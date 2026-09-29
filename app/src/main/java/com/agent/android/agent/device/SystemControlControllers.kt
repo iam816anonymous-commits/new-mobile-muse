@@ -1,5 +1,6 @@
 package com.agent.android.agent.device
 
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -29,7 +30,7 @@ class SystemControlControllers(private val context: Context?) {
             val value = Math.round((percent / 100.0) * 255).toInt().coerceIn(0, 255)
             val canWrite = Settings.System.canWrite(context)
             if (!canWrite) {
-                return SkillResult("BRIGHTNESS", SkillStatus.PERMISSION_REQUIRED, "WRITE_SETTINGS permission required to modify system brightness", System.currentTimeMillis() - start, "PERMISSION_REQUIRED")
+                return SkillResult("BRIGHTNESS", SkillStatus.PERMISSION_REQUIRED, "WRITE_SETTINGS permission required to modify system brightness. Grant via Settings -> Special App Access.", System.currentTimeMillis() - start, "WRITE_SETTINGS_REQUIRED")
             }
             Settings.System.putInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS, value)
             val verified = Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS, -1)
@@ -51,7 +52,7 @@ class SystemControlControllers(private val context: Context?) {
         return try {
             val canWrite = Settings.System.canWrite(context)
             if (!canWrite) {
-                return SkillResult("SCREEN_TIMEOUT", SkillStatus.PERMISSION_REQUIRED, "WRITE_SETTINGS permission required to modify screen timeout", System.currentTimeMillis() - start, "PERMISSION_REQUIRED")
+                return SkillResult("SCREEN_TIMEOUT", SkillStatus.PERMISSION_REQUIRED, "WRITE_SETTINGS permission required to modify screen timeout", System.currentTimeMillis() - start, "WRITE_SETTINGS_REQUIRED")
             }
             val ms = seconds * 1000
             Settings.System.putInt(context.contentResolver, Settings.System.SCREEN_OFF_TIMEOUT, ms)
@@ -60,6 +61,27 @@ class SystemControlControllers(private val context: Context?) {
             SkillResult("SCREEN_TIMEOUT", SkillStatus.SUCCESS, "Screen timeout set to $verifiedSec s [Verified]", System.currentTimeMillis() - start)
         } catch (e: Exception) {
             SkillResult("SCREEN_TIMEOUT", SkillStatus.FAILED, "Error setting screen timeout: ${e.message}", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
+        }
+    }
+
+    fun getRingerStatus(): SkillResult {
+        val start = System.currentTimeMillis()
+        if (context == null) return SkillResult("RINGER", SkillStatus.UNAVAILABLE, "Context unavailable", System.currentTimeMillis() - start, "NO_CONTEXT")
+
+        return try {
+            val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                ?: return SkillResult("RINGER", SkillStatus.UNAVAILABLE, "AudioManager unavailable", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
+
+            val currentMode = audio.ringerMode
+            val modeName = when (currentMode) {
+                AudioManager.RINGER_MODE_NORMAL -> "NORMAL"
+                AudioManager.RINGER_MODE_SILENT -> "SILENT"
+                AudioManager.RINGER_MODE_VIBRATE -> "VIBRATE"
+                else -> "UNKNOWN"
+            }
+            SkillResult("RINGER", SkillStatus.SUCCESS, "RINGER_MODE: $modeName", System.currentTimeMillis() - start)
+        } catch (e: Exception) {
+            SkillResult("RINGER", SkillStatus.FAILED, "Error reading ringer mode: ${e.message}", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
         }
     }
 
@@ -78,6 +100,13 @@ class SystemControlControllers(private val context: Context?) {
             val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
                 ?: return SkillResult("RINGER", SkillStatus.UNAVAILABLE, "AudioManager unavailable", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                if (notificationManager != null && !notificationManager.isNotificationPolicyAccessGranted) {
+                    return SkillResult("RINGER", SkillStatus.PERMISSION_REQUIRED, "Notification Policy Access required to change ringer mode", System.currentTimeMillis() - start, "NOTIFICATION_POLICY_ACCESS_REQUIRED")
+                }
+            }
+
             audio.ringerMode = targetMode
             val verifiedMode = audio.ringerMode
             val verifiedName = when (verifiedMode) {
@@ -88,9 +117,25 @@ class SystemControlControllers(private val context: Context?) {
             }
             SkillResult("RINGER", SkillStatus.SUCCESS, "Ringer mode set to $verifiedName [Verified]", System.currentTimeMillis() - start)
         } catch (e: SecurityException) {
-            SkillResult("RINGER", SkillStatus.PERMISSION_REQUIRED, "Notification Policy Access required to change ringer mode", System.currentTimeMillis() - start, "PERMISSION_REQUIRED")
+            SkillResult("RINGER", SkillStatus.PERMISSION_REQUIRED, "Notification Policy Access required to change ringer mode: ${e.message}", System.currentTimeMillis() - start, "NOTIFICATION_POLICY_ACCESS_REQUIRED")
         } catch (e: Exception) {
             SkillResult("RINGER", SkillStatus.FAILED, "Error setting ringer mode: ${e.message}", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
+        }
+    }
+
+    fun getMediaStatus(): SkillResult {
+        val start = System.currentTimeMillis()
+        if (context == null) return SkillResult("MEDIA", SkillStatus.UNAVAILABLE, "Context unavailable", System.currentTimeMillis() - start, "NO_CONTEXT")
+
+        return try {
+            val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                ?: return SkillResult("MEDIA", SkillStatus.UNAVAILABLE, "AudioManager unavailable", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
+
+            val isPlaying = audio.isMusicActive
+            val stateName = if (isPlaying) "PLAYING" else "PAUSED/STOPPED"
+            SkillResult("MEDIA", SkillStatus.SUCCESS, "PLAYBACK_STATE: $stateName", System.currentTimeMillis() - start)
+        } catch (e: Exception) {
+            SkillResult("MEDIA", SkillStatus.UNSUPPORTED, "Media status query unsupported: ${e.message}", System.currentTimeMillis() - start, "UNSUPPORTED")
         }
     }
 
@@ -173,7 +218,10 @@ class SystemControlControllers(private val context: Context?) {
             val gpsOk = lm?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true
             val netOk = lm?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
 
-            SkillResult("LOCATION_STATUS", SkillStatus.SUCCESS, "GPS Provider: ${if (gpsOk) "ENABLED" else "DISABLED"} | Network Provider: ${if (netOk) "ENABLED" else "DISABLED"}", System.currentTimeMillis() - start)
+            val gpsText = if (gpsOk) "ENABLED" else "DISABLED"
+            val netText = if (netOk) "ENABLED" else "DISABLED"
+
+            SkillResult("LOCATION_STATUS", SkillStatus.SUCCESS, "GPS_PROVIDER: $gpsText | NETWORK_PROVIDER: $netText", System.currentTimeMillis() - start)
         } catch (e: Exception) {
             SkillResult("LOCATION_STATUS", SkillStatus.FAILED, "Error querying location status: ${e.message}", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
         }

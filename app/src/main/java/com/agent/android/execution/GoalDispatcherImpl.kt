@@ -144,12 +144,20 @@ class GoalDispatcherImpl(
             }
             lower.startsWith("ringer") -> {
                 val mode = trimmed.substringAfter("ringer").trim()
-                val res = systemControlControllers?.setRingerMode(mode) ?: SkillResult("RINGER", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                val res = if (mode.equals("status", ignoreCase = true) || mode.isEmpty()) {
+                    systemControlControllers?.getRingerStatus() ?: SkillResult("RINGER", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                } else {
+                    systemControlControllers?.setRingerMode(mode) ?: SkillResult("RINGER", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                }
                 DispatchDetails(trimmed, "RINGER", "SystemControlControllers", res, res.message)
             }
             lower.startsWith("media") -> {
                 val action = trimmed.substringAfter("media").trim()
-                val res = systemControlControllers?.dispatchMediaKey(action) ?: SkillResult("MEDIA", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                val res = if (action.equals("status", ignoreCase = true) || action.isEmpty()) {
+                    systemControlControllers?.getMediaStatus() ?: SkillResult("MEDIA", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                } else {
+                    systemControlControllers?.dispatchMediaKey(action) ?: SkillResult("MEDIA", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                }
                 DispatchDetails(trimmed, "MEDIA", "SystemControlControllers", res, res.message)
             }
             lower.startsWith("device info") -> {
@@ -176,18 +184,20 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, "VIBRATE", "HapticController", res, res.message)
             }
             lower.startsWith("volume") -> {
-                val args = trimmed.substringAfter("volume").trim().split("\\s+".toRegex())
-                val res = if (args.size >= 2) {
-                    val streamStr = args[0].lowercase()
-                    val percentStr = args[1]
-                    val percent = percentStr.toIntOrNull() ?: -1
-                    val streamType = volumeController?.parseStreamType(streamStr) ?: android.media.AudioManager.STREAM_MUSIC
+                val args = trimmed.substringAfter("volume").trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
+                val res = if (args.size >= 2 && args[1].lowercase() == "status") {
+                    val streamType = volumeController?.parseStreamType(args[0]) ?: android.media.AudioManager.STREAM_MUSIC
+                    volumeController?.getVolume(streamType) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                } else if (args.size >= 2) {
+                    val streamType = volumeController?.parseStreamType(args[0]) ?: android.media.AudioManager.STREAM_MUSIC
+                    val percent = args[1].toIntOrNull() ?: -1
                     volumeController?.setVolumePercentage(percent, streamType) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L)
                 } else if (args.size == 1 && args[0].toIntOrNull() != null) {
                     val percent = args[0].toInt()
                     volumeController?.setVolumePercentage(percent) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L)
                 } else {
-                    volumeController?.getVolume() ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                    val streamType = if (args.isNotEmpty()) volumeController?.parseStreamType(args[0]) ?: android.media.AudioManager.STREAM_MUSIC else android.media.AudioManager.STREAM_MUSIC
+                    volumeController?.getVolume(streamType) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L)
                 }
                 DispatchDetails(trimmed, "VOLUME", "VolumeController", res, res.message)
             }

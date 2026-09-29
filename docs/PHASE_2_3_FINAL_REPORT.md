@@ -1,42 +1,34 @@
-# Phase 2.3 Final Report: System Control & Capability Expansion
+# Phase 2.3 Final Report: System Control, Capabilities & State Readback
 
 ## Executive Summary
 
-Phase 2.3 extends LocalAgent with deterministic system controls, read-only system information queries, system settings intents, and a central Capability Registry on Android 8.1 / API 27 (Tecno Camon i).
+Phase 2.3 extends LocalAgent with deterministic system controls, read-only system information queries, system settings intents, special permission detection, and a central Capability Registry on Android 8.1 / API 27 (Tecno Camon i).
 
-## New System Controls & Capabilities
+## New & Hardened Controls
 
-1. **System Controllers (`SystemControlControllers.kt`)**:
-   * **Brightness**: `brightness <0-100>` (System settings brightness with `WRITE_SETTINGS` permission check and read-back verification).
-   * **Screen Timeout**: `screen timeout <15|30|60|120|300|600|1800>` (Bounded timeout in seconds with `WRITE_SETTINGS` check).
-   * **Ringer Mode**: `ringer <normal|silent|vibrate>` (Stream ringer mode with Notification Policy Access check).
-   * **Media Control**: `media <play|pause|stop|next|previous>` (Dispatches KeyEvent media keys via `AudioManager`).
-   * **Device Info**: `device info` (Model, OS version, API level, storage free/total).
-   * **Network Status**: `network status` (Active connectivity state and network type).
-   * **Location Status**: `location status` (Read-only GPS & Network provider status).
-   * **System Settings Intents**: `open settings`, `open wifi settings`, `open bluetooth settings`, `open battery settings`, `open accessibility settings` (Resolved via `PackageManager`).
+1. **Brightness & WRITE_SETTINGS**:
+   * `brightness <0-100>` checks `Settings.System.canWrite(context)`. Returns `PERMISSION_REQUIRED` (`WRITE_SETTINGS_REQUIRED`) if access is missing with Settings shortcut in UI. `CapabilityRegistry` reports `BRIGHTNESS: PERMISSION_REQUIRED`.
 
-2. **Capability Registry (`CapabilityRegistry.kt`)**:
-   * Tracks availability and permission status for 12 core capabilities (`FLASHLIGHT`, `VIBRATION`, `VOLUME`, `WIFI`, `BLUETOOTH`, `ACCELEROMETER`, `GYROSCOPE`, `PROXIMITY`, `LIGHT`, `MAGNETOMETER`, `BRIGHTNESS`, `RINGER`, etc.).
+2. **RINGER Read vs Write Separation**:
+   * `ringer status` reads `audioManager.ringerMode` directly without requiring Notification Policy Access (`RINGER_MODE: NORMAL/SILENT/VIBRATE`).
+   * `ringer <normal|silent|vibrate>` checks Notification Policy Access and returns `PERMISSION_REQUIRED` (`NOTIFICATION_POLICY_ACCESS_REQUIRED`) if access is absent.
 
-3. **Standardized Command Results**:
-   * Every command output formats `COMMAND`, `OPERATION`, `CONTROLLER`, `STATUS`, `RESULT`, `VERIFICATION`, `ERROR_CODE`, `DURATION`.
+3. **Media Status**:
+   * `media status` inspects `audioManager.isMusicActive` returning `PLAYBACK_STATE: PLAYING` or `PLAYBACK_STATE: PAUSED/STOPPED`.
 
-## Verification & Build Results
+4. **Location Status**:
+   * `location status` explicitly reports `GPS_PROVIDER: ENABLED/DISABLED | NETWORK_PROVIDER: ENABLED/DISABLED`.
 
-* **Unit Tests**: `./gradlew testDebugUnitTest` passed (54/54 unit tests).
-* **Linting**: `./gradlew lintDebug` passed (0 errors).
+5. **Screen Timeout & System Controls**:
+   * `screen timeout <15|30|60|120|300|600|1800>` (bounded timeout with `WRITE_SETTINGS` check).
+   * `media <play|pause|stop|next|previous>` (dispatches key events via `AudioManager`).
+   * `device info`, `network status`, `open settings`, `open wifi settings`, `open bluetooth settings`.
+
+6. **Capability Registry (`CapabilityRegistry.kt`)**:
+   * Reports real-time status across 12 capabilities (`AVAILABLE`, `UNAVAILABLE`, `UNSUPPORTED`, `PERMISSION_REQUIRED`).
+
+## Verification Results
+
+* **Unit Tests**: `./gradlew testDebugUnitTest` passed (61/61 unit tests).
+* **Lint Check**: `./gradlew lintDebug` passed (0 errors).
 * **Debug APK**: `app/build/outputs/apk/debug/app-debug.apk` (~3.4 MB).
-
-## Physical Device Verification Matrix (Tecno Camon i / API 27)
-
-1. `timer 10` -> Verified timer request accepted.
-2. `alarm 18:30` -> Verified alarm request accepted.
-3. `bluetooth status` / `bluetooth on` -> Verified status query and asynchronous verification.
-4. `volume music 50` -> Verified 50% index mapping and read-after-write.
-5. `brightness 80` -> Verified system brightness update.
-6. `screen timeout 60` -> Verified 60s screen timeout update.
-7. `ringer vibrate` -> Verified ringer mode set to VIBRATE.
-8. `media play` / `media pause` -> Verified media key dispatch.
-9. `device info` -> Verified RAM / Storage / Model output.
-10. `open settings` -> Verified Settings activity launch.

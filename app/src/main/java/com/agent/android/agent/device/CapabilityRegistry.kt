@@ -6,6 +6,7 @@ import android.hardware.SensorManager
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.os.Vibrator
+import android.provider.Settings
 
 enum class CapabilityStatus {
     AVAILABLE,
@@ -62,9 +63,16 @@ class CapabilityRegistry(private val context: Context?) {
             }
         }
 
-        map["BRIGHTNESS"] = CapabilityInfo("BRIGHTNESS", CapabilityStatus.AVAILABLE, "Window/System brightness control available")
-        map["SCREEN_TIMEOUT"] = CapabilityInfo("SCREEN_TIMEOUT", CapabilityStatus.AVAILABLE, "Screen timeout setting available")
-        map["RINGER"] = CapabilityInfo("RINGER", CapabilityStatus.AVAILABLE, "Ringer mode stream control available")
+        // Brightness
+        val canWriteSettings = context != null && Settings.System.canWrite(context)
+        map["BRIGHTNESS"] = CapabilityInfo(
+            "BRIGHTNESS",
+            if (canWriteSettings) CapabilityStatus.AVAILABLE else CapabilityStatus.PERMISSION_REQUIRED,
+            if (canWriteSettings) "System brightness control available" else "WRITE_SETTINGS special permission required"
+        )
+
+        map["SCREEN_TIMEOUT"] = CapabilityInfo("SCREEN_TIMEOUT", if (canWriteSettings) CapabilityStatus.AVAILABLE else CapabilityStatus.PERMISSION_REQUIRED, if (canWriteSettings) "Screen timeout setting available" else "WRITE_SETTINGS special permission required")
+        map["RINGER"] = CapabilityInfo("RINGER", CapabilityStatus.AVAILABLE, "Ringer mode read/write available")
         map["MEDIA"] = CapabilityInfo("MEDIA", CapabilityStatus.AVAILABLE, "Media key dispatch available")
         map["LOCATION_STATUS"] = CapabilityInfo("LOCATION_STATUS", CapabilityStatus.AVAILABLE, "Read-only location provider status available")
         map["APP_LAUNCH"] = CapabilityInfo("APP_LAUNCH", CapabilityStatus.AVAILABLE, "PackageManager app discovery & launch available")

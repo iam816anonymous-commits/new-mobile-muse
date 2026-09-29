@@ -18,6 +18,17 @@ class VolumeController(private val context: Context?) {
         }
     }
 
+    fun getStreamName(streamType: Int): String {
+        return when (streamType) {
+            AudioManager.STREAM_RING -> "RING"
+            AudioManager.STREAM_ALARM -> "ALARM"
+            AudioManager.STREAM_NOTIFICATION -> "NOTIFICATION"
+            AudioManager.STREAM_SYSTEM -> "SYSTEM"
+            AudioManager.STREAM_VOICE_CALL -> "VOICE"
+            else -> "MUSIC"
+        }
+    }
+
     fun getVolume(streamType: Int = AudioManager.STREAM_MUSIC): SkillResult {
         val start = System.currentTimeMillis()
         if (context == null) return SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "Context unavailable", System.currentTimeMillis() - start, "NO_CONTEXT")
@@ -26,8 +37,10 @@ class VolumeController(private val context: Context?) {
                 ?: return SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "AudioManager unavailable", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
             val current = audio.getStreamVolume(streamType)
             val max = audio.getStreamMaxVolume(streamType)
-            val percent = if (max > 0) (current * 100) / max else 0
-            SkillResult("VOLUME", SkillStatus.SUCCESS, "Stream $streamType Volume: $current / $max ($percent%)", System.currentTimeMillis() - start)
+            val percent = if (max > 0) Math.round((current.toDouble() / max.toDouble()) * 100.0).toInt() else 0
+            val streamName = getStreamName(streamType)
+            val message = "STREAM: $streamName | CURRENT_INDEX: $current | MAX_INDEX: $max | PERCENTAGE: $percent%"
+            SkillResult("VOLUME", SkillStatus.SUCCESS, message, System.currentTimeMillis() - start)
         } catch (e: Exception) {
             SkillResult("VOLUME", SkillStatus.FAILED, "Error querying volume: ${e.message}", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
         }
@@ -50,15 +63,18 @@ class VolumeController(private val context: Context?) {
 
             audio.setStreamVolume(streamType, targetIndex, 0)
             val verifiedIndex = audio.getStreamVolume(streamType)
+            val streamName = getStreamName(streamType)
 
             if (verifiedIndex == targetIndex) {
-                val actualPercent = if (max > 0) (verifiedIndex * 100) / max else 0
-                SkillResult("VOLUME", SkillStatus.SUCCESS, "Stream $streamType set to $verifiedIndex / $max ($actualPercent%) [Verified]", System.currentTimeMillis() - start)
+                val actualPercent = if (max > 0) Math.round((verifiedIndex.toDouble() / max.toDouble()) * 100.0).toInt() else 0
+                val message = "STREAM: $streamName | CURRENT_INDEX: $verifiedIndex | MAX_INDEX: $max | PERCENTAGE: $actualPercent% [Verified]"
+                SkillResult("VOLUME", SkillStatus.SUCCESS, message, System.currentTimeMillis() - start)
             } else if (verifiedIndex == initialIndex && targetIndex != initialIndex) {
-                SkillResult("VOLUME", SkillStatus.UNSUPPORTED, "Volume stream $streamType is fixed or locked by device OS policy", System.currentTimeMillis() - start, "UNSUPPORTED_FIXED_VOLUME")
+                SkillResult("VOLUME", SkillStatus.UNSUPPORTED, "Volume stream $streamName is fixed or locked by device OS policy", System.currentTimeMillis() - start, "UNSUPPORTED_FIXED_VOLUME")
             } else {
-                val actualPercent = if (max > 0) (verifiedIndex * 100) / max else 0
-                SkillResult("VOLUME", SkillStatus.SUCCESS, "Stream $streamType set to nearest hardware index $verifiedIndex / $max ($actualPercent%)", System.currentTimeMillis() - start)
+                val actualPercent = if (max > 0) Math.round((verifiedIndex.toDouble() / max.toDouble()) * 100.0).toInt() else 0
+                val message = "STREAM: $streamName | CURRENT_INDEX: $verifiedIndex | MAX_INDEX: $max | PERCENTAGE: $actualPercent%"
+                SkillResult("VOLUME", SkillStatus.SUCCESS, message, System.currentTimeMillis() - start)
             }
         } catch (e: Exception) {
             SkillResult("VOLUME", SkillStatus.FAILED, "Error setting volume: ${e.message}", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
