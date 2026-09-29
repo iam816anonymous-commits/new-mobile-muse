@@ -10,6 +10,8 @@ import com.agent.android.agent.skills.IntentSkills
 import com.agent.android.agent.skills.NotesSkill
 import com.agent.android.agent.skills.SkillResult
 import com.agent.android.agent.skills.SkillStatus
+import com.agent.android.agent.skills.app.AppLaunchStatus
+import com.agent.android.agent.skills.app.AppLauncher
 import com.agent.android.safety.CancellationReason
 
 data class DispatchDetails(
@@ -29,7 +31,8 @@ class GoalDispatcherImpl(
     private val hapticController: HapticController? = null,
     private val volumeController: VolumeController? = null,
     private val connectivityControllers: ConnectivityControllers? = null,
-    private val hardwareObservationControllers: HardwareObservationControllers? = null
+    private val hardwareObservationControllers: HardwareObservationControllers? = null,
+    private val appLauncher: AppLauncher? = null
 ) : GoalDispatcher {
 
     override fun dispatchGoal(goal: String): Boolean {
@@ -69,6 +72,30 @@ class GoalDispatcherImpl(
         val lower = trimmed.lowercase()
 
         return when {
+            lower.startsWith("open ") -> {
+                val appQuery = trimmed.substringAfter("open ").trim()
+                if (appLauncher != null) {
+                    val launchRes = appLauncher.launchApp(appQuery)
+                    val status = if (launchRes.status == AppLaunchStatus.SUCCESS) SkillStatus.SUCCESS else SkillStatus.FAILED
+                    val skillRes = SkillResult(
+                        operation = "OPEN_APP",
+                        status = status,
+                        message = launchRes.message,
+                        durationMs = launchRes.durationMs,
+                        errorCode = launchRes.errorCode
+                    )
+                    DispatchDetails(
+                        command = trimmed,
+                        operation = "OPEN_APP",
+                        controllerName = "AppLauncherImpl",
+                        result = skillRes,
+                        verificationText = "Package: ${launchRes.resolvedPackage ?: "NONE"}"
+                    )
+                } else {
+                    val errRes = SkillResult("OPEN_APP", SkillStatus.UNAVAILABLE, "AppLauncher unavailable", 0L, "NO_LAUNCHER")
+                    DispatchDetails(trimmed, "OPEN_APP", "AppLauncherImpl", errRes, "No Launcher")
+                }
+            }
             lower.startsWith("calculate") -> {
                 val expr = trimmed.substringAfter("calculate").trim()
                 val res = calculatorSkill.calculate(expr)

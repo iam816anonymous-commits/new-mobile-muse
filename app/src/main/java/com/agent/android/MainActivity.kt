@@ -21,6 +21,7 @@ import com.agent.android.agent.device.VolumeController
 import com.agent.android.agent.skills.CalculatorSkill
 import com.agent.android.agent.skills.IntentSkills
 import com.agent.android.agent.skills.NotesSkill
+import com.agent.android.agent.skills.app.AppLauncherImpl
 import com.agent.android.execution.ExecutionController
 import com.agent.android.execution.GoalDispatcherImpl
 import com.agent.android.safety.HarnessSuiteSummary
@@ -45,6 +46,7 @@ class MainActivity : Activity() {
     private lateinit var testHarness: Phase1SafetyTestHarness
     private lateinit var goalDispatcher: GoalDispatcherImpl
     private lateinit var obsControllers: HardwareObservationControllers
+    private lateinit var appLauncher: AppLauncherImpl
 
     private val historyLog: Deque<HistoryEntry> = ArrayDeque()
 
@@ -53,6 +55,11 @@ class MainActivity : Activity() {
     private lateinit var tvSafetyStatus: TextView
     private lateinit var tvAccessibilityStatus: TextView
     private lateinit var btnEnableAccessibility: Button
+
+    private lateinit var etAppLaunchQuery: EditText
+    private lateinit var btnValidateApp: Button
+    private lateinit var btnLaunchApp: Button
+    private lateinit var tvAppLaunchDisplay: TextView
 
     private lateinit var tvPermissionStatus: TextView
     private lateinit var btnRequestPermissions: Button
@@ -84,14 +91,20 @@ class MainActivity : Activity() {
         val volume = VolumeController(this)
         val conn = ConnectivityControllers(this)
         obsControllers = HardwareObservationControllers(this)
+        appLauncher = AppLauncherImpl(this)
 
-        goalDispatcher = GoalDispatcherImpl(executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers)
+        goalDispatcher = GoalDispatcherImpl(executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers, appLauncher)
 
         tvAgentStatus = findViewById(R.id.tvAgentStatus)
         tvExecutionState = findViewById(R.id.tvExecutionState)
         tvSafetyStatus = findViewById(R.id.tvSafetyStatus)
         tvAccessibilityStatus = findViewById(R.id.tvAccessibilityStatus)
         btnEnableAccessibility = findViewById(R.id.btnEnableAccessibility)
+
+        etAppLaunchQuery = findViewById(R.id.etAppLaunchQuery)
+        btnValidateApp = findViewById(R.id.btnValidateApp)
+        btnLaunchApp = findViewById(R.id.btnLaunchApp)
+        tvAppLaunchDisplay = findViewById(R.id.tvAppLaunchDisplay)
 
         tvPermissionStatus = findViewById(R.id.tvPermissionStatus)
         btnRequestPermissions = findViewById(R.id.btnRequestPermissions)
@@ -115,6 +128,24 @@ class MainActivity : Activity() {
             startActivity(intent)
         }
 
+        btnValidateApp.setOnClickListener {
+            val q = etAppLaunchQuery.text.toString()
+            val valRes = appLauncher.validateApp(q)
+            tvAppLaunchDisplay.text = """
+                Requested: ${valRes.requestedApp}
+                Resolved: ${valRes.resolvedLabel ?: "NONE"}
+                Package: ${valRes.resolvedPackage ?: "NONE"}
+                Activity: ${valRes.launcherActivity ?: "NONE"}
+                Status: ${valRes.status}
+                Duration: ${valRes.durationMs} ms
+            """.trimIndent()
+        }
+
+        btnLaunchApp.setOnClickListener {
+            val q = etAppLaunchQuery.text.toString()
+            executeLiveCommand("open $q")
+        }
+
         btnRequestPermissions.setOnClickListener {
             checkAndRequestRuntimePermissions()
         }
@@ -136,6 +167,8 @@ class MainActivity : Activity() {
 
         btnClearConsole.setOnClickListener {
             etLiveCommand.setText("")
+            etAppLaunchQuery.setText("")
+            tvAppLaunchDisplay.text = "Requested: -\nResolved: -\nPackage: -\nActivity: -\nStatus: IDLE\nDuration: - ms"
             tvLiveConsoleDisplay.text = "COMMAND: -\nOPERATION: -\nCONTROLLER: -\nSTATUS: IDLE\nVERIFICATION: -\nDURATION: - ms"
             historyLog.clear()
             tvExecutionHistoryLog.text = "No recent executions."
@@ -155,7 +188,7 @@ class MainActivity : Activity() {
             updateUIState()
         }
 
-        logger.i("UI", "Control plane UI launched with Device Diagnostics.")
+        logger.i("UI", "Control plane UI launched with Safe App Launch Panel.")
         updateUIState()
     }
 
@@ -190,9 +223,11 @@ class MainActivity : Activity() {
 
     private fun runDiagnostics() {
         val report = obsControllers.runDeviceDiagnostics()
+        val launchableCount = appLauncher.listInstalledLaunchableApps().size
         val sb = StringBuilder()
         sb.append("DEVICE: ${report.deviceModel}\n")
         sb.append("OS: ${report.androidVersion}\n")
+        sb.append("LAUNCHABLE APPS: $launchableCount\n")
         sb.append("TORCH: ${if (report.cameraTorchAvailable) "AVAILABLE" else "UNAVAILABLE"}\n")
         sb.append("VIBRATOR: ${if (report.vibratorAvailable) "AVAILABLE" else "UNAVAILABLE"}\n")
         sb.append("MUSIC VOL MAX: ${report.musicVolumeMax} (CURRENT: ${report.musicVolumeCurrent})\n")
@@ -314,7 +349,7 @@ class MainActivity : Activity() {
         for (log in logger.getLogs()) {
             sb.append("[${log.category}] ${log.message}\n")
         }
-        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 2.1 LocalAgent active."
+        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 2.2 LocalAgent active."
     }
 
     private fun isAccessibilityServiceEnabled(context: Context, service: Class<*>): Boolean {
