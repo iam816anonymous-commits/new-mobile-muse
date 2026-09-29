@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">LocalAgent</string>
+    <string name="accessibility_service_description">LocalAgent Accessibility Observation Service</string>
+</resources>
