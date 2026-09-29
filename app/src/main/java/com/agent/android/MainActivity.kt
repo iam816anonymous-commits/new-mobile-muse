@@ -7,43 +7,64 @@ import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
+import com.agent.android.agent.device.ConnectivityControllers
+import com.agent.android.agent.device.FlashlightController
+import com.agent.android.agent.device.HapticController
+import com.agent.android.agent.device.HardwareObservationControllers
+import com.agent.android.agent.device.VolumeController
 import com.agent.android.agent.skills.CalculatorSkill
 import com.agent.android.agent.skills.IntentSkills
 import com.agent.android.agent.skills.NotesSkill
-import com.agent.android.agent.skills.Phase2DeviceTestHarness
-import com.agent.android.agent.skills.Phase2HeadlessTestHarness
+import com.agent.android.execution.DispatchDetails
 import com.agent.android.execution.ExecutionController
 import com.agent.android.execution.GoalDispatcherImpl
 import com.agent.android.safety.HarnessSuiteSummary
 import com.agent.android.safety.Phase1SafetyTestHarness
-import com.agent.android.safety.SafetyTestResult
 import com.agent.android.service.LocalAgentAccessibilityService
 import com.agent.android.storage.Logger
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.util.ArrayDeque
+import java.util.Deque
+
+data class HistoryEntry(
+    val timestamp: String,
+    val command: String,
+    val status: String,
+    val durationMs: Long,
+    val errorCode: String?
+)
 
 class MainActivity : Activity() {
 
     private val executionController = ExecutionController()
     private val logger = Logger()
     private lateinit var testHarness: Phase1SafetyTestHarness
-
-    private lateinit var phase2HeadlessHarness: Phase2HeadlessTestHarness
-    private lateinit var phase2DeviceHarness: Phase2DeviceTestHarness
     private lateinit var goalDispatcher: GoalDispatcherImpl
+
+    private val historyLog: Deque<HistoryEntry> = ArrayDeque()
 
     private lateinit var tvAgentStatus: TextView
     private lateinit var tvExecutionState: TextView
     private lateinit var tvSafetyStatus: TextView
     private lateinit var tvAccessibilityStatus: TextView
     private lateinit var btnEnableAccessibility: Button
-    private lateinit var tvSuiteSummary: TextView
-    private lateinit var tvPhase2Status: TextView
-    private lateinit var tvLogArea: TextView
 
+    private lateinit var etLiveCommand: EditText
+    private lateinit var btnExecuteLiveCommand: Button
+    private lateinit var btnTestConcurrency: Button
+    private lateinit var btnClearConsole: Button
+    private lateinit var tvLiveConsoleDisplay: TextView
+    private lateinit var tvExecutionHistoryLog: TextView
+
+    private lateinit var tvSuiteSummary: TextView
     private lateinit var btnRunAllTests: Button
     private lateinit var btnClearResults: Button
-    private lateinit var btnRunPhase2HeadlessTests: Button
-    private lateinit var btnRunPhase2DeviceTests: Button
+    private lateinit var tvLogArea: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,28 +74,55 @@ class MainActivity : Activity() {
         val calc = CalculatorSkill()
         val notes = NotesSkill(this)
         val intents = IntentSkills(this)
-        goalDispatcher = GoalDispatcherImpl(executionController, calc, notes, intents)
+        val flash = FlashlightController(this)
+        val haptics = HapticController(this)
+        val volume = VolumeController(this)
+        val conn = ConnectivityControllers(this)
+        val obs = HardwareObservationControllers(this)
 
-        phase2HeadlessHarness = Phase2HeadlessTestHarness(executionController, calc, notes)
-        phase2DeviceHarness = Phase2DeviceTestHarness()
+        goalDispatcher = GoalDispatcherImpl(executionController, calc, notes, intents, flash, haptics, volume, conn, obs)
 
         tvAgentStatus = findViewById(R.id.tvAgentStatus)
         tvExecutionState = findViewById(R.id.tvExecutionState)
         tvSafetyStatus = findViewById(R.id.tvSafetyStatus)
         tvAccessibilityStatus = findViewById(R.id.tvAccessibilityStatus)
         btnEnableAccessibility = findViewById(R.id.btnEnableAccessibility)
-        tvSuiteSummary = findViewById(R.id.tvSuiteSummary)
-        tvPhase2Status = findViewById(R.id.tvPhase2Status)
-        tvLogArea = findViewById(R.id.tvLogArea)
 
+        etLiveCommand = findViewById(R.id.etLiveCommand)
+        btnExecuteLiveCommand = findViewById(R.id.btnExecuteLiveCommand)
+        btnTestConcurrency = findViewById(R.id.btnTestConcurrency)
+        btnClearConsole = findViewById(R.id.btnClearConsole)
+        tvLiveConsoleDisplay = findViewById(R.id.tvLiveConsoleDisplay)
+        tvExecutionHistoryLog = findViewById(R.id.tvExecutionHistoryLog)
+
+        tvSuiteSummary = findViewById(R.id.tvSuiteSummary)
         btnRunAllTests = findViewById(R.id.btnRunAllTests)
         btnClearResults = findViewById(R.id.btnClearResults)
-        btnRunPhase2HeadlessTests = findViewById(R.id.btnRunPhase2HeadlessTests)
-        btnRunPhase2DeviceTests = findViewById(R.id.btnRunPhase2DeviceTests)
+        tvLogArea = findViewById(R.id.tvLogArea)
 
         btnEnableAccessibility.setOnClickListener {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
             startActivity(intent)
+        }
+
+        btnExecuteLiveCommand.setOnClickListener {
+            val cmd = etLiveCommand.text.toString()
+            if (cmd.isNotBlank()) {
+                executeLiveCommand(cmd)
+            }
+        }
+
+        btnTestConcurrency.setOnClickListener {
+            runConcurrencyTest()
+        }
+
+        btnClearConsole.setOnClickListener {
+            etLiveCommand.setText("")
+            tvLiveConsoleDisplay.text = "COMMAND: -\nOPERATION: -\nCONTROLLER: -\nSTATUS: IDLE\nVERIFICATION: -\nDURATION: - ms"
+            historyLog.clear()
+            tvExecutionHistoryLog.text = "No recent executions."
+            logger.i("UI", "Console and history cleared.")
+            updateUIState()
         }
 
         btnRunAllTests.setOnClickListener {
@@ -84,33 +132,85 @@ class MainActivity : Activity() {
 
         btnClearResults.setOnClickListener {
             tvSuiteSummary.text = "Suite Status: NOT RUN (Passed: 0, Failed: 0, Total: 0)"
-            tvPhase2Status.text = "Phase 2 Status: IDLE (Select operation or run tests)"
             logger.clear()
             logger.i("UI", "Test results cleared.")
             updateUIState()
         }
 
-        btnRunPhase2HeadlessTests.setOnClickListener {
-            val summary = phase2HeadlessHarness.runAllHeadlessTests()
-            tvPhase2Status.text = "Headless Core Tests: Passed ${summary.passedCount}/${summary.totalCount}"
-            logger.i("Harness", "Phase 2 Headless Core Suite Executed. Overall Passed: ${summary.overallPassed}")
-            updateUIState()
-        }
-
-        btnRunPhase2DeviceTests.setOnClickListener {
-            val summary = phase2DeviceHarness.runAllDeviceTests()
-            tvPhase2Status.text = "Device Control Tests: Passed ${summary.passedCount}/${summary.totalCount}"
-            logger.i("Harness", "Phase 2 Device Control Suite Executed. Overall Passed: ${summary.overallPassed}")
-            updateUIState()
-        }
-
-        logger.i("UI", "Control plane UI launched with Phase 2 panels.")
+        logger.i("UI", "Control plane UI launched with Live Command Console.")
         updateUIState()
     }
 
     override fun onResume() {
         super.onResume()
         updateUIState()
+    }
+
+    private fun executeLiveCommand(command: String) {
+        val start = System.currentTimeMillis()
+        val details = goalDispatcher.dispatchAndProcess(command)
+        val success = goalDispatcher.dispatchGoal(command)
+
+        val duration = System.currentTimeMillis() - start
+        val statusText = if (success) "SUCCESS" else "FAILED (${details.result.status})"
+
+        tvLiveConsoleDisplay.text = """
+            COMMAND: ${details.command}
+            OPERATION: ${details.operation}
+            CONTROLLER: ${details.controllerName}
+            STATUS: $statusText
+            RESULT: ${details.result.message}
+            VERIFICATION: ${details.verificationText}
+            ERROR CODE: ${details.result.errorCode ?: "NONE"}
+            DURATION: ${details.result.durationMs} ms
+        """.trimIndent()
+
+        addHistoryEntry(HistoryEntry(
+            timestamp = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date()),
+            command = details.command,
+            status = details.result.status.name,
+            durationMs = details.result.durationMs,
+            errorCode = details.result.errorCode
+        ))
+
+        updateUIState()
+    }
+
+    private fun runConcurrencyTest() {
+        val firstAcquired = executionController.acquireExecution()
+        val secondAcquired = executionController.acquireExecution()
+
+        val resultMsg = "Concurrency Lock Test:\nCommand 1: ${if (firstAcquired) "ACCEPTED" else "REJECTED"}\nCommand 2: ${if (secondAcquired) "ACCEPTED (ERROR)" else "REJECTED (CORRECT)"}"
+        tvLiveConsoleDisplay.text = resultMsg
+
+        if (firstAcquired) {
+            executionController.releaseExecution()
+        }
+
+        addHistoryEntry(HistoryEntry(
+            timestamp = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date()),
+            command = "CONCURRENCY_TEST",
+            status = if (firstAcquired && !secondAcquired) "PASS" else "FAIL",
+            durationMs = 0L,
+            errorCode = if (secondAcquired) "LOCK_FAILED" else null
+        ))
+
+        updateUIState()
+    }
+
+    private fun addHistoryEntry(entry: HistoryEntry) {
+        if (historyLog.size >= 20) {
+            historyLog.pollFirst()
+        }
+        historyLog.addLast(entry)
+
+        val sb = StringBuilder()
+        for (h in historyLog) {
+            sb.append("[${h.timestamp}] ${h.command} -> ${h.status} (${h.durationMs}ms)")
+            if (h.errorCode != null) sb.append(" [Err: ${h.errorCode}]")
+            sb.append("\n")
+        }
+        tvExecutionHistoryLog.text = sb.toString()
     }
 
     private fun updateUIState() {

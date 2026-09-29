@@ -58,7 +58,7 @@ class Phase2HeadlessUnitTest {
         val success = dispatcher.dispatchGoal("calculate 25 * 2")
         assertTrue(success)
 
-        val unknown = dispatcher.processGoal("invalid command")
+        val unknown = dispatcher.dispatchAndProcess("invalid command").result
         assertEquals(SkillStatus.INVALID_GOAL, unknown.status)
     }
 
