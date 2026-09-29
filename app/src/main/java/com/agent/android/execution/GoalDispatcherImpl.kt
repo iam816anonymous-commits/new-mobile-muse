@@ -33,18 +33,30 @@ class GoalDispatcherImpl(
 ) : GoalDispatcher {
 
     override fun dispatchGoal(goal: String): Boolean {
+        return dispatchAndProcessWithLock(goal).result.status == SkillStatus.SUCCESS
+    }
+
+    fun dispatchAndProcessWithLock(goal: String): DispatchDetails {
         if (!executionController.acquireExecution()) {
-            return false
+            val rejectedRes = SkillResult(
+                operation = "LOCK_REJECTED",
+                status = SkillStatus.FAILED,
+                message = "Goal dispatch rejected: another execution is active",
+                durationMs = 0L,
+                errorCode = "LOCK_REJECTED"
+            )
+            return DispatchDetails(goal, "LOCK_REJECTED", "ExecutionController", rejectedRes, "Execution Lock Rejected")
         }
         return try {
             val details = dispatchAndProcess(goal)
             executionController.releaseExecution(
                 if (details.result.status == SkillStatus.SUCCESS) CancellationReason.NONE else CancellationReason.INTERNAL_FAILURE
             )
-            details.result.status == SkillStatus.SUCCESS
+            details
         } catch (e: Exception) {
             executionController.releaseExecution(CancellationReason.INTERNAL_FAILURE)
-            false
+            val errRes = SkillResult("ERROR", SkillStatus.FAILED, "Internal execution error: ${e.message}", 0L, "INTERNAL_ERROR")
+            DispatchDetails(goal, "ERROR", "GoalDispatcherImpl", errRes, "Exception Thrown")
         }
     }
 
@@ -68,8 +80,8 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, "NOTE", "NotesSkill", res, "Persisted to file")
             }
             lower.startsWith("timer") -> {
-                val minStr = trimmed.substringAfter("timer").replace("[^0-9]".toRegex(), "")
-                val min = minStr.toIntOrNull() ?: 0
+                val minArg = trimmed.substringAfter("timer").trim()
+                val min = minArg.toIntOrNull() ?: 0
                 val res = intentSkills?.setTimer(min) ?: SkillResult("SET_TIMER", SkillStatus.UNAVAILABLE, "No Activity context", 0L)
                 DispatchDetails(trimmed, "SET_TIMER", "IntentSkills", res, "AlarmClock Intent Launched")
             }
@@ -92,12 +104,30 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, "FLASHLIGHT", "FlashlightController", res, "Torch state = ${if (enable) "ON" else "OFF"}")
             }
             lower.startsWith("vibrate") -> {
-                val ms = trimmed.substringAfter("vibrate").replace("[^0-9]".toRegex(), "").toLongOrNull() ?: 300L
+                val argStr = trimmed.substringAfter("vibrate").trim()
+                val ms = argStr.toLongOrNull() ?: -1L
                 val res = hapticController?.vibrate(ms) ?: SkillResult("VIBRATE", SkillStatus.UNAVAILABLE, "No Controller", 0L)
-                DispatchDetails(trimmed, "VIBRATE", "HapticController", res, "Haptics triggered")
+                DispatchDetails(trimmed, "VIBRATE", "HapticController", res, res.message)
             }
             lower.startsWith("volume") -> {
-                val res = volumeController?.getVolume() ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                val args = trimmed.substringAfter("volume").trim().split("\\s+".toRegex())
+                val res = if (args.size >= 2) {
+                    val streamStr = args[0].lowercase()
+                    val percentStr = args[1]
+                    val percent = percentStr.toIntOrNull() ?: -1
+                    val streamType = when (streamStr) {
+                        "ring" -> android.media.AudioManager.STREAM_RING
+                        "alarm" -> android.media.AudioManager.STREAM_ALARM
+                        "notification" -> android.media.AudioManager.STREAM_NOTIFICATION
+                        else -> android.media.AudioManager.STREAM_MUSIC
+                    }
+                    volumeController?.setVolumePercentage(percent, streamType) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                } else if (args.size == 1 && args[0].toIntOrNull() != null) {
+                    val percent = args[0].toInt()
+                    volumeController?.setVolumePercentage(percent) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                } else {
+                    volumeController?.getVolume() ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                }
                 DispatchDetails(trimmed, "VOLUME", "VolumeController", res, res.message)
             }
             lower.startsWith("wifi") -> {

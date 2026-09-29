@@ -1,14 +1,18 @@
 package com.agent.android
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.agent.android.agent.device.ConnectivityControllers
 import com.agent.android.agent.device.FlashlightController
 import com.agent.android.agent.device.HapticController
@@ -17,17 +21,12 @@ import com.agent.android.agent.device.VolumeController
 import com.agent.android.agent.skills.CalculatorSkill
 import com.agent.android.agent.skills.IntentSkills
 import com.agent.android.agent.skills.NotesSkill
-import com.agent.android.execution.DispatchDetails
 import com.agent.android.execution.ExecutionController
 import com.agent.android.execution.GoalDispatcherImpl
 import com.agent.android.safety.HarnessSuiteSummary
 import com.agent.android.safety.Phase1SafetyTestHarness
 import com.agent.android.service.LocalAgentAccessibilityService
 import com.agent.android.storage.Logger
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.util.ArrayDeque
 import java.util.Deque
 
@@ -45,6 +44,7 @@ class MainActivity : Activity() {
     private val logger = Logger()
     private lateinit var testHarness: Phase1SafetyTestHarness
     private lateinit var goalDispatcher: GoalDispatcherImpl
+    private lateinit var obsControllers: HardwareObservationControllers
 
     private val historyLog: Deque<HistoryEntry> = ArrayDeque()
 
@@ -53,6 +53,11 @@ class MainActivity : Activity() {
     private lateinit var tvSafetyStatus: TextView
     private lateinit var tvAccessibilityStatus: TextView
     private lateinit var btnEnableAccessibility: Button
+
+    private lateinit var tvPermissionStatus: TextView
+    private lateinit var btnRequestPermissions: Button
+    private lateinit var btnRunDiagnostics: Button
+    private lateinit var tvDiagnosticsDisplay: TextView
 
     private lateinit var etLiveCommand: EditText
     private lateinit var btnExecuteLiveCommand: Button
@@ -78,15 +83,20 @@ class MainActivity : Activity() {
         val haptics = HapticController(this)
         val volume = VolumeController(this)
         val conn = ConnectivityControllers(this)
-        val obs = HardwareObservationControllers(this)
+        obsControllers = HardwareObservationControllers(this)
 
-        goalDispatcher = GoalDispatcherImpl(executionController, calc, notes, intents, flash, haptics, volume, conn, obs)
+        goalDispatcher = GoalDispatcherImpl(executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers)
 
         tvAgentStatus = findViewById(R.id.tvAgentStatus)
         tvExecutionState = findViewById(R.id.tvExecutionState)
         tvSafetyStatus = findViewById(R.id.tvSafetyStatus)
         tvAccessibilityStatus = findViewById(R.id.tvAccessibilityStatus)
         btnEnableAccessibility = findViewById(R.id.btnEnableAccessibility)
+
+        tvPermissionStatus = findViewById(R.id.tvPermissionStatus)
+        btnRequestPermissions = findViewById(R.id.btnRequestPermissions)
+        btnRunDiagnostics = findViewById(R.id.btnRunDiagnostics)
+        tvDiagnosticsDisplay = findViewById(R.id.tvDiagnosticsDisplay)
 
         etLiveCommand = findViewById(R.id.etLiveCommand)
         btnExecuteLiveCommand = findViewById(R.id.btnExecuteLiveCommand)
@@ -103,6 +113,14 @@ class MainActivity : Activity() {
         btnEnableAccessibility.setOnClickListener {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
             startActivity(intent)
+        }
+
+        btnRequestPermissions.setOnClickListener {
+            checkAndRequestRuntimePermissions()
+        }
+
+        btnRunDiagnostics.setOnClickListener {
+            runDiagnostics()
         }
 
         btnExecuteLiveCommand.setOnClickListener {
@@ -137,7 +155,7 @@ class MainActivity : Activity() {
             updateUIState()
         }
 
-        logger.i("UI", "Control plane UI launched with Live Command Console.")
+        logger.i("UI", "Control plane UI launched with Device Diagnostics.")
         updateUIState()
     }
 
@@ -146,13 +164,52 @@ class MainActivity : Activity() {
         updateUIState()
     }
 
-    private fun executeLiveCommand(command: String) {
-        val start = System.currentTimeMillis()
-        val details = goalDispatcher.dispatchAndProcess(command)
-        val success = goalDispatcher.dispatchGoal(command)
+    private fun checkAndRequestRuntimePermissions() {
+        val permissionsToRequest = mutableListOf<String>()
+        val storageGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        val cameraGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 
-        val duration = System.currentTimeMillis() - start
-        val statusText = if (success) "SUCCESS" else "FAILED (${details.result.status})"
+        if (!storageGranted) permissionsToRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        if (!cameraGranted) permissionsToRequest.add(Manifest.permission.CAMERA)
+
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), PERMISSION_REQUEST_CODE)
+        } else {
+            logger.i("Permissions", "All runtime permissions already granted.")
+            updateUIState()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            logger.i("Permissions", "Permission result received.")
+            updateUIState()
+        }
+    }
+
+    private fun runDiagnostics() {
+        val report = obsControllers.runDeviceDiagnostics()
+        val sb = StringBuilder()
+        sb.append("DEVICE: ${report.deviceModel}\n")
+        sb.append("OS: ${report.androidVersion}\n")
+        sb.append("TORCH: ${if (report.cameraTorchAvailable) "AVAILABLE" else "UNAVAILABLE"}\n")
+        sb.append("VIBRATOR: ${if (report.vibratorAvailable) "AVAILABLE" else "UNAVAILABLE"}\n")
+        sb.append("MUSIC VOL MAX: ${report.musicVolumeMax} (CURRENT: ${report.musicVolumeCurrent})\n")
+        sb.append("TIMER INTENT: ${if (report.timerIntentAvailable) "RESOLVED" else "UNAVAILABLE"}\n")
+        sb.append("ALARM INTENT: ${if (report.alarmIntentAvailable) "RESOLVED" else "UNAVAILABLE"}\n")
+        sb.append("SEARCH INTENT: ${if (report.webSearchIntentAvailable) "RESOLVED" else "UNAVAILABLE"}\n\n")
+        sb.append("SENSORS:\n")
+        for (s in report.sensors) {
+            sb.append("- ${s.name}: ${if (s.isAvailable) "AVAILABLE [Vendor: ${s.vendor}]" else "NOT PRESENT"}\n")
+        }
+        tvDiagnosticsDisplay.text = sb.toString()
+        logger.i("Diagnostics", "Run Device Diagnostics completed.")
+    }
+
+    private fun executeLiveCommand(command: String) {
+        val details = goalDispatcher.dispatchAndProcessWithLock(command)
+        val statusText = if (details.result.status == com.agent.android.agent.skills.SkillStatus.SUCCESS) "SUCCESS" else "FAILED (${details.result.status})"
 
         tvLiveConsoleDisplay.text = """
             COMMAND: ${details.command}
@@ -220,6 +277,11 @@ class MainActivity : Activity() {
         tvExecutionState.text = "Execution State: ${state.name}"
         tvSafetyStatus.text = "Safety Status: ${safety.status.name}"
 
+        val storagePerm = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        val cameraPerm = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+
+        tvPermissionStatus.text = "Storage Permission (Notes): ${if (storagePerm) "GRANTED" else "DENIED / REQUIRED"}\nCamera Permission (Torch): ${if (cameraPerm) "GRANTED" else "DENIED / REQUIRED"}"
+
         val isAccEnabled = isAccessibilityServiceEnabled(this, LocalAgentAccessibilityService::class.java)
         if (isAccEnabled) {
             tvAccessibilityStatus.text = "Accessibility Service: ENABLED"
@@ -252,7 +314,7 @@ class MainActivity : Activity() {
         for (log in logger.getLogs()) {
             sb.append("[${log.category}] ${log.message}\n")
         }
-        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 2 LocalAgent active."
+        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 2.1 LocalAgent active."
     }
 
     private fun isAccessibilityServiceEnabled(context: Context, service: Class<*>): Boolean {
@@ -272,5 +334,9 @@ class MainActivity : Activity() {
             }
         }
         return false
+    }
+
+    companion object {
+        private const val PERMISSION_REQUEST_CODE = 1001
     }
 }

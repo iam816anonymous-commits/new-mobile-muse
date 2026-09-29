@@ -22,7 +22,7 @@
         android:layout_marginTop="8dp"
         android:background="#332196F3"
         android:padding="8dp"
-        android:text="PHASE 0, 1 &amp; 2 ACTIVE: Safety Harness, Headless Core &amp; Live Command Console."
+        android:text="PHASE 0, 1 &amp; 2.1 ACTIVE: Safety Harness, Diagnostics &amp; Hardened Core."
         android:textColor="#90CAF9"
         android:textSize="12sp" />
 
@@ -79,6 +79,63 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="Configure Accessibility Service" />
+
+            <!-- FIRST-RUN RUNTIME PERMISSIONS SETUP -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="FIRST-RUN PERMISSION SETUP"
+                android:textColor="#FFB74D"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvPermissionStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="#263238"
+                android:padding="8dp"
+                android:text="Storage Permission (Notes): CHECKING...\nCamera Permission (Torch): CHECKING..."
+                android:textColor="#ECEFF1"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnRequestPermissions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Grant Required Runtime Permissions" />
+
+            <!-- DEVICE DIAGNOSTICS SECTION -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="DEVICE DIAGNOSTICS"
+                android:textColor="#00E5FF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnRunDiagnostics"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="RUN DEVICE DIAGNOSTICS" />
+
+            <TextView
+                android:id="@+id/tvDiagnosticsDisplay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="#1C2833"
+                android:padding="8dp"
+                android:text="Diagnostics report not run."
+                android:textColor="#A3E4D7"
+                android:typeface="monospace"
+                android:textSize="11sp" />
 
             <!-- LIVE COMMAND TEST CONSOLE -->
             <TextView
@@ -245,7 +302,7 @@
                 android:layout_marginTop="8dp"
                 android:background="#1E1E1E"
                 android:padding="8dp"
-                android:text="[SYSTEM] Phase 2 LocalAgent Live Command Console active."
+                android:text="[SYSTEM] Phase 2.1 LocalAgent active."
                 android:textColor="#00FF66"
                 android:typeface="monospace"
                 android:textSize="12sp" />
