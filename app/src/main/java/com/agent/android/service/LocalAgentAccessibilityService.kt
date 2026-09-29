@@ -2,7 +2,10 @@ package com.agent.android.service
 
 import android.accessibilityservice.AccessibilityService
 import android.util.Log
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
+import com.agent.android.execution.ExecutionController
+import com.agent.android.safety.CancellationReason
 
 /**
  * Foundation Accessibility Service for LocalAgent.
@@ -23,9 +26,16 @@ import android.view.accessibility.AccessibilityEvent
  */
 class LocalAgentAccessibilityService : AccessibilityService() {
 
+    @Volatile
+    private var lastVolumeUpTimeMs: Long = 0L
+
+    var executionController: ExecutionController? = null
+
     override fun onServiceConnected() {
         super.onServiceConnected()
-        Log.i(TAG, "LocalAgentAccessibilityService connected")
+        try {
+            Log.i(TAG, "LocalAgentAccessibilityService connected")
+        } catch (ignored: Throwable) {}
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -33,16 +43,62 @@ class LocalAgentAccessibilityService : AccessibilityService() {
         // Do not execute any actions or trigger autonomous loops from here.
     }
 
+    fun handleKeyEventInternal(keyCode: Int, action: Int, eventTimeMs: Long): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP && action == KeyEvent.ACTION_DOWN) {
+            val nowMs = if (eventTimeMs > 0) eventTimeMs else System.currentTimeMillis()
+            if (lastVolumeUpTimeMs > 0L && (nowMs - lastVolumeUpTimeMs) <= PANIC_THRESHOLD_MS) {
+                lastVolumeUpTimeMs = 0L
+                triggerPanicEmergencyStop()
+                return true
+            } else {
+                lastVolumeUpTimeMs = nowMs
+            }
+        }
+        return false
+    }
+
+    public override fun onKeyEvent(event: KeyEvent?): Boolean {
+        if (event != null) {
+            val handled = handleKeyEventInternal(
+                event.keyCode,
+                event.action,
+                if (event.eventTime > 0) event.eventTime else System.currentTimeMillis()
+            )
+            if (handled) return true
+        }
+        return super.onKeyEvent(event)
+    }
+
+    private fun triggerPanicEmergencyStop() {
+        try {
+            Log.e(TAG, "HARDWARE PANIC BUTTON DETECTED (Double Volume-Up). Triggering Emergency Stop!")
+        } catch (ignored: Throwable) {}
+
+        executionController?.let { controller ->
+            controller.cancellationManager.requestCancellation(CancellationReason.USER_PANIC)
+            controller.getActiveJob()?.cancel()
+            controller.releaseExecution(CancellationReason.USER_PANIC)
+        }
+        try {
+            performGlobalAction(GLOBAL_ACTION_HOME)
+        } catch (ignored: Throwable) {}
+    }
+
     override fun onInterrupt() {
-        Log.w(TAG, "LocalAgentAccessibilityService interrupted")
+        try {
+            Log.w(TAG, "LocalAgentAccessibilityService interrupted")
+        } catch (ignored: Throwable) {}
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.i(TAG, "LocalAgentAccessibilityService destroyed")
+        try {
+            Log.i(TAG, "LocalAgentAccessibilityService destroyed")
+        } catch (ignored: Throwable) {}
     }
 
     companion object {
         private const val TAG = "LocalAgentAccService"
+        const val PANIC_THRESHOLD_MS = 500L
     }
 }

@@ -72,8 +72,8 @@ class Phase0UnitTest {
 
     @Test
     fun testSafetyStateContract() {
-        val state = SafetyState(status = SafetyStatus.SAFE)
-        assertEquals(SafetyStatus.SAFE, state.status)
+        val state = SafetyState(status = SafetyStatus.SAFE_IDLE)
+        assertEquals(SafetyStatus.SAFE_IDLE, state.status)
         assertFalse(state.isEmergencyStopActive)
     }
 
