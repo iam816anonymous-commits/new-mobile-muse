@@ -13,10 +13,12 @@ import android.widget.EditText
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.agent.android.agent.device.CapabilityRegistry
 import com.agent.android.agent.device.ConnectivityControllers
 import com.agent.android.agent.device.FlashlightController
 import com.agent.android.agent.device.HapticController
 import com.agent.android.agent.device.HardwareObservationControllers
+import com.agent.android.agent.device.SystemControlControllers
 import com.agent.android.agent.device.VolumeController
 import com.agent.android.agent.skills.CalculatorSkill
 import com.agent.android.agent.skills.IntentSkills
@@ -47,6 +49,7 @@ class MainActivity : Activity() {
     private lateinit var goalDispatcher: GoalDispatcherImpl
     private lateinit var obsControllers: HardwareObservationControllers
     private lateinit var appLauncher: AppLauncherImpl
+    private lateinit var capabilityRegistry: CapabilityRegistry
 
     private val historyLog: Deque<HistoryEntry> = ArrayDeque()
 
@@ -55,6 +58,8 @@ class MainActivity : Activity() {
     private lateinit var tvSafetyStatus: TextView
     private lateinit var tvAccessibilityStatus: TextView
     private lateinit var btnEnableAccessibility: Button
+
+    private lateinit var tvCapabilityRegistryDisplay: TextView
 
     private lateinit var etAppLaunchQuery: EditText
     private lateinit var btnValidateApp: Button
@@ -83,6 +88,7 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
 
         testHarness = Phase1SafetyTestHarness(executionController, logger)
+        capabilityRegistry = CapabilityRegistry(this)
         val calc = CalculatorSkill()
         val notes = NotesSkill(this)
         val intents = IntentSkills(this)
@@ -92,14 +98,17 @@ class MainActivity : Activity() {
         val conn = ConnectivityControllers(this)
         obsControllers = HardwareObservationControllers(this)
         appLauncher = AppLauncherImpl(this)
+        val sysCtrl = SystemControlControllers(this)
 
-        goalDispatcher = GoalDispatcherImpl(executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers, appLauncher)
+        goalDispatcher = GoalDispatcherImpl(executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers, appLauncher, sysCtrl)
 
         tvAgentStatus = findViewById(R.id.tvAgentStatus)
         tvExecutionState = findViewById(R.id.tvExecutionState)
         tvSafetyStatus = findViewById(R.id.tvSafetyStatus)
         tvAccessibilityStatus = findViewById(R.id.tvAccessibilityStatus)
         btnEnableAccessibility = findViewById(R.id.btnEnableAccessibility)
+
+        tvCapabilityRegistryDisplay = findViewById(R.id.tvCapabilityRegistryDisplay)
 
         etAppLaunchQuery = findViewById(R.id.etAppLaunchQuery)
         btnValidateApp = findViewById(R.id.btnValidateApp)
@@ -188,7 +197,7 @@ class MainActivity : Activity() {
             updateUIState()
         }
 
-        logger.i("UI", "Control plane UI launched with Safe App Launch Panel.")
+        logger.i("UI", "Control plane UI launched with Device Capabilities Registry.")
         updateUIState()
     }
 
@@ -317,6 +326,13 @@ class MainActivity : Activity() {
 
         tvPermissionStatus.text = "Storage Permission (Notes): ${if (storagePerm) "GRANTED" else "DENIED / REQUIRED"}\nCamera Permission (Torch): ${if (cameraPerm) "GRANTED" else "DENIED / REQUIRED"}"
 
+        val caps = capabilityRegistry.checkAllCapabilities()
+        val capSb = StringBuilder()
+        for ((_, info) in caps) {
+            capSb.append("[${info.capabilityName}]: ${info.status} (${info.reason})\n")
+        }
+        tvCapabilityRegistryDisplay.text = capSb.toString().trim()
+
         val isAccEnabled = isAccessibilityServiceEnabled(this, LocalAgentAccessibilityService::class.java)
         if (isAccEnabled) {
             tvAccessibilityStatus.text = "Accessibility Service: ENABLED"
@@ -349,7 +365,7 @@ class MainActivity : Activity() {
         for (log in logger.getLogs()) {
             sb.append("[${log.category}] ${log.message}\n")
         }
-        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 2.2 LocalAgent active."
+        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 2.3 LocalAgent active."
     }
 
     private fun isAccessibilityServiceEnabled(context: Context, service: Class<*>): Boolean {

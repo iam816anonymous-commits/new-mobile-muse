@@ -4,6 +4,7 @@ import com.agent.android.agent.device.ConnectivityControllers
 import com.agent.android.agent.device.FlashlightController
 import com.agent.android.agent.device.HapticController
 import com.agent.android.agent.device.HardwareObservationControllers
+import com.agent.android.agent.device.SystemControlControllers
 import com.agent.android.agent.device.VolumeController
 import com.agent.android.agent.skills.CalculatorSkill
 import com.agent.android.agent.skills.IntentSkills
@@ -32,7 +33,8 @@ class GoalDispatcherImpl(
     private val volumeController: VolumeController? = null,
     private val connectivityControllers: ConnectivityControllers? = null,
     private val hardwareObservationControllers: HardwareObservationControllers? = null,
-    private val appLauncher: AppLauncher? = null
+    private val appLauncher: AppLauncher? = null,
+    private val systemControlControllers: SystemControlControllers? = null
 ) : GoalDispatcher {
 
     override fun dispatchGoal(goal: String): Boolean {
@@ -72,25 +74,28 @@ class GoalDispatcherImpl(
         val lower = trimmed.lowercase()
 
         return when {
-            lower.startsWith("open ") -> {
-                val appQuery = trimmed.substringAfter("open ").trim()
+            lower.startsWith("launch ") -> {
+                val pkg = trimmed.substringAfter("launch ").trim()
                 if (appLauncher != null) {
-                    val launchRes = appLauncher.launchApp(appQuery)
+                    val launchRes = appLauncher.launchApp(pkg)
                     val status = if (launchRes.status == AppLaunchStatus.SUCCESS) SkillStatus.SUCCESS else SkillStatus.FAILED
-                    val skillRes = SkillResult(
-                        operation = "OPEN_APP",
-                        status = status,
-                        message = launchRes.message,
-                        durationMs = launchRes.durationMs,
-                        errorCode = launchRes.errorCode
-                    )
-                    DispatchDetails(
-                        command = trimmed,
-                        operation = "OPEN_APP",
-                        controllerName = "AppLauncherImpl",
-                        result = skillRes,
-                        verificationText = "Package: ${launchRes.resolvedPackage ?: "NONE"}"
-                    )
+                    val skillRes = SkillResult("LAUNCH_APP", status, launchRes.message, launchRes.durationMs, launchRes.errorCode)
+                    DispatchDetails(trimmed, "LAUNCH_APP", "AppLauncherImpl", skillRes, "Package: ${launchRes.resolvedPackage ?: "NONE"}")
+                } else {
+                    val errRes = SkillResult("LAUNCH_APP", SkillStatus.UNAVAILABLE, "AppLauncher unavailable", 0L, "NO_LAUNCHER")
+                    DispatchDetails(trimmed, "LAUNCH_APP", "AppLauncherImpl", errRes, "No Launcher")
+                }
+            }
+            lower.startsWith("open ") -> {
+                val target = trimmed.substringAfter("open ").trim()
+                if (target.contains("settings")) {
+                    val res = systemControlControllers?.openSystemSettings(target) ?: SkillResult("SYSTEM_SETTINGS", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                    DispatchDetails(trimmed, "SYSTEM_SETTINGS", "SystemControlControllers", res, res.message)
+                } else if (appLauncher != null) {
+                    val launchRes = appLauncher.launchApp(target)
+                    val status = if (launchRes.status == AppLaunchStatus.SUCCESS) SkillStatus.SUCCESS else SkillStatus.FAILED
+                    val skillRes = SkillResult("OPEN_APP", status, launchRes.message, launchRes.durationMs, launchRes.errorCode)
+                    DispatchDetails(trimmed, "OPEN_APP", "AppLauncherImpl", skillRes, "Package: ${launchRes.resolvedPackage ?: "NONE"}")
                 } else {
                     val errRes = SkillResult("OPEN_APP", SkillStatus.UNAVAILABLE, "AppLauncher unavailable", 0L, "NO_LAUNCHER")
                     DispatchDetails(trimmed, "OPEN_APP", "AppLauncherImpl", errRes, "No Launcher")
@@ -108,9 +113,9 @@ class GoalDispatcherImpl(
             }
             lower.startsWith("timer") -> {
                 val minArg = trimmed.substringAfter("timer").trim()
-                val min = minArg.toIntOrNull() ?: 0
+                val min = minArg.toIntOrNull() ?: -1
                 val res = intentSkills?.setTimer(min) ?: SkillResult("SET_TIMER", SkillStatus.UNAVAILABLE, "No Activity context", 0L)
-                DispatchDetails(trimmed, "SET_TIMER", "IntentSkills", res, "AlarmClock Intent Launched")
+                DispatchDetails(trimmed, "SET_TIMER", "IntentSkills", res, res.message)
             }
             lower.startsWith("alarm") || lower.startsWith("set alarm") -> {
                 val timeStr = trimmed.substringAfter("alarm").trim()
@@ -118,12 +123,46 @@ class GoalDispatcherImpl(
                 val h = parts.getOrNull(0)?.toIntOrNull() ?: -1
                 val m = parts.getOrNull(1)?.toIntOrNull() ?: -1
                 val res = intentSkills?.setAlarm(h, m) ?: SkillResult("SET_ALARM", SkillStatus.UNAVAILABLE, "No Activity context", 0L)
-                DispatchDetails(trimmed, "SET_ALARM", "IntentSkills", res, "AlarmClock Intent Launched")
+                DispatchDetails(trimmed, "SET_ALARM", "IntentSkills", res, res.message)
             }
             lower.startsWith("search") || lower.startsWith("web search") -> {
                 val query = if (lower.startsWith("search")) trimmed.substringAfter("search").trim() else trimmed.substringAfter("web search").trim()
                 val res = intentSkills?.webSearch(query) ?: SkillResult("WEB_SEARCH", SkillStatus.UNAVAILABLE, "No Activity context", 0L)
-                DispatchDetails(trimmed, "WEB_SEARCH", "IntentSkills", res, "WebSearch Intent Launched")
+                DispatchDetails(trimmed, "WEB_SEARCH", "IntentSkills", res, res.message)
+            }
+            lower.startsWith("brightness") -> {
+                val arg = trimmed.substringAfter("brightness").trim()
+                val percent = arg.toIntOrNull() ?: -1
+                val res = systemControlControllers?.setBrightness(percent) ?: SkillResult("BRIGHTNESS", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                DispatchDetails(trimmed, "BRIGHTNESS", "SystemControlControllers", res, res.message)
+            }
+            lower.startsWith("screen timeout") -> {
+                val arg = trimmed.substringAfter("screen timeout").trim()
+                val sec = arg.toIntOrNull() ?: -1
+                val res = systemControlControllers?.setScreenTimeout(sec) ?: SkillResult("SCREEN_TIMEOUT", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                DispatchDetails(trimmed, "SCREEN_TIMEOUT", "SystemControlControllers", res, res.message)
+            }
+            lower.startsWith("ringer") -> {
+                val mode = trimmed.substringAfter("ringer").trim()
+                val res = systemControlControllers?.setRingerMode(mode) ?: SkillResult("RINGER", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                DispatchDetails(trimmed, "RINGER", "SystemControlControllers", res, res.message)
+            }
+            lower.startsWith("media") -> {
+                val action = trimmed.substringAfter("media").trim()
+                val res = systemControlControllers?.dispatchMediaKey(action) ?: SkillResult("MEDIA", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                DispatchDetails(trimmed, "MEDIA", "SystemControlControllers", res, res.message)
+            }
+            lower.startsWith("device info") -> {
+                val res = systemControlControllers?.getDeviceInfo() ?: SkillResult("DEVICE_INFO", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                DispatchDetails(trimmed, "DEVICE_INFO", "SystemControlControllers", res, res.message)
+            }
+            lower.startsWith("network status") -> {
+                val res = systemControlControllers?.getNetworkStatus() ?: SkillResult("NETWORK_STATUS", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                DispatchDetails(trimmed, "NETWORK_STATUS", "SystemControlControllers", res, res.message)
+            }
+            lower.startsWith("location status") -> {
+                val res = systemControlControllers?.getLocationStatus() ?: SkillResult("LOCATION_STATUS", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                DispatchDetails(trimmed, "LOCATION_STATUS", "SystemControlControllers", res, res.message)
             }
             lower.startsWith("flashlight") -> {
                 val enable = lower.endsWith("on")
@@ -142,12 +181,7 @@ class GoalDispatcherImpl(
                     val streamStr = args[0].lowercase()
                     val percentStr = args[1]
                     val percent = percentStr.toIntOrNull() ?: -1
-                    val streamType = when (streamStr) {
-                        "ring" -> android.media.AudioManager.STREAM_RING
-                        "alarm" -> android.media.AudioManager.STREAM_ALARM
-                        "notification" -> android.media.AudioManager.STREAM_NOTIFICATION
-                        else -> android.media.AudioManager.STREAM_MUSIC
-                    }
+                    val streamType = volumeController?.parseStreamType(streamStr) ?: android.media.AudioManager.STREAM_MUSIC
                     volumeController?.setVolumePercentage(percent, streamType) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L)
                 } else if (args.size == 1 && args[0].toIntOrNull() != null) {
                     val percent = args[0].toInt()
@@ -168,7 +202,13 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, "WIFI", "ConnectivityControllers", res, res.message)
             }
             lower.startsWith("bluetooth") -> {
-                val res = connectivityControllers?.getBluetoothStatus() ?: SkillResult("BLUETOOTH", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                val res = if (lower.contains("on")) {
+                    connectivityControllers?.setBluetooth(true) ?: SkillResult("BLUETOOTH", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                } else if (lower.contains("off")) {
+                    connectivityControllers?.setBluetooth(false) ?: SkillResult("BLUETOOTH", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                } else {
+                    connectivityControllers?.getBluetoothStatus() ?: SkillResult("BLUETOOTH", SkillStatus.UNAVAILABLE, "No Controller", 0L)
+                }
                 DispatchDetails(trimmed, "BLUETOOTH", "ConnectivityControllers", res, res.message)
             }
             lower.startsWith("battery") -> {

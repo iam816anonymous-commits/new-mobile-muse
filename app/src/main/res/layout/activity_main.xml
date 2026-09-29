@@ -22,7 +22,7 @@
         android:layout_marginTop="8dp"
         android:background="#332196F3"
         android:padding="8dp"
-        android:text="PHASE 0, 1, 2.1 &amp; 2.2 ACTIVE: Safe App Launch &amp; Diagnostics Operational."
+        android:text="PHASE 0, 1, 2.2 &amp; 2.3 ACTIVE: Hardened Core &amp; System Controls Operational."
         android:textColor="#90CAF9"
         android:textSize="12sp" />
 
@@ -79,6 +79,28 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="Configure Accessibility Service" />
+
+            <!-- DEVICE CAPABILITIES REGISTRY DISPLAY -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="DEVICE CAPABILITIES REGISTRY"
+                android:textColor="#FFD54F"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvCapabilityRegistryDisplay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="#263238"
+                android:padding="8dp"
+                android:text="Capability registry loading..."
+                android:textColor="#ECEFF1"
+                android:typeface="monospace"
+                android:textSize="11sp" />
 
             <!-- APP LAUNCH TEST PANEL -->
             <TextView
@@ -209,7 +231,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:hint="Enter command (e.g. open Settings)"
+                android:hint="Enter command (e.g. brightness 80)"
                 android:textColor="#FFFFFF"
                 android:textColorHint="#777777"
                 android:background="#222222"
@@ -359,7 +381,7 @@
                 android:layout_marginTop="8dp"
                 android:background="#1E1E1E"
                 android:padding="8dp"
-                android:text="[SYSTEM] Phase 2.2 LocalAgent active."
+                android:text="[SYSTEM] Phase 2.3 LocalAgent active."
                 android:textColor="#00FF66"
                 android:typeface="monospace"
                 android:textSize="12sp" />
