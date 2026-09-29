@@ -22,7 +22,7 @@
         android:layout_marginTop="8dp"
         android:background="#332196F3"
         android:padding="8dp"
-        android:text="PHASE 0 &amp; 1 ACTIVE: Safety Harness &amp; Verification Panel Operational."
+        android:text="PHASE 0, 1 &amp; 2 ACTIVE: Safety Harness, Headless Core &amp; Device Control Operational."
         android:textColor="#90CAF9"
         android:textSize="12sp" />
 
@@ -80,7 +80,7 @@
                 android:layout_marginTop="8dp"
                 android:text="Configure Accessibility Service" />
 
-            <!-- PHASE 1 SAFETY HARNESS TEST PANEL -->
+            <!-- PHASE 1 SAFETY HARNESS PANEL -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -122,54 +122,49 @@
                     android:text="Clear Results" />
             </LinearLayout>
 
-            <GridLayout
+            <!-- PHASE 2 HEADLESS CORE PANEL -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="PHASE 2 — HEADLESS CORE &amp; DEVICE CONTROL"
+                android:textColor="#81C784"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnRunPhase2HeadlessTests"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:text="Run Headless Core Tests" />
+
+                <Button
+                    android:id="@+id/btnRunPhase2DeviceTests"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="Run Device Control Tests" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvPhase2Status"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:columnCount="2">
-
-                <Button
-                    android:id="@+id/btnTestOwnership"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:text="Test Execution Lock" />
-
-                <Button
-                    android:id="@+id/btnTestConcurrent"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:text="Test Concurrent Rejection" />
-
-                <Button
-                    android:id="@+id/btnTestCancellation"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:text="Test Manual Cancellation" />
-
-                <Button
-                    android:id="@+id/btnTestWatchdog"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:text="Test Watchdog Timeout" />
-
-                <Button
-                    android:id="@+id/btnTestPanic"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:text="Test Panic Abort" />
-
-                <Button
-                    android:id="@+id/btnTestStateReset"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:text="Test State Reset" />
-            </GridLayout>
+                android:background="#1B5E20"
+                android:padding="8dp"
+                android:text="Phase 2 Status: IDLE (Select operation or run tests)"
+                android:textColor="#A5D6A7"
+                android:textSize="12sp" />
 
             <!-- HARDWARE VERIFICATION STATUS SECTION -->
             <TextView
@@ -188,7 +183,7 @@
                 android:layout_marginTop="4dp"
                 android:background="#263238"
                 android:padding="8dp"
-                android:text="Volume-Up Double Press: [ NOT VERIFIED ]\nMANUAL DEVICE TEST REQUIRED"
+                android:text="Volume-Up Double Press: [ NOT VERIFIED ]\nPhysical Flashlight/Haptics/Sensors: [ MANUAL DEVICE TEST REQUIRED ]"
                 android:textColor="#FFB74D"
                 android:textSize="12sp" />
 
@@ -207,7 +202,7 @@
                 android:layout_marginTop="8dp"
                 android:background="#1E1E1E"
                 android:padding="8dp"
-                android:text="[SYSTEM] Phase 1 LocalAgent Safety Harness active."
+                android:text="[SYSTEM] Phase 2 LocalAgent Headless Core &amp; Device Control active."
                 android:textColor="#00FF66"
                 android:typeface="monospace"
                 android:textSize="12sp" />

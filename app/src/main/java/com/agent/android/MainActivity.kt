@@ -8,7 +8,13 @@ import android.provider.Settings
 import android.text.TextUtils
 import android.widget.Button
 import android.widget.TextView
+import com.agent.android.agent.skills.CalculatorSkill
+import com.agent.android.agent.skills.IntentSkills
+import com.agent.android.agent.skills.NotesSkill
+import com.agent.android.agent.skills.Phase2DeviceTestHarness
+import com.agent.android.agent.skills.Phase2HeadlessTestHarness
 import com.agent.android.execution.ExecutionController
+import com.agent.android.execution.GoalDispatcherImpl
 import com.agent.android.safety.HarnessSuiteSummary
 import com.agent.android.safety.Phase1SafetyTestHarness
 import com.agent.android.safety.SafetyTestResult
@@ -21,28 +27,36 @@ class MainActivity : Activity() {
     private val logger = Logger()
     private lateinit var testHarness: Phase1SafetyTestHarness
 
+    private lateinit var phase2HeadlessHarness: Phase2HeadlessTestHarness
+    private lateinit var phase2DeviceHarness: Phase2DeviceTestHarness
+    private lateinit var goalDispatcher: GoalDispatcherImpl
+
     private lateinit var tvAgentStatus: TextView
     private lateinit var tvExecutionState: TextView
     private lateinit var tvSafetyStatus: TextView
     private lateinit var tvAccessibilityStatus: TextView
     private lateinit var btnEnableAccessibility: Button
     private lateinit var tvSuiteSummary: TextView
+    private lateinit var tvPhase2Status: TextView
     private lateinit var tvLogArea: TextView
 
     private lateinit var btnRunAllTests: Button
     private lateinit var btnClearResults: Button
-    private lateinit var btnTestOwnership: Button
-    private lateinit var btnTestConcurrent: Button
-    private lateinit var btnTestCancellation: Button
-    private lateinit var btnTestWatchdog: Button
-    private lateinit var btnTestPanic: Button
-    private lateinit var btnTestStateReset: Button
+    private lateinit var btnRunPhase2HeadlessTests: Button
+    private lateinit var btnRunPhase2DeviceTests: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         testHarness = Phase1SafetyTestHarness(executionController, logger)
+        val calc = CalculatorSkill()
+        val notes = NotesSkill(this)
+        val intents = IntentSkills(this)
+        goalDispatcher = GoalDispatcherImpl(executionController, calc, notes, intents)
+
+        phase2HeadlessHarness = Phase2HeadlessTestHarness(executionController, calc, notes)
+        phase2DeviceHarness = Phase2DeviceTestHarness()
 
         tvAgentStatus = findViewById(R.id.tvAgentStatus)
         tvExecutionState = findViewById(R.id.tvExecutionState)
@@ -50,16 +64,13 @@ class MainActivity : Activity() {
         tvAccessibilityStatus = findViewById(R.id.tvAccessibilityStatus)
         btnEnableAccessibility = findViewById(R.id.btnEnableAccessibility)
         tvSuiteSummary = findViewById(R.id.tvSuiteSummary)
+        tvPhase2Status = findViewById(R.id.tvPhase2Status)
         tvLogArea = findViewById(R.id.tvLogArea)
 
         btnRunAllTests = findViewById(R.id.btnRunAllTests)
         btnClearResults = findViewById(R.id.btnClearResults)
-        btnTestOwnership = findViewById(R.id.btnTestOwnership)
-        btnTestConcurrent = findViewById(R.id.btnTestConcurrent)
-        btnTestCancellation = findViewById(R.id.btnTestCancellation)
-        btnTestWatchdog = findViewById(R.id.btnTestWatchdog)
-        btnTestPanic = findViewById(R.id.btnTestPanic)
-        btnTestStateReset = findViewById(R.id.btnTestStateReset)
+        btnRunPhase2HeadlessTests = findViewById(R.id.btnRunPhase2HeadlessTests)
+        btnRunPhase2DeviceTests = findViewById(R.id.btnRunPhase2DeviceTests)
 
         btnEnableAccessibility.setOnClickListener {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
@@ -73,19 +84,27 @@ class MainActivity : Activity() {
 
         btnClearResults.setOnClickListener {
             tvSuiteSummary.text = "Suite Status: NOT RUN (Passed: 0, Failed: 0, Total: 0)"
+            tvPhase2Status.text = "Phase 2 Status: IDLE (Select operation or run tests)"
             logger.clear()
             logger.i("UI", "Test results cleared.")
             updateUIState()
         }
 
-        btnTestOwnership.setOnClickListener { displaySingleTestResult(testHarness.testExecutionOwnership()) }
-        btnTestConcurrent.setOnClickListener { displaySingleTestResult(testHarness.testConcurrentExecutionRejection()) }
-        btnTestCancellation.setOnClickListener { displaySingleTestResult(testHarness.testManualCancellation()) }
-        btnTestWatchdog.setOnClickListener { displaySingleTestResult(testHarness.testWatchdogTimeout()) }
-        btnTestPanic.setOnClickListener { displaySingleTestResult(testHarness.testPanicLogicSimulation()) }
-        btnTestStateReset.setOnClickListener { displaySingleTestResult(testHarness.testStateReset()) }
+        btnRunPhase2HeadlessTests.setOnClickListener {
+            val summary = phase2HeadlessHarness.runAllHeadlessTests()
+            tvPhase2Status.text = "Headless Core Tests: Passed ${summary.passedCount}/${summary.totalCount}"
+            logger.i("Harness", "Phase 2 Headless Core Suite Executed. Overall Passed: ${summary.overallPassed}")
+            updateUIState()
+        }
 
-        logger.i("UI", "Control plane UI launched with Safety Test Panel.")
+        btnRunPhase2DeviceTests.setOnClickListener {
+            val summary = phase2DeviceHarness.runAllDeviceTests()
+            tvPhase2Status.text = "Device Control Tests: Passed ${summary.passedCount}/${summary.totalCount}"
+            logger.i("Harness", "Phase 2 Device Control Suite Executed. Overall Passed: ${summary.overallPassed}")
+            updateUIState()
+        }
+
+        logger.i("UI", "Control plane UI launched with Phase 2 panels.")
         updateUIState()
     }
 
@@ -128,18 +147,12 @@ class MainActivity : Activity() {
         updateUIState()
     }
 
-    private fun displaySingleTestResult(result: SafetyTestResult) {
-        val status = if (result.passed) "PASS" else "FAIL"
-        logger.i("Harness", "[$status] ${result.testName} (${result.durationMs}ms) - ${result.actualResult}")
-        updateUIState()
-    }
-
     private fun refreshLogs() {
         val sb = StringBuilder()
         for (log in logger.getLogs()) {
             sb.append("[${log.category}] ${log.message}\n")
         }
-        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 1 LocalAgent active."
+        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 2 LocalAgent active."
     }
 
     private fun isAccessibilityServiceEnabled(context: Context, service: Class<*>): Boolean {
