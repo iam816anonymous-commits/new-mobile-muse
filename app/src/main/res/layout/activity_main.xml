@@ -22,102 +22,197 @@
         android:layout_marginTop="8dp"
         android:background="#332196F3"
         android:padding="8dp"
-        android:text="PHASE 0 FOUNDATION ACTIVE: Autonomous features are disabled."
+        android:text="PHASE 0 &amp; 1 ACTIVE: Safety Harness &amp; Verification Panel Operational."
         android:textColor="#90CAF9"
         android:textSize="12sp" />
-
-    <TextView
-        android:id="@+id/tvAgentStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Agent Status: IDLE"
-        android:textColor="#FFFFFF"
-        android:textSize="14sp" />
-
-    <TextView
-        android:id="@+id/tvExecutionState"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Execution State: IDLE"
-        android:textColor="#AAAAAA"
-        android:textSize="14sp" />
-
-    <TextView
-        android:id="@+id/tvSafetyStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Safety Status: SAFE"
-        android:textColor="#66BB6A"
-        android:textSize="14sp" />
-
-    <TextView
-        android:id="@+id/tvAccessibilityStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Accessibility Service: NOT ENABLED"
-        android:textColor="#EF5350"
-        android:textSize="14sp" />
-
-    <Button
-        android:id="@+id/btnEnableAccessibility"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="Configure Accessibility Service" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/btnStartPlaceholder"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="4dp"
-            android:enabled="false"
-            android:text="START" />
-
-        <Button
-            android:id="@+id/btnStopPlaceholder"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:enabled="false"
-            android:text="STOP" />
-    </LinearLayout>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Activity Log:"
-        android:textColor="#00E5FF"
-        android:textSize="14sp" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="8dp"
-        android:background="#1E1E1E"
-        android:padding="8dp">
+        android:layout_marginTop="8dp">
 
-        <TextView
-            android:id="@+id/tvLogArea"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="[SYSTEM] Phase 0 LocalAgent initialized."
-            android:textColor="#00FF66"
-            android:typeface="monospace"
-            android:textSize="12sp" />
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvAgentStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Agent Status: IDLE"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvExecutionState"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Execution State: IDLE"
+                android:textColor="#AAAAAA"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvSafetyStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Safety Status: SAFE_IDLE"
+                android:textColor="#66BB6A"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvAccessibilityStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Accessibility Service: NOT ENABLED"
+                android:textColor="#EF5350"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/btnEnableAccessibility"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Configure Accessibility Service" />
+
+            <!-- PHASE 1 SAFETY HARNESS TEST PANEL -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="PHASE 1 — SAFETY HARNESS TEST PANEL"
+                android:textColor="#FFD54F"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvSuiteSummary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Suite Status: NOT RUN (Passed: 0, Failed: 0, Total: 0)"
+                android:textColor="#E0E0E0"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnRunAllTests"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:text="Run All Phase 1 Tests" />
+
+                <Button
+                    android:id="@+id/btnClearResults"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="Clear Results" />
+            </LinearLayout>
+
+            <GridLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:columnCount="2">
+
+                <Button
+                    android:id="@+id/btnTestOwnership"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:text="Test Execution Lock" />
+
+                <Button
+                    android:id="@+id/btnTestConcurrent"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:text="Test Concurrent Rejection" />
+
+                <Button
+                    android:id="@+id/btnTestCancellation"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:text="Test Manual Cancellation" />
+
+                <Button
+                    android:id="@+id/btnTestWatchdog"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:text="Test Watchdog Timeout" />
+
+                <Button
+                    android:id="@+id/btnTestPanic"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:text="Test Panic Abort" />
+
+                <Button
+                    android:id="@+id/btnTestStateReset"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:text="Test State Reset" />
+            </GridLayout>
+
+            <!-- HARDWARE VERIFICATION STATUS SECTION -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="HARDWARE VERIFICATION"
+                android:textColor="#00E5FF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvHardwareVerificationStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="#263238"
+                android:padding="8dp"
+                android:text="Volume-Up Double Press: [ NOT VERIFIED ]\nMANUAL DEVICE TEST REQUIRED"
+                android:textColor="#FFB74D"
+                android:textSize="12sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Harness &amp; Activity Log:"
+                android:textColor="#00E5FF"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvLogArea"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="#1E1E1E"
+                android:padding="8dp"
+                android:text="[SYSTEM] Phase 1 LocalAgent Safety Harness active."
+                android:textColor="#00FF66"
+                android:typeface="monospace"
+                android:textSize="12sp" />
+
+        </LinearLayout>
     </ScrollView>
 
 </LinearLayout>
