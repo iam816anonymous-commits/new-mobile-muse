@@ -1,12 +1,14 @@
 package com.agent.android.agent.device
 
 import android.Manifest
+import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
+import android.os.Build
 import android.os.Vibrator
 import android.provider.Settings
 import androidx.core.content.ContextCompat
@@ -130,7 +132,7 @@ class CapabilityRegistry(private val context: Context?) {
             )
         }
 
-        // Brightness
+        // Brightness / WRITE_SETTINGS
         val canWriteSettings = context != null && Settings.System.canWrite(context)
         map["BRIGHTNESS"] = DetailedCapabilityInfo(
             "BRIGHTNESS",
@@ -150,13 +152,20 @@ class CapabilityRegistry(private val context: Context?) {
             if (canWriteSettings) "WRITE_SETTINGS granted" else "WRITE_SETTINGS permission required"
         )
 
+        // Ringer / Notification Policy Access
+        val notifPolicyGranted = if (context != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            nm?.isNotificationPolicyAccessGranted == true
+        } else {
+            true
+        }
         map["RINGER"] = DetailedCapabilityInfo(
             "RINGER",
             true,
-            true,
-            true,
-            CapabilityStatus.AVAILABLE,
-            "Ringer mode available"
+            notifPolicyGranted,
+            notifPolicyGranted,
+            if (notifPolicyGranted) CapabilityStatus.AVAILABLE else CapabilityStatus.PERMISSION_REQUIRED,
+            if (notifPolicyGranted) "Ringer mode write permitted" else "Notification Policy Access required for SILENT mode"
         )
 
         map["MEDIA"] = DetailedCapabilityInfo(

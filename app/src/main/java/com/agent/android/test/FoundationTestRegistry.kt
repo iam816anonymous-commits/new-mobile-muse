@@ -66,44 +66,58 @@ class FoundationTestRegistry {
         add(TestCase("2.3.09", "haptics.vibrate", "PHASE_2", "HAPTICS", "Invalid Vibration Duration", "Rejects duration exceeding 2000ms maximum.", "vibrate 5000", "INVALID_ARGUMENT", TestType.NEGATIVE))
         add(TestCase("2.3.10", "haptics.status", "PHASE_2", "HAPTICS", "Vibration Status", "Queries haptic status.", "vibrate status", "Vibration status reported", TestType.AUTOMATED, requiredCapability = "VIBRATION"))
 
-        // VOLUME (9)
-        add(TestCase("2.3.11", "volume.music.status", "PHASE_2", "VOLUME", "Media Current Volume", "Queries current music volume stream level.", "volume music status", "Returns current/max music volume", TestType.AUTOMATED))
-        add(TestCase("2.3.12", "volume.music.set", "PHASE_2", "VOLUME", "Media Volume Low (10%)", "Sets music stream volume to 10%.", "volume music 10", "Music volume changes to ~10%", TestType.PHYSICAL, requiresPhysicalVerification = true))
-        add(TestCase("2.3.13", "volume.music.set", "PHASE_2", "VOLUME", "Media Volume Medium (50%)", "Sets music stream volume to 50%.", "volume music 50", "Music volume changes to ~50%", TestType.PHYSICAL, requiresPhysicalVerification = true))
-        add(TestCase("2.3.14", "volume.music.set", "PHASE_2", "VOLUME", "Media Volume High (90%)", "Sets music stream volume to 90%.", "volume music 90", "Music volume changes to ~90%", TestType.PHYSICAL, requiresPhysicalVerification = true))
-        add(TestCase("2.3.15", "volume.notification.set", "PHASE_2", "VOLUME", "Notification Volume Control", "Sets notification stream volume to 50%.", "volume notification 50", "Notification volume changes to ~50%", TestType.PHYSICAL, requiresPhysicalVerification = true))
-        add(TestCase("2.3.16", "volume.ring.set", "PHASE_2", "VOLUME", "Ring Volume Control", "Sets ringer stream volume to 50%.", "volume ring 50", "Ring volume changes to ~50%", TestType.PHYSICAL, requiresPhysicalVerification = true))
-        add(TestCase("2.3.17", "volume.alarm.set", "PHASE_2", "VOLUME", "Alarm Volume Control", "Sets alarm stream volume to 50%.", "volume alarm 50", "Alarm volume changes to ~50%", TestType.PHYSICAL, requiresPhysicalVerification = true))
-        add(TestCase("2.3.18", "volume.system.set", "PHASE_2", "VOLUME", "System Volume Control", "Sets system stream volume to 50%.", "volume system 50", "System volume changes to ~50%", TestType.PHYSICAL, requiresPhysicalVerification = true))
-        add(TestCase("2.3.19", "volume.music.set", "PHASE_2", "VOLUME", "Invalid Volume Percentage", "Rejects volume percentage > 100%.", "volume music 150", "INVALID_ARGUMENT", TestType.NEGATIVE))
+        // VOLUME STREAMS: MUSIC, RING, ALARM, NOTIFICATION (16)
+        val streams = listOf("music", "ring", "alarm", "notification")
+        var vIdx = 11
+        for (s in streams) {
+            add(TestCase("2.3.$vIdx", "volume.$s.status", "PHASE_2", "VOLUME", "${s.uppercase()} Stream Status", "Queries $s stream status, indices, and percentage.", "volume $s status", "Reports stream $s status", TestType.AUTOMATED))
+            vIdx++
+            add(TestCase("2.3.$vIdx", "volume.$s.current", "PHASE_2", "VOLUME", "${s.uppercase()} Current Index", "Queries current $s stream index.", "volume $s current", "Reports current index", TestType.AUTOMATED))
+            vIdx++
+            add(TestCase("2.3.$vIdx", "volume.$s.maximum", "PHASE_2", "VOLUME", "${s.uppercase()} Maximum Index", "Queries maximum $s stream index.", "volume $s maximum", "Reports maximum index", TestType.AUTOMATED))
+            vIdx++
+            add(TestCase("2.3.$vIdx", "volume.$s.percentage", "PHASE_2", "VOLUME", "${s.uppercase()} Stream Percentage", "Queries current $s stream percentage.", "volume $s percentage", "Reports percentage", TestType.AUTOMATED))
+            vIdx++
+            add(TestCase("2.3.$vIdx", "volume.$s.set", "PHASE_2", "VOLUME", "${s.uppercase()} Volume Set 50%", "Sets $s stream volume to 50%.", "volume $s 50", "Volume set to 50%", TestType.PHYSICAL, requiresPhysicalVerification = true))
+            vIdx++
+            add(TestCase("2.3.$vIdx", "volume.$s.set", "PHASE_2", "VOLUME", "${s.uppercase()} Volume Invalid Negative", "Rejects negative percentage.", "volume $s -1", "INVALID_ARGUMENT", TestType.NEGATIVE))
+            vIdx++
+            add(TestCase("2.3.$vIdx", "volume.$s.set", "PHASE_2", "VOLUME", "${s.uppercase()} Volume Invalid Excess", "Rejects percentage > 100.", "volume $s 101", "INVALID_ARGUMENT", TestType.NEGATIVE))
+            vIdx++
+            add(TestCase("2.3.$vIdx", "volume.$s.set", "PHASE_2", "VOLUME", "${s.uppercase()} Volume Non-Numeric", "Rejects non-numeric percentage.", "volume $s abc", "INVALID_ARGUMENT", TestType.NEGATIVE))
+            vIdx++
+        }
+
+        // PHYSICAL VOLUME BUTTON PASS-THROUGH TEST
+        add(TestCase("VOLUME-PHYSICAL-001", "safety.panic", "PHASE_2", "VOLUME", "Physical Volume Buttons Control", "Verify physical Volume Up/Down buttons remain under normal Android system control.", "press physical volume up/down", "Android volume slider appears and changes volume normally", TestType.PHYSICAL, requiresPhysicalVerification = true))
 
         // CONNECTIVITY (7)
-        add(TestCase("2.3.20", "wifi.status", "PHASE_2", "CONNECTIVITY", "Wi-Fi Status", "Queries Wi-Fi enabled status.", "wifi status", "Reports Wi-Fi status", TestType.AUTOMATED, requiredCapability = "WIFI"))
-        add(TestCase("2.3.21", "wifi.on", "PHASE_2", "CONNECTIVITY", "Wi-Fi ON Request", "Requests Wi-Fi enablement.", "wifi on", "Wi-Fi ON requested or restricted note", TestType.AUTOMATED, requiredCapability = "WIFI"))
-        add(TestCase("2.3.22", "wifi.off", "PHASE_2", "CONNECTIVITY", "Wi-Fi OFF Request", "Requests Wi-Fi disablement.", "wifi off", "Wi-Fi OFF requested or restricted note", TestType.AUTOMATED, requiredCapability = "WIFI"))
-        add(TestCase("2.3.23", "bluetooth.status", "PHASE_2", "CONNECTIVITY", "Bluetooth Status", "Queries Bluetooth status.", "bluetooth status", "Reports Bluetooth status", TestType.AUTOMATED, requiredCapability = "BLUETOOTH"))
-        add(TestCase("2.3.24", "bluetooth.on", "PHASE_2", "CONNECTIVITY", "Bluetooth ON Request", "Requests Bluetooth enablement.", "bluetooth on", "Bluetooth ON requested or intent opened", TestType.AUTOMATED, requiredCapability = "BLUETOOTH"))
-        add(TestCase("2.3.25", "bluetooth.off", "PHASE_2", "CONNECTIVITY", "Bluetooth OFF Request", "Requests Bluetooth disablement.", "bluetooth off", "Bluetooth OFF requested or intent opened", TestType.AUTOMATED, requiredCapability = "BLUETOOTH"))
-        add(TestCase("2.3.26", "bluetooth.status", "PHASE_2", "CONNECTIVITY", "Bluetooth Hardware Check", "Verifies Bluetooth adapter detection.", "bluetooth status", "Adapter present and reported", TestType.HARDWARE, requiredCapability = "BLUETOOTH"))
+        add(TestCase("2.3.30", "wifi.status", "PHASE_2", "CONNECTIVITY", "Wi-Fi Status", "Queries Wi-Fi enabled status.", "wifi status", "Reports Wi-Fi status", TestType.AUTOMATED, requiredCapability = "WIFI"))
+        add(TestCase("2.3.31", "wifi.on", "PHASE_2", "CONNECTIVITY", "Wi-Fi ON Request", "Requests Wi-Fi enablement.", "wifi on", "Wi-Fi ON requested or restricted note", TestType.AUTOMATED, requiredCapability = "WIFI"))
+        add(TestCase("2.3.32", "wifi.off", "PHASE_2", "CONNECTIVITY", "Wi-Fi OFF Request", "Requests Wi-Fi disablement.", "wifi off", "Wi-Fi OFF requested or restricted note", TestType.AUTOMATED, requiredCapability = "WIFI"))
+        add(TestCase("2.3.33", "bluetooth.status", "PHASE_2", "CONNECTIVITY", "Bluetooth Status", "Queries Bluetooth status.", "bluetooth status", "Reports Bluetooth status", TestType.AUTOMATED, requiredCapability = "BLUETOOTH"))
+        add(TestCase("2.3.34", "bluetooth.on", "PHASE_2", "CONNECTIVITY", "Bluetooth ON Request", "Requests Bluetooth enablement.", "bluetooth on", "Bluetooth ON requested or intent opened", TestType.AUTOMATED, requiredCapability = "BLUETOOTH"))
+        add(TestCase("2.3.35", "bluetooth.off", "PHASE_2", "CONNECTIVITY", "Bluetooth OFF Request", "Requests Bluetooth disablement.", "bluetooth off", "Bluetooth OFF requested or intent opened", TestType.AUTOMATED, requiredCapability = "BLUETOOTH"))
+        add(TestCase("2.3.36", "bluetooth.status", "PHASE_2", "CONNECTIVITY", "Bluetooth Hardware Check", "Verifies Bluetooth adapter detection.", "bluetooth status", "Adapter present and reported", TestType.HARDWARE, requiredCapability = "BLUETOOTH"))
 
         // SYSTEM CONTROLS (9)
-        add(TestCase("2.3.27", "brightness.status", "PHASE_2", "SYSTEM_CONTROLS", "Brightness Status", "Queries screen brightness level (read-only).", "brightness status", "Reports current screen brightness level", TestType.AUTOMATED))
-        add(TestCase("2.3.28", "brightness.set", "PHASE_2", "SYSTEM_CONTROLS", "Brightness Control Valid", "Sets screen brightness level (50%).", "brightness 50", "Screen brightness changes to ~50%", TestType.PHYSICAL, requiresPhysicalVerification = true, requiredPermission = "android.permission.WRITE_SETTINGS"))
-        add(TestCase("2.3.29", "brightness.set", "PHASE_2", "SYSTEM_CONTROLS", "Brightness Control Invalid Value (128)", "Rejects brightness percentage > 100%.", "brightness 128", "INVALID_ARGUMENT", TestType.NEGATIVE))
-        add(TestCase("2.3.30", "brightness.status", "PHASE_2", "SYSTEM_CONTROLS", "WRITE_SETTINGS Detection", "Verifies special permission detection for system settings.", "brightness status", "Reports WRITE_SETTINGS permission status", TestType.PERMISSION, requiredPermission = "android.permission.WRITE_SETTINGS"))
-        add(TestCase("2.3.31", "ringer.status", "PHASE_2", "SYSTEM_CONTROLS", "Ringer Status", "Queries current ringer mode.", "ringer status", "Reports current ringer mode", TestType.AUTOMATED))
-        add(TestCase("2.3.32", "ringer.normal", "PHASE_2", "SYSTEM_CONTROLS", "Ringer Mode Control", "Sets ringer mode to NORMAL.", "ringer normal", "Ringer mode set to NORMAL", TestType.PHYSICAL, requiresPhysicalVerification = true))
-        add(TestCase("2.3.33", "ringer.silent", "PHASE_2", "SYSTEM_CONTROLS", "Notification Policy Detection", "Verifies Do Not Disturb access detection.", "ringer silent", "Reports notification policy access requirement", TestType.PERMISSION))
-        add(TestCase("2.3.34", "location.status", "PHASE_2", "SYSTEM_CONTROLS", "Location Status", "Queries GPS/location provider state.", "location status", "Reports location status & provider state", TestType.AUTOMATED))
-        add(TestCase("2.3.35", "battery.status", "PHASE_2", "SYSTEM_CONTROLS", "Battery Status", "Queries battery level and power state.", "battery status", "Reports battery percentage and charging state", TestType.AUTOMATED))
+        add(TestCase("2.3.37", "brightness.status", "PHASE_2", "SYSTEM_CONTROLS", "Brightness Status", "Queries screen brightness level (read-only).", "brightness status", "Reports current screen brightness level", TestType.AUTOMATED))
+        add(TestCase("2.3.38", "brightness.set", "PHASE_2", "SYSTEM_CONTROLS", "Brightness Control Valid", "Sets screen brightness level (50%).", "brightness 50", "Screen brightness changes to ~50%", TestType.PHYSICAL, requiresPhysicalVerification = true, requiredPermission = "android.permission.WRITE_SETTINGS"))
+        add(TestCase("2.3.39", "brightness.set", "PHASE_2", "SYSTEM_CONTROLS", "Brightness Control Invalid Value (128)", "Rejects brightness percentage > 100%.", "brightness 128", "INVALID_ARGUMENT", TestType.NEGATIVE))
+        add(TestCase("2.3.40", "brightness.status", "PHASE_2", "SYSTEM_CONTROLS", "WRITE_SETTINGS Detection", "Verifies special permission detection for system settings.", "brightness status", "Reports WRITE_SETTINGS permission status", TestType.PERMISSION, requiredPermission = "android.permission.WRITE_SETTINGS"))
+        add(TestCase("2.3.41", "ringer.status", "PHASE_2", "SYSTEM_CONTROLS", "Ringer Status", "Queries current ringer mode.", "ringer status", "Reports current ringer mode", TestType.AUTOMATED))
+        add(TestCase("2.3.42", "ringer.normal", "PHASE_2", "SYSTEM_CONTROLS", "Ringer Mode Control", "Sets ringer mode to NORMAL.", "ringer normal", "Ringer mode set to NORMAL", TestType.PHYSICAL, requiresPhysicalVerification = true))
+        add(TestCase("2.3.43", "ringer.silent", "PHASE_2", "SYSTEM_CONTROLS", "Notification Policy Detection", "Verifies Do Not Disturb access detection.", "ringer silent", "Reports notification policy access requirement", TestType.PERMISSION))
+        add(TestCase("2.3.44", "location.status", "PHASE_2", "SYSTEM_CONTROLS", "Location Status", "Queries GPS/location provider state.", "location status", "Reports location status & provider state", TestType.AUTOMATED))
+        add(TestCase("2.3.45", "battery.status", "PHASE_2", "SYSTEM_CONTROLS", "Battery Status", "Queries battery level and power state.", "battery status", "Reports battery percentage and charging state", TestType.AUTOMATED))
 
         // SENSORS (7)
-        add(TestCase("2.3.36", "sensor.list", "PHASE_2", "SENSORS", "Sensor Enumeration", "Enumerates installed hardware sensors via SensorManager.", "sensor list", "Lists installed hardware sensors with metadata", TestType.AUTOMATED))
-        add(TestCase("2.3.37", "sensor.accelerometer.sample", "PHASE_2", "SENSORS", "Accelerometer Sample", "Requests 3-axis accelerometer reading.", "sensor accelerometer", "Returns X, Y, Z acceleration data", TestType.SENSOR, requiredCapability = "ACCELEROMETER"))
-        add(TestCase("2.3.38", "sensor.gyroscope.sample", "PHASE_2", "SENSORS", "Gyroscope Sample", "Requests 3-axis gyroscope reading.", "sensor gyroscope", "Returns rotation rate or UNAVAILABLE", TestType.SENSOR, requiredCapability = "GYROSCOPE"))
-        add(TestCase("2.3.39", "sensor.proximity.sample", "PHASE_2", "SENSORS", "Proximity Sample", "Requests proximity distance reading.", "sensor proximity", "Returns distance (cm) and range metadata", TestType.SENSOR, requiredCapability = "PROXIMITY"))
-        add(TestCase("2.3.40", "sensor.light.sample", "PHASE_2", "SENSORS", "Light Sensor Sample", "Requests ambient light level reading.", "sensor light", "Returns illuminance (lux)", TestType.SENSOR, requiredCapability = "LIGHT"))
-        add(TestCase("2.3.41", "sensor.unknown", "PHASE_2", "SENSORS", "Unavailable Sensor Request", "Requests data from non-existent sensor.", "sensor fake_sensor", "NO_SENSOR", TestType.NEGATIVE))
+        add(TestCase("2.3.46", "sensor.list", "PHASE_2", "SENSORS", "Sensor Enumeration", "Enumerates installed hardware sensors via SensorManager.", "sensor list", "Lists installed hardware sensors with metadata", TestType.AUTOMATED))
+        add(TestCase("2.3.47", "sensor.accelerometer.sample", "PHASE_2", "SENSORS", "Accelerometer Sample", "Requests 3-axis accelerometer reading.", "sensor accelerometer", "Returns X, Y, Z acceleration data", TestType.SENSOR, requiredCapability = "ACCELEROMETER"))
+        add(TestCase("2.3.48", "sensor.gyroscope.sample", "PHASE_2", "SENSORS", "Gyroscope Sample", "Requests 3-axis gyroscope reading.", "sensor gyroscope", "Returns rotation rate or UNAVAILABLE", TestType.SENSOR, requiredCapability = "GYROSCOPE"))
+        add(TestCase("2.3.49", "sensor.proximity.sample", "PHASE_2", "SENSORS", "Proximity Sample", "Requests proximity distance reading.", "sensor proximity", "Returns distance (cm) and range metadata", TestType.SENSOR, requiredCapability = "PROXIMITY"))
+        add(TestCase("2.3.50", "sensor.light.sample", "PHASE_2", "SENSORS", "Light Sensor Sample", "Requests ambient light level reading.", "sensor light", "Returns illuminance (lux)", TestType.SENSOR, requiredCapability = "LIGHT"))
+        add(TestCase("2.3.51", "sensor.unknown", "PHASE_2", "SENSORS", "Unavailable Sensor Request", "Requests data from non-existent sensor.", "sensor fake_sensor", "NO_SENSOR", TestType.NEGATIVE))
 
         // STT & TTS (4)
         add(TestCase("2.4.01", "stt.status", "PHASE_2.4", "STT", "STT Engine Availability", "Queries Android SpeechRecognizer availability.", null, "SpeechRecognizer AVAILABLE or UNAVAILABLE reported", TestType.HARDWARE, requiredCapability = "STT"))

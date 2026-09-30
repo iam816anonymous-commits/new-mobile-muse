@@ -174,16 +174,35 @@ class GoalDispatcherImpl(
                 val res = hapticController?.vibrate(ms) ?: SkillResult("VIBRATE", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
-            "volume.music.status", "volume.ring.status", "volume.notification.status", "volume.alarm.status", "volume.system.status" -> {
+            "volume.music.status", "volume.ring.status", "volume.notification.status", "volume.alarm.status" -> {
                 val streamName = cmdDef.commandId.split(".")[1]
                 val streamType = volumeController?.parseStreamType(streamName) ?: android.media.AudioManager.STREAM_MUSIC
-                val res = volumeController?.getVolume(streamType) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                val res = volumeController?.getVolumeStatus(streamType) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, "VOLUME", cmdDef.handlerIdentifier, res, res.message)
             }
-            "volume.music.set", "volume.ring.set", "volume.notification.set", "volume.alarm.set", "volume.system.set" -> {
+            "volume.music.current", "volume.ring.current", "volume.notification.current", "volume.alarm.current" -> {
                 val streamName = cmdDef.commandId.split(".")[1]
                 val streamType = volumeController?.parseStreamType(streamName) ?: android.media.AudioManager.STREAM_MUSIC
-                val percent = parsedArgs.getInt("percentage", -1)
+                val res = volumeController?.getCurrentIndex(streamType) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, "VOLUME", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "volume.music.maximum", "volume.ring.maximum", "volume.notification.maximum", "volume.alarm.maximum" -> {
+                val streamName = cmdDef.commandId.split(".")[1]
+                val streamType = volumeController?.parseStreamType(streamName) ?: android.media.AudioManager.STREAM_MUSIC
+                val res = volumeController?.getMaximumIndex(streamType) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, "VOLUME", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "volume.music.percentage", "volume.ring.percentage", "volume.notification.percentage", "volume.alarm.percentage" -> {
+                val streamName = cmdDef.commandId.split(".")[1]
+                val streamType = volumeController?.parseStreamType(streamName) ?: android.media.AudioManager.STREAM_MUSIC
+                val res = volumeController?.getPercentage(streamType) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, "VOLUME", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "volume.music.set", "volume.ring.set", "volume.notification.set", "volume.alarm.set" -> {
+                val streamName = cmdDef.commandId.split(".")[1]
+                val streamType = volumeController?.parseStreamType(streamName) ?: android.media.AudioManager.STREAM_MUSIC
+                val percentStr = parsedArgs.getString("percentage")
+                val percent = percentStr?.toIntOrNull() ?: -1
                 val res = volumeController?.setVolumePercentage(percent, streamType) ?: SkillResult("VOLUME", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, "VOLUME", cmdDef.handlerIdentifier, res, res.message)
             }

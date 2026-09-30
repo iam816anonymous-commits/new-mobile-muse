@@ -53,6 +53,31 @@ class Phase24CommandRegistryUnitTest {
     }
 
     @Test
+    fun testVolumeCommandResolutionSeparation() {
+        val registry = CommandRegistry()
+
+        val statusCmd = registry.findCommandForInput("volume music status")
+        assertNotNull(statusCmd)
+        assertEquals("volume.music.status", statusCmd?.commandId)
+
+        val setCmd = registry.findCommandForInput("volume music 50")
+        assertNotNull(setCmd)
+        assertEquals("volume.music.set", setCmd?.commandId)
+
+        val currentCmd = registry.findCommandForInput("volume music current")
+        assertNotNull(currentCmd)
+        assertEquals("volume.music.current", currentCmd?.commandId)
+
+        val maxCmd = registry.findCommandForInput("volume music maximum")
+        assertNotNull(maxCmd)
+        assertEquals("volume.music.maximum", maxCmd?.commandId)
+
+        val pctCmd = registry.findCommandForInput("volume music percentage")
+        assertNotNull(pctCmd)
+        assertEquals("volume.music.percentage", pctCmd?.commandId)
+    }
+
+    @Test
     fun testArgumentParsing() {
         val registry = CommandRegistry()
 

@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -668,7 +669,25 @@ class MainActivity : Activity() {
         tvReadinessOverallBanner.text = "FOUNDATION STATUS: ${report.statusText}\n${if (report.isReady) "All foundation checks passed!" else "Blocking reasons:\n- " + report.blockingReasons.joinToString("\n- ")}"
         tvReadinessOverallBanner.setTextColor(color)
 
+        val audio = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        val musicCur = audio?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
+        val musicMax = audio?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 1
+        val ringCur = audio?.getStreamVolume(AudioManager.STREAM_RING) ?: 0
+        val ringMax = audio?.getStreamMaxVolume(AudioManager.STREAM_RING) ?: 1
+        val alarmCur = audio?.getStreamVolume(AudioManager.STREAM_ALARM) ?: 0
+        val alarmMax = audio?.getStreamMaxVolume(AudioManager.STREAM_ALARM) ?: 1
+        val notifCur = audio?.getStreamVolume(AudioManager.STREAM_NOTIFICATION) ?: 0
+        val notifMax = audio?.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION) ?: 1
+
+        val volSb = StringBuilder()
+        volSb.append("VOLUME STREAMS DIAGNOSTICS:\n")
+        volSb.append("- MUSIC: $musicCur / $musicMax (${Math.round((musicCur.toDouble() / musicMax) * 100)}%)\n")
+        volSb.append("- RING: $ringCur / $ringMax (${Math.round((ringCur.toDouble() / ringMax) * 100)}%)\n")
+        volSb.append("- ALARM: $alarmCur / $alarmMax (${Math.round((alarmCur.toDouble() / alarmMax) * 100)}%)\n")
+        volSb.append("- NOTIFICATION: $notifCur / $notifMax (${Math.round((notifCur.toDouble() / notifMax) * 100)}%)\n\n")
+
         val sysSb = StringBuilder()
+        sysSb.append(volSb.toString())
         sysSb.append("APP PACKAGE: ${packageName}\n")
         sysSb.append("BUILD VERSION: ${resultStore.getBuildVersion()}\n")
         sysSb.append("DEVICE: ${Build.MANUFACTURER} ${Build.MODEL}\n")

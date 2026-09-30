@@ -23,6 +23,11 @@ import com.agent.android.safety.CancellationReason
  * - dispatch gestures
  * - perform taps
  * - trigger recovery
+ *
+ * PHYSICAL VOLUME KEY PRESERVATION RULE:
+ * Single physical volume key presses (KEYCODE_VOLUME_UP, KEYCODE_VOLUME_DOWN, KEYCODE_VOLUME_MUTE)
+ * MUST return false immediately to preserve native Android volume key propagation.
+ * Only a double Volume-Up press within 500ms is consumed (returns true) to trigger the emergency stop panic mechanism.
  */
 class LocalAgentAccessibilityService : AccessibilityService() {
 

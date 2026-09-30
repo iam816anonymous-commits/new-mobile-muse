@@ -41,17 +41,15 @@ class CommandRegistry {
         register(CommandDefinition("haptics.status", "Haptics Status", CommandCategory.DEVICE, "Queries vibrator service status", CommandStatus.IMPLEMENTED, "vibrate status", listOf("vibrate status"), requirement = CommandRequirement(requiredCapabilities = listOf("VIBRATION")), handlerIdentifier = "HapticController"))
         register(CommandDefinition("haptics.vibrate", "Trigger Vibration", CommandCategory.DEVICE, "Triggers haptic vibration for duration (1-2000ms)", CommandStatus.IMPLEMENTED, "vibrate <duration_ms>", listOf("vibrate 200"), listOf("durationMs"), CommandRequirement(requiredCapabilities = listOf("VIBRATION"), physicalObservationRequired = true), handlerIdentifier = "HapticController"))
 
-        // 9. VOLUME
-        register(CommandDefinition("volume.music.status", "Music Volume Status", CommandCategory.DEVICE, "Queries music volume stream level", CommandStatus.IMPLEMENTED, "volume music status", listOf("volume music status"), handlerIdentifier = "VolumeController"))
-        register(CommandDefinition("volume.music.set", "Set Music Volume", CommandCategory.DEVICE, "Sets music stream volume percentage (0-100)", CommandStatus.IMPLEMENTED, "volume music <percentage>", listOf("volume music 50"), listOf("percentage"), CommandRequirement(physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "VolumeController"))
-        register(CommandDefinition("volume.ring.status", "Ring Volume Status", CommandCategory.DEVICE, "Queries ringer volume level", CommandStatus.IMPLEMENTED, "volume ring status", listOf("volume ring status"), handlerIdentifier = "VolumeController"))
-        register(CommandDefinition("volume.ring.set", "Set Ring Volume", CommandCategory.DEVICE, "Sets ringer volume percentage", CommandStatus.IMPLEMENTED, "volume ring <percentage>", listOf("volume ring 50"), listOf("percentage"), CommandRequirement(physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "VolumeController"))
-        register(CommandDefinition("volume.notification.status", "Notification Volume Status", CommandCategory.DEVICE, "Queries notification volume level", CommandStatus.IMPLEMENTED, "volume notification status", listOf("volume notification status"), handlerIdentifier = "VolumeController"))
-        register(CommandDefinition("volume.notification.set", "Set Notification Volume", CommandCategory.DEVICE, "Sets notification volume percentage", CommandStatus.IMPLEMENTED, "volume notification <percentage>", listOf("volume notification 50"), listOf("percentage"), CommandRequirement(physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "VolumeController"))
-        register(CommandDefinition("volume.alarm.status", "Alarm Volume Status", CommandCategory.DEVICE, "Queries alarm volume level", CommandStatus.IMPLEMENTED, "volume alarm status", listOf("volume alarm status"), handlerIdentifier = "VolumeController"))
-        register(CommandDefinition("volume.alarm.set", "Set Alarm Volume", CommandCategory.DEVICE, "Sets alarm volume percentage", CommandStatus.IMPLEMENTED, "volume alarm <percentage>", listOf("volume alarm 50"), listOf("percentage"), CommandRequirement(physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "VolumeController"))
-        register(CommandDefinition("volume.system.status", "System Volume Status", CommandCategory.DEVICE, "Queries system stream volume level", CommandStatus.IMPLEMENTED, "volume system status", listOf("volume system status"), handlerIdentifier = "VolumeController"))
-        register(CommandDefinition("volume.system.set", "Set System Volume", CommandCategory.DEVICE, "Sets system volume percentage", CommandStatus.IMPLEMENTED, "volume system <percentage>", listOf("volume system 50"), listOf("percentage"), CommandRequirement(physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "VolumeController"))
+        // 9. VOLUME STREAMS (ALARM, RING, NOTIFICATION, MUSIC)
+        val streams = listOf("alarm", "ring", "notification", "music")
+        for (s in streams) {
+            register(CommandDefinition("volume.$s.status", "${s.uppercase()} Volume Status", CommandCategory.DEVICE, "Queries complete $s volume status", CommandStatus.IMPLEMENTED, "volume $s status", listOf("volume $s status"), handlerIdentifier = "VolumeController"))
+            register(CommandDefinition("volume.$s.current", "${s.uppercase()} Volume Current", CommandCategory.DEVICE, "Queries current $s volume index", CommandStatus.IMPLEMENTED, "volume $s current", listOf("volume $s current"), handlerIdentifier = "VolumeController"))
+            register(CommandDefinition("volume.$s.maximum", "${s.uppercase()} Volume Maximum", CommandCategory.DEVICE, "Queries maximum $s volume index", CommandStatus.IMPLEMENTED, "volume $s maximum", listOf("volume $s maximum"), handlerIdentifier = "VolumeController"))
+            register(CommandDefinition("volume.$s.percentage", "${s.uppercase()} Volume Percentage", CommandCategory.DEVICE, "Queries current $s volume percentage", CommandStatus.IMPLEMENTED, "volume $s percentage", listOf("volume $s percentage"), handlerIdentifier = "VolumeController"))
+            register(CommandDefinition("volume.$s.set", "Set ${s.uppercase()} Volume", CommandCategory.DEVICE, "Sets $s stream volume percentage (0-100%)", CommandStatus.IMPLEMENTED, "volume $s <percentage>", listOf("volume $s 50"), listOf("percentage"), CommandRequirement(physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "VolumeController"))
+        }
 
         // 10. CONNECTIVITY
         register(CommandDefinition("wifi.status", "Wi-Fi Status", CommandCategory.CONNECTIVITY, "Queries Wi-Fi hardware enabled status", CommandStatus.IMPLEMENTED, "wifi status", listOf("wifi status"), requirement = CommandRequirement(requiredCapabilities = listOf("WIFI")), handlerIdentifier = "ConnectivityControllers"))
@@ -107,25 +105,41 @@ class CommandRegistry {
     fun findCommandForInput(rawInput: String): CommandDefinition? {
         val trimmed = rawInput.trim().lowercase()
         if (trimmed.isEmpty()) return null
+        val inputTokens = trimmed.split("\\s+".toRegex())
 
-        for (cmd in registry.values) {
-            val basePrefix = cmd.syntax.split(" ")[0].lowercase()
-            if (trimmed == basePrefix || trimmed.startsWith("$basePrefix ")) {
-                val tokens = cmd.syntax.lowercase().split(" ")
-                if (tokens.size >= 2 && !tokens[1].startsWith("<")) {
-                    val subPrefix = "${tokens[0]} ${tokens[1]}"
-                    if (trimmed == subPrefix || trimmed.startsWith("$subPrefix ")) {
-                        return cmd
-                    }
-                } else if (tokens.size == 1) {
-                    if (trimmed == tokens[0]) return cmd
-                } else {
-                    return cmd
+        // Sort commands descending by fixed token count (longest/most specific prefix first)
+        val sortedCmds = registry.values.sortedByDescending { cmd ->
+            cmd.syntax.lowercase().split("\\s+".toRegex()).takeWhile { !it.startsWith("<") }.size
+        }
+
+        for (cmd in sortedCmds) {
+            val syntaxTokens = cmd.syntax.lowercase().split("\\s+".toRegex())
+            val fixedTokens = syntaxTokens.takeWhile { !it.startsWith("<") }
+            val hasVariable = syntaxTokens.size > fixedTokens.size
+
+            if (inputTokens.size < fixedTokens.size) continue
+
+            var matchesFixed = true
+            for (i in fixedTokens.indices) {
+                if (inputTokens[i] != fixedTokens[i]) {
+                    matchesFixed = false
+                    break
                 }
             }
+
+            if (!matchesFixed) continue
+
+            if (!hasVariable) {
+                if (inputTokens.size == fixedTokens.size) {
+                    return cmd
+                }
+            } else {
+                return cmd
+            }
         }
+
         return registry.values.find { cmd ->
-            cmd.examples.any { ex -> trimmed.startsWith(ex.lowercase().split(" ")[0]) || trimmed.equals(ex.lowercase()) }
+            cmd.examples.any { ex -> trimmed.startsWith(ex.lowercase()) || trimmed == ex.lowercase() }
         }
     }
 
@@ -165,9 +179,6 @@ class CommandRegistry {
             "haptics.vibrate" -> {
                 if (parts.size >= 2) params["durationMs"] = parts[1]
             }
-            "volume.music.set", "volume.ring.set", "volume.notification.set", "volume.alarm.set", "volume.system.set" -> {
-                if (parts.size >= 3) params["percentage"] = parts[2]
-            }
             "brightness.set" -> {
                 if (parts.size >= 2) params["value"] = parts[1]
             }
@@ -177,7 +188,11 @@ class CommandRegistry {
                 }
             }
             else -> {
-                if (parts.size > 1) {
+                if (definition.commandId.startsWith("volume.") && definition.commandId.endsWith(".set")) {
+                    if (parts.size >= 3) {
+                        params["percentage"] = parts[2]
+                    }
+                } else if (parts.size > 1) {
                     params["rawArgs"] = parts.drop(1).joinToString(" ")
                 }
             }
