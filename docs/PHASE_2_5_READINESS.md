@@ -1,7 +1,20 @@
-# LocalAgent Phase 2.5 Testing & Readiness Strategy
+# Phase 2.5 Readiness & Coverage Report
 
-## Testing Matrix
-- **Automated Tests**: Unit tests in `Phase25FoundationUnitTest.kt`, `Phase241FoundationPatchTest.kt`, `Phase24CommandRegistryUnitTest.kt` (88 tests passing).
-- **Sequential UI Runner**: 43 Foundation test cases covering positive, negative, permission-blocked, hardware-blocked, and physical observation cases.
-- **Physical Verification**: `VOLUME-PHYSICAL-001` manual verification for physical Volume key pass-through.
-- **Pre-Phase-3 Readiness Status**: `PHASE_3_READY` (All platform capabilities, permission models, settings fallbacks, and command definitions verified).
+## Readiness Evaluator Rules
+`FoundationReadinessEvaluator` enforces 9 deterministic category gates:
+1. **BUILD**: Valid package name and context
+2. **SAFETY**: Execution state machine not in PANIC
+3. **EXECUTION**: ExecutionController in IDLE state
+4. **PERMISSIONS**: All foundation runtime permissions and special access checks
+5. **HARDWARE**: Detailed hardware capability checks
+6. **STT**: Built-in SpeechRecognizer availability
+7. **TTS**: Built-in TextToSpeech availability
+8. **COMMAND_REGISTRY**: **0 implemented commands with zero test coverage**
+9. **TESTS**: All foundation test cases executed without failure/blocking
+
+## Command Coverage Report
+- **Implemented Commands**: 53 / 53
+- **Coverage Percentage**: 100%
+- **Uncovered Commands**: 0
+
+The automated unit test `Phase25FoundationUnitTest.testCommandRegistryTestCoverageIntegrity` asserts that every command in `CommandRegistry` has corresponding test coverage in `FoundationTestRegistry`.

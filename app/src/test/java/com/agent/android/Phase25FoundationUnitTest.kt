@@ -19,11 +19,33 @@ import com.agent.android.agent.device.ScreenCaptureController
 import com.agent.android.agent.device.TextInputController
 import com.agent.android.agent.device.UsageStatsController
 import com.agent.android.agent.skills.SkillStatus
+import com.agent.android.commands.CommandRegistry
+import com.agent.android.commands.CommandStatus
+import com.agent.android.test.FoundationTestRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class Phase25FoundationUnitTest {
+
+    @Test
+    fun testCommandRegistryTestCoverageIntegrity() {
+        val commandRegistry = CommandRegistry()
+        val testRegistry = FoundationTestRegistry()
+
+        val allCommands = commandRegistry.getAllCommands()
+        val implementedCommands = allCommands.filter { it.status == CommandStatus.IMPLEMENTED }
+        val testCases = testRegistry.getAllTestCases()
+        val testedCommandIds = testCases.map { it.commandId }.toSet()
+
+        val uncovered = implementedCommands.filter { !testedCommandIds.contains(it.commandId) }
+
+        assertTrue(
+            "Every implemented command in CommandRegistry must have corresponding test coverage in FoundationTestRegistry. Uncovered commands: ${uncovered.map { it.commandId }}",
+            uncovered.isEmpty()
+        )
+    }
 
     @Test
     fun testClipboardControllerNullContextSafeguard() {

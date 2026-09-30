@@ -46,11 +46,17 @@ class FoundationTestRegistry {
         add(TestCase("2.1.14", "web.search", "PHASE_2", "HEADLESS_CORE", "Web Search", "Dispatches system web search intent.", "web search localagent", "Search intent launched", TestType.AUTOMATED))
         add(TestCase("2.1.15", "unknown.command", "PHASE_2", "HEADLESS_CORE", "Invalid Command", "Handles unrecognized command string safely.", "unsupported command xyz", "UNKNOWN_COMMAND", TestType.NEGATIVE))
 
-        // APP LAUNCHING (4)
+        // APP LAUNCHING & DISCOVERY (8)
         add(TestCase("2.2.01", "app.launch", "PHASE_2", "APP_LAUNCH", "Launch Known Application", "Resolves and opens Settings app.", "open settings", "Settings app brought to foreground", TestType.PHYSICAL, requiresPhysicalVerification = true))
         add(TestCase("2.2.02", "app.launch", "PHASE_2", "APP_LAUNCH", "Invalid Package", "Attempts to open non-existent app package.", "open NonExistentApp12345", "APP_NOT_FOUND", TestType.NEGATIVE))
         add(TestCase("2.2.03", "app.launch", "PHASE_2", "APP_LAUNCH", "Unavailable App Resolution", "Resolves ambiguous or missing app query.", "open FakeAppUnknown", "APP_NOT_FOUND", TestType.NEGATIVE))
         add(TestCase("2.2.04", "app.launch", "PHASE_2", "APP_LAUNCH", "Launcher Empty Query", "Handles empty app query string.", "open ", "INVALID_ARGUMENT", TestType.NEGATIVE))
+        add(TestCase("2.5.APP.001", "app.current", "PHASE_2.5", "APPLICATION", "Current Foreground App Query", "Queries active foreground app package via usage stats.", "app current", "Foreground app package or USAGE_STATS restriction reported", TestType.AUTOMATED))
+        add(TestCase("2.5.APP.002", "app.list", "PHASE_2.5", "APPLICATION", "List Installed Applications", "Lists launchable installed applications.", "app list", "Installed app list returned", TestType.AUTOMATED))
+        add(TestCase("2.5.APP.003", "app.find", "PHASE_2.5", "APPLICATION", "Find App Positive (Settings)", "Finds Settings app package by query.", "app find settings", "Settings package matched", TestType.AUTOMATED))
+        add(TestCase("2.5.APP.004", "app.find", "PHASE_2.5", "APPLICATION", "Find App Nonexistent Negative", "Attempts to find nonexistent app query.", "app find definitely_nonexistent_app_xyz", "APP_NOT_FOUND", TestType.NEGATIVE))
+        add(TestCase("2.5.APP.005", "app.info", "PHASE_2.5", "APPLICATION", "App Info Positive (com.android.settings)", "Queries package info for Settings.", "app info com.android.settings", "Package info returned", TestType.AUTOMATED))
+        add(TestCase("2.5.APP.006", "app.info", "PHASE_2.5", "APPLICATION", "App Info Nonexistent Negative", "Queries package info for nonexistent package.", "app info definitely.nonexistent.package", "NOT_FOUND", TestType.NEGATIVE))
 
         // FLASHLIGHT (5)
         add(TestCase("2.3.01", "flashlight.status", "PHASE_2", "FLASHLIGHT", "Flashlight Status", "Queries torch availability.", "flashlight status", "Flashlight status reported", TestType.AUTOMATED, requiredCapability = "FLASHLIGHT"))
@@ -65,6 +71,29 @@ class FoundationTestRegistry {
         add(TestCase("2.3.08", "haptics.vibrate", "PHASE_2", "HAPTICS", "Maximum Allowed Vibration", "Triggers 2000ms haptic feedback (max bound).", "vibrate 2000", "Device vibrates physically for 2000ms", TestType.PHYSICAL, requiresPhysicalVerification = true, requiredCapability = "VIBRATION"))
         add(TestCase("2.3.09", "haptics.vibrate", "PHASE_2", "HAPTICS", "Invalid Vibration Duration", "Rejects duration exceeding 2000ms maximum.", "vibrate 5000", "INVALID_ARGUMENT", TestType.NEGATIVE))
         add(TestCase("2.3.10", "haptics.status", "PHASE_2", "HAPTICS", "Vibration Status", "Queries haptic status.", "vibrate status", "Vibration status reported", TestType.AUTOMATED, requiredCapability = "VIBRATION"))
+
+        // CLIPBOARD (4)
+        add(TestCase("2.5.CLIP.001", "clipboard.status", "PHASE_2.5", "CLIPBOARD", "Clipboard Status Query", "Queries system clipboard state.", "clipboard status", "Clipboard status reported", TestType.AUTOMATED))
+        add(TestCase("2.5.CLIP.002", "clipboard.write", "PHASE_2.5", "CLIPBOARD", "Write Clipboard Text", "Writes test string to clipboard.", "clipboard write LocalAgent Test String", "Clipboard text written", TestType.AUTOMATED))
+        add(TestCase("2.5.CLIP.003", "clipboard.read", "PHASE_2.5", "CLIPBOARD", "Read Clipboard Contents", "Reads current text from clipboard.", "clipboard read", "Clipboard content read or empty reported", TestType.AUTOMATED))
+        add(TestCase("2.5.CLIP.004", "clipboard.clear", "PHASE_2.5", "CLIPBOARD", "Clear Clipboard Contents", "Clears system clipboard.", "clipboard clear", "Clipboard cleared", TestType.AUTOMATED))
+
+        // NOTIFICATIONS (2)
+        add(TestCase("2.5.NOTIF.001", "notification.status", "PHASE_2.5", "OBSERVATION", "Notification Listener Status Query", "Queries NotificationListener connection state.", "notification status", "Notification status reported", TestType.PERMISSION))
+        add(TestCase("2.5.NOTIF.002", "notification.latest", "PHASE_2.5", "OBSERVATION", "Latest Notification Query", "Reads latest received notification snapshot.", "notification latest", "Latest notification reported or NO_DATA", TestType.AUTOMATED))
+
+        // DISPLAY & INPUT (6)
+        add(TestCase("2.5.DISP.001", "display.status", "PHASE_2.5", "DEVICE", "Display Status Query", "Queries screen metrics, density, and orientation.", "display status", "Display metrics reported", TestType.AUTOMATED))
+        add(TestCase("2.5.DISP.002", "display.dimensions", "PHASE_2.5", "DEVICE", "Display Dimensions Query", "Queries screen pixel width and height.", "display dimensions", "Screen dimensions reported", TestType.AUTOMATED))
+        add(TestCase("2.5.DISP.003", "display.orientation", "PHASE_2.5", "DEVICE", "Display Orientation Query", "Queries screen orientation.", "display orientation", "Screen orientation reported", TestType.AUTOMATED))
+        add(TestCase("2.5.DISP.004", "screen.capture.status", "PHASE_2.5", "DEVICE", "Screen Capture Status Query", "Queries screen capture permission/consent state.", "screen capture status", "Screen capture status reported", TestType.AUTOMATED))
+        add(TestCase("2.5.INP.001", "keyboard.status", "PHASE_2.5", "OBSERVATION", "Soft Keyboard Status Query", "Queries soft keyboard visibility.", "keyboard status", "Keyboard status reported", TestType.AUTOMATED))
+        add(TestCase("2.5.INP.002", "input.status", "PHASE_2.5", "OBSERVATION", "Input Method Status Query", "Queries IME and input capability state.", "input status", "Input status reported", TestType.AUTOMATED))
+
+        // CAMERA (3)
+        add(TestCase("2.5.CAM.001", "camera.status", "PHASE_2.5", "DEVICE", "Camera Hardware Status Query", "Queries camera hardware count.", "camera status", "Camera count and availability reported", TestType.HARDWARE))
+        add(TestCase("2.5.CAM.002", "camera.permission", "PHASE_2.5", "DEVICE", "Camera Permission Query", "Queries CAMERA runtime permission.", "camera permission", "CAMERA permission state reported", TestType.PERMISSION))
+        add(TestCase("2.5.CAM.003", "camera.list", "PHASE_2.5", "DEVICE", "Camera Device List Query", "Lists installed camera device IDs.", "camera list", "Camera IDs listed", TestType.HARDWARE))
 
         // VOLUME STREAMS: MUSIC, RING, ALARM, NOTIFICATION (16)
         val streams = listOf("music", "ring", "alarm", "notification")
@@ -100,7 +129,7 @@ class FoundationTestRegistry {
         add(TestCase("2.3.35", "bluetooth.off", "PHASE_2", "CONNECTIVITY", "Bluetooth OFF Request", "Requests Bluetooth disablement.", "bluetooth off", "Bluetooth OFF requested or intent opened", TestType.AUTOMATED, requiredCapability = "BLUETOOTH"))
         add(TestCase("2.3.36", "bluetooth.status", "PHASE_2", "CONNECTIVITY", "Bluetooth Hardware Check", "Verifies Bluetooth adapter detection.", "bluetooth status", "Adapter present and reported", TestType.HARDWARE, requiredCapability = "BLUETOOTH"))
 
-        // SYSTEM CONTROLS (9)
+        // SYSTEM CONTROLS (10)
         add(TestCase("2.3.37", "brightness.status", "PHASE_2", "SYSTEM_CONTROLS", "Brightness Status", "Queries screen brightness level (read-only).", "brightness status", "Reports current screen brightness level", TestType.AUTOMATED))
         add(TestCase("2.3.38", "brightness.set", "PHASE_2", "SYSTEM_CONTROLS", "Brightness Control Valid", "Sets screen brightness level (50%).", "brightness 50", "Screen brightness changes to ~50%", TestType.PHYSICAL, requiresPhysicalVerification = true, requiredPermission = "android.permission.WRITE_SETTINGS"))
         add(TestCase("2.3.39", "brightness.set", "PHASE_2", "SYSTEM_CONTROLS", "Brightness Control Invalid Value (128)", "Rejects brightness percentage > 100%.", "brightness 128", "INVALID_ARGUMENT", TestType.NEGATIVE))
@@ -108,8 +137,16 @@ class FoundationTestRegistry {
         add(TestCase("2.3.41", "ringer.status", "PHASE_2", "SYSTEM_CONTROLS", "Ringer Status", "Queries current ringer mode.", "ringer status", "Reports current ringer mode", TestType.AUTOMATED))
         add(TestCase("2.3.42", "ringer.normal", "PHASE_2", "SYSTEM_CONTROLS", "Ringer Mode Control", "Sets ringer mode to NORMAL.", "ringer normal", "Ringer mode set to NORMAL", TestType.PHYSICAL, requiresPhysicalVerification = true))
         add(TestCase("2.3.43", "ringer.silent", "PHASE_2", "SYSTEM_CONTROLS", "Notification Policy Detection", "Verifies Do Not Disturb access detection.", "ringer silent", "Reports notification policy access requirement", TestType.PERMISSION))
+        add(TestCase("2.5.RING.001", "ringer.vibrate", "PHASE_2.5", "SYSTEM_CONTROLS", "Ringer Mode Vibrate Control", "Sets ringer mode to VIBRATE.", "ringer vibrate", "Ringer mode set to VIBRATE", TestType.PHYSICAL, requiresPhysicalVerification = true))
         add(TestCase("2.3.44", "location.status", "PHASE_2", "SYSTEM_CONTROLS", "Location Status", "Queries GPS/location provider state.", "location status", "Reports location status & provider state", TestType.AUTOMATED))
         add(TestCase("2.3.45", "battery.status", "PHASE_2", "SYSTEM_CONTROLS", "Battery Status", "Queries battery level and power state.", "battery status", "Reports battery percentage and charging state", TestType.AUTOMATED))
+
+        // NETWORK, LOCATION, POWER, BACKGROUND & DEVICE SNAPSHOT (5)
+        add(TestCase("2.5.NET.001", "network.status", "PHASE_2.5", "OBSERVATION", "Network Connection Status", "Queries active network state.", "network status", "Active network state reported", TestType.AUTOMATED))
+        add(TestCase("2.5.LOC.001", "location.providers", "PHASE_2.5", "OBSERVATION", "Location Providers Query", "Queries location provider details.", "location providers", "Location providers listed", TestType.AUTOMATED))
+        add(TestCase("2.5.PWR.001", "power.status", "PHASE_2.5", "OBSERVATION", "Power Interactivity Status", "Queries screen interactive power state.", "power status", "Power interactivity reported", TestType.AUTOMATED))
+        add(TestCase("2.5.BG.001", "background.policy", "PHASE_2.5", "DIAGNOSTICS", "Background Execution Policy Query", "Queries background execution policy.", "background policy", "Background execution policy reported", TestType.AUTOMATED))
+        add(TestCase("2.5.SNAP.001", "device.snapshot", "PHASE_2.5", "DIAGNOSTICS", "Device Unified Snapshot Query", "Aggregates unified device state snapshot.", "device snapshot", "Device snapshot aggregated", TestType.AUTOMATED))
 
         // SENSORS (7)
         add(TestCase("2.3.46", "sensor.list", "PHASE_2", "SENSORS", "Sensor Enumeration", "Enumerates installed hardware sensors via SensorManager.", "sensor list", "Lists installed hardware sensors with metadata", TestType.AUTOMATED))
@@ -119,11 +156,20 @@ class FoundationTestRegistry {
         add(TestCase("2.3.50", "sensor.light.sample", "PHASE_2", "SENSORS", "Light Sensor Sample", "Requests ambient light level reading.", "sensor light", "Returns illuminance (lux)", TestType.SENSOR, requiredCapability = "LIGHT"))
         add(TestCase("2.3.51", "sensor.unknown", "PHASE_2", "SENSORS", "Unavailable Sensor Request", "Requests data from non-existent sensor.", "sensor fake_sensor", "NO_SENSOR", TestType.NEGATIVE))
 
-        // STT & TTS (4)
-        add(TestCase("2.4.01", "stt.status", "PHASE_2.4", "STT", "STT Engine Availability", "Queries Android SpeechRecognizer availability.", null, "SpeechRecognizer AVAILABLE or UNAVAILABLE reported", TestType.HARDWARE, requiredCapability = "STT"))
-        add(TestCase("2.4.02", "stt.listen", "PHASE_2.4", "STT", "STT Listening Test", "Starts built-in speech recognition listener.", null, "Recognizer listens and returns transcript or timeout", TestType.PHYSICAL, requiresPhysicalVerification = true, requiredPermission = "android.permission.RECORD_AUDIO", requiredCapability = "STT"))
-        add(TestCase("2.4.03", "tts.status", "PHASE_2.4", "TTS", "TTS Engine Availability", "Queries Android TextToSpeech engine status.", null, "TextToSpeech initialized and AVAILABLE", TestType.HARDWARE, requiredCapability = "TTS"))
+        // SPEECH: STT & TTS (6)
+        add(TestCase("2.4.01", "stt.status", "PHASE_2.4", "STT", "STT Engine Availability", "Queries Android SpeechRecognizer availability.", "stt status", "SpeechRecognizer AVAILABLE or UNAVAILABLE reported", TestType.HARDWARE, requiredCapability = "STT"))
+        add(TestCase("2.4.02", "stt.listen", "PHASE_2.4", "STT", "STT Listening Test", "Starts built-in speech recognition listener.", "stt listen", "Recognizer listens and returns transcript or timeout", TestType.PHYSICAL, requiresPhysicalVerification = true, requiredPermission = "android.permission.RECORD_AUDIO", requiredCapability = "STT"))
+        add(TestCase("2.5.STT.001", "stt.cancel", "PHASE_2.5", "STT", "STT Cancel Session", "Cancels active speech recognition session.", "stt cancel", "Active speech session cancelled or NO_ACTIVE_SESSION", TestType.AUTOMATED, requiredCapability = "STT"))
+        add(TestCase("2.4.03", "tts.status", "PHASE_2.4", "TTS", "TTS Engine Availability", "Queries Android TextToSpeech engine status.", "tts status", "TextToSpeech initialized and AVAILABLE", TestType.HARDWARE, requiredCapability = "TTS"))
         add(TestCase("2.4.04", "tts.speak", "PHASE_2.4", "TTS", "TTS Speak Test", "Speaks phrase 'Foundation test successful'.", "speak Foundation test successful", "Speech output heard physically from speaker", TestType.PHYSICAL, requiresPhysicalVerification = true, requiredCapability = "TTS"))
+        add(TestCase("2.5.TTS.001", "tts.stop", "PHASE_2.5", "TTS", "TTS Stop Output", "Stops active speech output.", "tts stop", "TTS speech stopped or idle", TestType.AUTOMATED, requiredCapability = "TTS"))
+
+        // PERMISSIONS, CAPABILITIES, ACCESSIBILITY & DIAGNOSTICS (5)
+        add(TestCase("2.5.DIAG.001", "permissions.status", "PHASE_2.5", "DIAGNOSTICS", "All Permissions Status Query", "Queries runtime permissions & special access.", "permissions status", "Permissions status reported", TestType.PERMISSION))
+        add(TestCase("2.5.DIAG.002", "capabilities.status", "PHASE_2.5", "DIAGNOSTICS", "All Capabilities Status Query", "Queries hardware capability states.", "capabilities status", "Capabilities status reported", TestType.HARDWARE))
+        add(TestCase("2.5.DIAG.003", "accessibility.status", "PHASE_2.5", "DIAGNOSTICS", "Accessibility Connection Query", "Queries accessibility service connection.", "accessibility status", "Accessibility status reported", TestType.PERMISSION))
+        add(TestCase("2.5.DIAG.004", "diagnostics.status", "PHASE_2.5", "DIAGNOSTICS", "Device Diagnostics Query", "Runs device diagnostics and sensor inspection.", "diagnostics status", "Diagnostics report generated", TestType.AUTOMATED))
+        add(TestCase("2.5.DIAG.005", "diagnostics.readiness", "PHASE_2.5", "DIAGNOSTICS", "Foundation Readiness Evaluation", "Evaluates deterministic foundation readiness.", "readiness status", "Foundation readiness evaluated", TestType.AUTOMATED))
     }
 
     private fun add(testCase: TestCase) {

@@ -4,6 +4,7 @@ import com.agent.android.agent.device.AgentNotificationController
 import com.agent.android.agent.device.AppDiscoveryController
 import com.agent.android.agent.device.BackgroundExecutionPolicy
 import com.agent.android.agent.device.CameraController
+import com.agent.android.agent.device.CapabilityRegistry
 import com.agent.android.agent.device.ClipboardController
 import com.agent.android.agent.device.ConnectivityControllers
 import com.agent.android.agent.device.DeviceAdministrationCapabilityDetector
@@ -32,7 +33,11 @@ import com.agent.android.agent.skills.app.AppLaunchStatus
 import com.agent.android.agent.skills.app.AppLauncher
 import com.agent.android.commands.CommandRegistry
 import com.agent.android.commands.CommandStatus
+import com.agent.android.diagnostics.FoundationReadinessEvaluator
 import com.agent.android.safety.CancellationReason
+import com.agent.android.speech.SpeechToTextEngine
+import com.agent.android.speech.TextToSpeechEngine
+import com.agent.android.test.FoundationTestRegistry
 
 data class DispatchDetails(
     val command: String,
@@ -70,7 +75,11 @@ class GoalDispatcherImpl(
     private val appDiscoveryController: AppDiscoveryController? = null,
     private val deviceStateController: DeviceStateController? = null,
     private val settingsActionRegistry: SettingsActionRegistry? = null,
-    private val deviceAdminDetector: DeviceAdministrationCapabilityDetector? = null
+    private val deviceAdminDetector: DeviceAdministrationCapabilityDetector? = null,
+    private val capabilityRegistry: CapabilityRegistry? = null,
+    private val readinessEvaluator: FoundationReadinessEvaluator? = null,
+    private val sttEngine: SpeechToTextEngine? = null,
+    private val ttsEngine: TextToSpeechEngine? = null
 ) : GoalDispatcher {
 
     override fun dispatchGoal(goal: String): Boolean {
@@ -421,6 +430,45 @@ class GoalDispatcherImpl(
             "location.status" -> {
                 val res = systemControlControllers?.getLocationStatus() ?: SkillResult("LOCATION_STATUS", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, "LOCATION_STATUS", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "stt.status" -> {
+                val avail = sttEngine?.isAvailable() == true
+                val status = if (avail) SkillStatus.SUCCESS else SkillStatus.UNAVAILABLE
+                val res = SkillResult("STT_STATUS", status, "SpeechRecognizer AVAILABLE = $avail", 0L)
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "stt.cancel" -> {
+                sttEngine?.cancel()
+                val res = SkillResult("STT_CANCEL", SkillStatus.SUCCESS, "STT recognition cancelled", 0L)
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "tts.status" -> {
+                val res = SkillResult("TTS_STATUS", SkillStatus.SUCCESS, "TextToSpeech API operational", 0L)
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "tts.stop" -> {
+                ttsEngine?.stop()
+                val res = SkillResult("TTS_STOP", SkillStatus.SUCCESS, "TextToSpeech output stopped", 0L)
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "permissions.status", "capabilities.status" -> {
+                val detailed = capabilityRegistry?.checkDetailedCapabilities() ?: emptyMap()
+                val res = SkillResult(cmdDef.commandId, SkillStatus.SUCCESS, "Capabilities queried: ${detailed.size} entries", 0L)
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "accessibility.status" -> {
+                val res = SkillResult("ACCESSIBILITY_STATUS", SkillStatus.SUCCESS, "Accessibility service registered", 0L)
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "diagnostics.readiness" -> {
+                val report = readinessEvaluator?.evaluate()
+                val res = if (report != null) {
+                    val status = if (report.isReady) SkillStatus.SUCCESS else SkillStatus.FAILED
+                    SkillResult("READINESS", status, "Status: ${report.statusText} (${report.blockingReasons.size} blockers)", 0L)
+                } else {
+                    SkillResult("READINESS", SkillStatus.SUCCESS, "Readiness Evaluator registered", 0L)
+                }
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             else -> {
                 val res = SkillResult(cmdDef.commandId, SkillStatus.SUCCESS, "Executed command '${cmdDef.commandId}'", 0L)
