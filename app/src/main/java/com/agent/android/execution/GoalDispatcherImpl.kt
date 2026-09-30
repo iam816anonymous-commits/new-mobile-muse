@@ -6,6 +6,7 @@ import com.agent.android.agent.device.BackgroundExecutionPolicy
 import com.agent.android.agent.device.CameraController
 import com.agent.android.agent.device.ClipboardController
 import com.agent.android.agent.device.ConnectivityControllers
+import com.agent.android.agent.device.DeviceAdministrationCapabilityDetector
 import com.agent.android.agent.device.DeviceStateController
 import com.agent.android.agent.device.DisplayController
 import com.agent.android.agent.device.FileAccessController
@@ -18,6 +19,7 @@ import com.agent.android.agent.device.NetworkController
 import com.agent.android.agent.device.NotificationController
 import com.agent.android.agent.device.PowerStateController
 import com.agent.android.agent.device.ScreenCaptureController
+import com.agent.android.agent.device.SettingsActionRegistry
 import com.agent.android.agent.device.SystemControlControllers
 import com.agent.android.agent.device.UsageStatsController
 import com.agent.android.agent.device.VolumeController
@@ -66,7 +68,9 @@ class GoalDispatcherImpl(
     private val powerStateController: PowerStateController? = null,
     private val backgroundExecutionPolicy: BackgroundExecutionPolicy = BackgroundExecutionPolicy(),
     private val appDiscoveryController: AppDiscoveryController? = null,
-    private val deviceStateController: DeviceStateController? = null
+    private val deviceStateController: DeviceStateController? = null,
+    private val settingsActionRegistry: SettingsActionRegistry? = null,
+    private val deviceAdminDetector: DeviceAdministrationCapabilityDetector? = null
 ) : GoalDispatcher {
 
     override fun dispatchGoal(goal: String): Boolean {
@@ -131,6 +135,13 @@ class GoalDispatcherImpl(
             "diagnostics.status" -> "DEVICE_INFO"
             "sensor.list" -> "SENSOR_LIST"
             else -> cmdDef.commandId
+        }
+
+        if (cmdDef.commandId.startsWith("settings.")) {
+            val res = settingsActionRegistry?.launchSettingsAction(cmdDef.commandId)
+                ?: systemControlControllers?.openSystemSettings(cmdDef.commandId.removePrefix("settings."))
+                ?: SkillResult("SETTINGS_ACTION", SkillStatus.UNAVAILABLE, "No Settings Handler", 0L, "NO_CONTROLLER")
+            return DispatchDetails(trimmed, opName, "SettingsActionRegistry", res, res.message)
         }
 
         return when (cmdDef.commandId) {
