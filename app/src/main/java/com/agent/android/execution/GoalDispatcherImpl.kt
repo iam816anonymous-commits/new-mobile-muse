@@ -305,7 +305,7 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, "Torch state = OFF")
             }
             "haptics.status" -> {
-                val res = hapticController?.vibrate(0L) ?: SkillResult("VIBRATE", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                val res = hapticController?.getVibratorStatus() ?: SkillResult("VIBRATION", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "haptics.vibrate" -> {

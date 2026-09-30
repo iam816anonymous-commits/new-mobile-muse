@@ -125,7 +125,8 @@ class HardwareObservationControllers(private val context: Context?) {
                 }
             }
             if (sample != null) {
-                SkillResult("SENSOR", SkillStatus.SUCCESS, "$sensorName sample: [$sample]", System.currentTimeMillis() - start)
+                val sensorMeta = "Vendor: ${sensor.vendor}, MaxRange: ${sensor.maximumRange}, Res: ${sensor.resolution}"
+                SkillResult("SENSOR", SkillStatus.SUCCESS, "$sensorName sample: [$sample] ($sensorMeta)", System.currentTimeMillis() - start)
             } else {
                 SkillResult("SENSOR", SkillStatus.FAILED, "$sensorName timeout waiting for sample", System.currentTimeMillis() - start, "SENSOR_TIMEOUT")
             }
