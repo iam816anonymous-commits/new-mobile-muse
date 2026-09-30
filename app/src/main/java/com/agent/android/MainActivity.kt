@@ -30,6 +30,7 @@ import com.agent.android.agent.skills.IntentSkills
 import com.agent.android.agent.skills.NotesSkill
 import com.agent.android.agent.skills.SkillStatus
 import com.agent.android.agent.skills.app.AppLauncherImpl
+import com.agent.android.commands.CommandRegistry
 import com.agent.android.diagnostics.FoundationReadinessEvaluator
 import com.agent.android.execution.ExecutionController
 import com.agent.android.execution.GoalDispatcherImpl
@@ -66,6 +67,7 @@ class MainActivity : Activity() {
     private lateinit var obsControllers: HardwareObservationControllers
     private lateinit var appLauncher: AppLauncherImpl
     private lateinit var capabilityRegistry: CapabilityRegistry
+    private lateinit var commandRegistry: CommandRegistry
 
     private lateinit var testRegistry: FoundationTestRegistry
     private lateinit var resultStore: TestResultStore
@@ -160,6 +162,7 @@ class MainActivity : Activity() {
 
         testHarness = Phase1SafetyTestHarness(executionController, logger)
         capabilityRegistry = CapabilityRegistry(this)
+        commandRegistry = CommandRegistry()
         val calc = CalculatorSkill()
         val notes = NotesSkill(this)
         val intents = IntentSkills(this)
@@ -171,12 +174,12 @@ class MainActivity : Activity() {
         appLauncher = AppLauncherImpl(this)
         val sysCtrl = SystemControlControllers(this)
 
-        goalDispatcher = GoalDispatcherImpl(executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers, appLauncher, sysCtrl)
+        goalDispatcher = GoalDispatcherImpl(executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers, appLauncher, sysCtrl, commandRegistry)
 
         testRegistry = FoundationTestRegistry()
         resultStore = TestResultStore(this)
         evidenceManager = EvidenceManager(this)
-        readinessEvaluator = FoundationReadinessEvaluator(this, executionController, capabilityRegistry, testRegistry)
+        readinessEvaluator = FoundationReadinessEvaluator(this, executionController, capabilityRegistry, testRegistry, commandRegistry)
 
         sttEngine = SpeechToTextEngine(this)
         ttsEngine = TextToSpeechEngine(this)
@@ -425,7 +428,7 @@ class MainActivity : Activity() {
 
         val current = testCases[currentTestIndex]
         tvTestIndex.text = "Test ${currentTestIndex + 1} / ${testCases.size} (ID: ${current.id})"
-        tvTestMeta.text = "Phase: ${current.phase} | Category: ${current.category} | Type: ${current.testType.name}"
+        tvTestMeta.text = "Command ID: ${current.commandId} | Phase: ${current.phase} | Category: ${current.category} | Type: ${current.testType.name}"
         tvTestName.text = current.name
         tvTestDescription.text = current.description
         tvTestCommand.text = current.command ?: "NONE (NO COMMAND)"
@@ -486,7 +489,9 @@ class MainActivity : Activity() {
                 current.error = details.result.errorCode
                 current.duration = dur
 
-                if (current.testType == TestType.AUTOMATED) {
+                if (details.result.errorCode == "PERMISSION_REQUIRED" || details.result.errorCode == "SPECIAL_ACCESS_REQUIRED") {
+                    current.status = TestStatus.BLOCKED
+                } else if (current.testType == TestType.AUTOMATED) {
                     current.status = if (details.result.status == SkillStatus.SUCCESS) TestStatus.PASSED else TestStatus.FAILED
                 } else if (current.testType == TestType.NEGATIVE) {
                     current.status = if (details.result.status != SkillStatus.SUCCESS) TestStatus.PASSED else TestStatus.FAILED
@@ -657,7 +662,8 @@ class MainActivity : Activity() {
         sysSb.append("APP PACKAGE: ${packageName}\n")
         sysSb.append("BUILD VERSION: ${resultStore.getBuildVersion()}\n")
         sysSb.append("DEVICE: ${Build.MANUFACTURER} ${Build.MODEL}\n")
-        sysSb.append("ANDROID OS: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n\n")
+        sysSb.append("ANDROID OS: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
+        sysSb.append("COMMAND COVERAGE: ${report.commandCoverageText}\n\n")
 
         for ((_, detail) in report.categoryDetails) {
             sysSb.append("[${detail.categoryName}]: ${if (detail.isPassed) "PASS" else "FAIL"} -> ${detail.detail}\n")

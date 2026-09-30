@@ -6,9 +6,10 @@ import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import com.agent.android.agent.device.CapabilityRegistry
+import com.agent.android.commands.CommandRegistry
+import com.agent.android.commands.CommandStatus
 import com.agent.android.execution.ExecutionController
 import com.agent.android.speech.SpeechToTextEngine
-import com.agent.android.speech.TextToSpeechEngine
 import com.agent.android.test.FoundationTestRegistry
 
 data class CategoryStatus(
@@ -21,14 +22,16 @@ data class FoundationReadinessReport(
     val isReady: Boolean,
     val statusText: String,
     val blockingReasons: List<String>,
-    val categoryDetails: Map<String, CategoryStatus>
+    val categoryDetails: Map<String, CategoryStatus>,
+    val commandCoverageText: String
 )
 
 class FoundationReadinessEvaluator(
     private val context: Context,
     private val executionController: ExecutionController,
     private val capabilityRegistry: CapabilityRegistry,
-    private val testRegistry: FoundationTestRegistry
+    private val testRegistry: FoundationTestRegistry,
+    private val commandRegistry: CommandRegistry = CommandRegistry()
 ) {
 
     fun evaluate(): FoundationReadinessReport {
@@ -99,7 +102,23 @@ class FoundationReadinessEvaluator(
         val ttsMsg = "TextToSpeech API present"
         categoryDetails["TTS"] = CategoryStatus("TTS", true, ttsMsg)
 
-        // 8. TESTS
+        // 8. COMMAND REGISTRY COVERAGE & CROSS-VALIDATION
+        val allCmds = commandRegistry.getAllCommands()
+        val implCmds = allCmds.filter { it.status == CommandStatus.IMPLEMENTED }
+        val allTests = testRegistry.getAllTestCases()
+        val testedCmdIds = allTests.map { it.commandId }.toSet()
+
+        val untestedImplCmds = implCmds.filter { !testedCmdIds.contains(it.commandId) }
+        val coveragePct = if (implCmds.isNotEmpty()) ((implCmds.size - untestedImplCmds.size) * 100) / implCmds.size else 0
+
+        val coverageMsg = "Implemented Commands: ${implCmds.size}/${allCmds.size} | Tested: ${implCmds.size - untestedImplCmds.size}/${implCmds.size} ($coveragePct% coverage)"
+        val cmdPassed = untestedImplCmds.isEmpty()
+        if (!cmdPassed) {
+            blockingReasons.add("COMMANDS: ${untestedImplCmds.size} implemented commands have zero test coverage: ${untestedImplCmds.map { it.commandId }}")
+        }
+        categoryDetails["COMMAND_REGISTRY"] = CategoryStatus("COMMAND_REGISTRY", cmdPassed, coverageMsg)
+
+        // 9. TESTS
         val summary = testRegistry.getSummary()
         val testsPassed = summary.failed == 0 && summary.blocked == 0 && summary.pending == 0 && summary.total > 0
         val testMsg = "Total: ${summary.total}, Passed: ${summary.passed}, Failed: ${summary.failed}, Blocked: ${summary.blocked}, Pending: ${summary.pending}"
@@ -116,7 +135,8 @@ class FoundationReadinessEvaluator(
             isReady = isReady,
             statusText = statusText,
             blockingReasons = blockingReasons,
-            categoryDetails = categoryDetails
+            categoryDetails = categoryDetails,
+            commandCoverageText = coverageMsg
         )
     }
 }

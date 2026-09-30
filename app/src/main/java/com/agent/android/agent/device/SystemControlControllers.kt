@@ -19,6 +19,20 @@ import com.agent.android.agent.skills.SkillStatus
 
 class SystemControlControllers(private val context: Context?) {
 
+    fun getBrightnessStatus(): SkillResult {
+        val start = System.currentTimeMillis()
+        if (context == null) return SkillResult("BRIGHTNESS", SkillStatus.UNAVAILABLE, "Context unavailable", System.currentTimeMillis() - start, "NO_CONTEXT")
+
+        return try {
+            val verified = Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS, -1)
+            val verifiedPct = if (verified >= 0) Math.round((verified / 255.0) * 100).toInt() else -1
+            val canWrite = Settings.System.canWrite(context)
+            SkillResult("BRIGHTNESS", SkillStatus.SUCCESS, "System brightness level $verified / 255 ($verifiedPct%) [WRITE_SETTINGS: $canWrite]", System.currentTimeMillis() - start)
+        } catch (e: Exception) {
+            SkillResult("BRIGHTNESS", SkillStatus.FAILED, "Error reading brightness: ${e.message}", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
+        }
+    }
+
     fun setBrightness(percent: Int): SkillResult {
         val start = System.currentTimeMillis()
         if (percent !in 0..100) {

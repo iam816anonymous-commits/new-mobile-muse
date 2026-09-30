@@ -2,6 +2,7 @@ package com.agent.android.test.model
 
 data class TestCase(
     val id: String,
+    val commandId: String = "",
     val phase: String,
     val category: String,
     val name: String,
