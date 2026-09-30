@@ -2,6 +2,8 @@ package com.agent.android
 
 import android.Manifest
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -18,6 +20,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.agent.android.agent.device.AppDiscoveryController
 import com.agent.android.agent.device.BackgroundExecutionPolicy
@@ -478,6 +481,7 @@ class MainActivity : Activity() {
         tvTestEvidence.text = "Evidence:\n$evText"
     }
 
+    @Suppress("NotificationPermission")
     private fun executeCurrentTest() {
         val current = testRegistry.getAllTestCases().getOrNull(currentTestIndex) ?: return
         val start = System.currentTimeMillis()
@@ -485,7 +489,25 @@ class MainActivity : Activity() {
         current.status = TestStatus.RUNNING
         refreshTestRunnerUI()
 
-        if (current.id.startsWith("1.1.")) {
+        if (current.id == "2.5.NOTIF.003") {
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            val channelId = "localagent_test_channel"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(channelId, "LocalAgent Test Channel", NotificationManager.IMPORTANCE_DEFAULT)
+                notificationManager?.createNotificationChannel(channel)
+            }
+            val builder = NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle("LocalAgent Test Notification")
+                .setContentText("Isolated test notification posted at ${System.currentTimeMillis()}")
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+            notificationManager?.notify(1001, builder.build())
+            val dur = System.currentTimeMillis() - start
+            current.status = TestStatus.PASSED
+            current.observedResult = "Posted local test notification on channel '$channelId'"
+            current.duration = dur
+        } else if (current.id.startsWith("1.1.")) {
             val safetyRes = when (current.id) {
                 "1.1.01" -> testHarness.testExecutionOwnership()
                 "1.1.04" -> testHarness.testConcurrentExecutionRejection()

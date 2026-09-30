@@ -16,10 +16,12 @@
 | `notification_listener_access` | `android.permission.BIND_NOTIFICATION_LISTENER_SERVICE` | NOTIFICATION_ACCESS | Yes | No | Yes | Yes (Settings) | Yes | Yes | `notification.status`, `notification.latest` | SPECIAL_ACCESS |
 | `usage_stats_access` | `android.permission.PACKAGE_USAGE_STATS` | USAGE_ACCESS | Yes | No | Yes | Yes (Settings) | Yes | Yes | `app.current` | SPECIAL_ACCESS |
 | `accessibility_service_required` | `android.permission.BIND_ACCESSIBILITY_SERVICE` | ACCESSIBILITY | Yes | No | Yes | Yes (Settings) | Yes | Yes | `accessibility.status`, `safety.panic` | SPECIAL_ACCESS |
+| `device_admin_access` | `android.permission.BIND_DEVICE_ADMIN` | SPECIAL_ACCESS | Yes | No | Yes | Yes (Settings) | Yes | Yes | `permissions.status` | SPECIAL_ACCESS |
 | `device_owner_access` | `android.permission.BIND_DEVICE_ADMIN` | PRIVILEGED_ONLY | No | No | No | No | N/A | No | N/A | PRIVILEGED_ONLY |
 
 ## 2. API 27 Platform Specifics
+- **Device Administration**: `LocalAgentAdminReceiver` is declared in `AndroidManifest.xml` with `device_admin_policies.xml`. `device_admin_access` is user-grantable via Settings -> Device Administrators. Device Owner privileges remain explicitly classified as `PRIVILEGED_ONLY` (system provisioning required).
 - **Direct Bluetooth Control**: Restricted by OEM/Android 8.1 OS policies; direct toggling returns `BLOCKED / UNSUPPORTED_DIRECT_CONTROL` and opens Settings screen.
 - **Ringer Mode Modifications**: Requires Notification Policy Access (Do Not Disturb Special Access) on Android 7.0+ (API 24+).
-- **Foreground App Querying**: Requires `PACKAGE_USAGE_STATS` special access via Settings -> Usage Access.
-- **Notification Traversal**: Requires `BIND_NOTIFICATION_LISTENER_SERVICE` special access via Settings -> Notification Access.
+- **Foreground App Querying**: Requires `PACKAGE_USAGE_STATS` special access via Settings -> Usage Access checked via `AppOpsManager`.
+- **Notification Traversal**: Requires `BIND_NOTIFICATION_LISTENER_SERVICE` special access via Settings -> Notification Access checked via `enabled_notification_listeners`.

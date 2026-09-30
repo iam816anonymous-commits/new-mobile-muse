@@ -1,6 +1,7 @@
 package com.agent.android.permissions
 
 import android.Manifest
+import android.app.admin.DevicePolicyManager
 import android.provider.Settings
 
 class PermissionRegistry {
@@ -202,17 +203,32 @@ class PermissionRegistry {
             explanation = "Requires user enablement in Settings -> Accessibility"
         ))
 
+        register(PermissionDefinition(
+            id = "device_admin_access",
+            androidIdentifier = Manifest.permission.BIND_DEVICE_ADMIN,
+            displayName = "Device Administration Access",
+            category = PermissionCategory.SPECIAL_ACCESS,
+            description = "Allows activating LocalAgent as a user-granted Device Administrator",
+            protectionType = "SPECIAL_ACCESS",
+            requiresSettingsScreen = true,
+            requiresSpecialAccess = true,
+            relatedCapabilityIds = listOf("DEVICE_ADMIN"),
+            relatedCommandIds = listOf("diagnostics.status"),
+            settingsAction = DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN,
+            explanation = "Requires user enablement in Settings -> Device Administrators"
+        ))
+
         // 3. PRIVILEGED / SYSTEM-ONLY
         register(PermissionDefinition(
             id = "device_owner_access",
             androidIdentifier = "android.permission.BIND_DEVICE_ADMIN",
-            displayName = "Device Owner / Admin Privileges",
+            displayName = "Device Owner Privileges",
             category = PermissionCategory.PRIVILEGED_ONLY,
-            description = "Requires system or device-owner provisioning",
+            description = "Requires provisioning via ADB or system image",
             protectionType = "SIGNATURE_OR_SYSTEM",
             isObtainableOnApi27 = false,
             requiresUserInteraction = false,
-            explanation = "System-only privilege not obtainable by standard applications"
+            explanation = "System/provisioning privilege not obtainable by standard runtime flow"
         ))
     }
 

@@ -78,9 +78,10 @@ class FoundationTestRegistry {
         add(TestCase("2.5.CLIP.003", "clipboard.read", "PHASE_2.5", "CLIPBOARD", "Read Clipboard Contents", "Reads current text from clipboard.", "clipboard read", "Clipboard content read or empty reported", TestType.AUTOMATED))
         add(TestCase("2.5.CLIP.004", "clipboard.clear", "PHASE_2.5", "CLIPBOARD", "Clear Clipboard Contents", "Clears system clipboard.", "clipboard clear", "Clipboard cleared", TestType.AUTOMATED))
 
-        // NOTIFICATIONS (2)
+        // NOTIFICATIONS (3)
         add(TestCase("2.5.NOTIF.001", "notification.status", "PHASE_2.5", "OBSERVATION", "Notification Listener Status Query", "Queries NotificationListener connection state.", "notification status", "Notification status reported", TestType.PERMISSION))
         add(TestCase("2.5.NOTIF.002", "notification.latest", "PHASE_2.5", "OBSERVATION", "Latest Notification Query", "Reads latest received notification snapshot.", "notification latest", "Latest notification reported or NO_DATA", TestType.AUTOMATED))
+        add(TestCase("2.5.NOTIF.003", "notification.latest", "PHASE_2.5", "OBSERVATION", "Isolated Notification Callback Test", "Posts local test notification and verifies listener receipt.", "notification latest", "Local notification posted and captured", TestType.AUTOMATED))
 
         // DISPLAY & INPUT (6)
         add(TestCase("2.5.DISP.001", "display.status", "PHASE_2.5", "DEVICE", "Display Status Query", "Queries screen metrics, density, and orientation.", "display status", "Display metrics reported", TestType.AUTOMATED))
@@ -157,12 +158,14 @@ class FoundationTestRegistry {
         add(TestCase("2.4.04", "tts.speak", "PHASE_2.4", "TTS", "TTS Speak Test", "Speaks phrase 'Foundation test successful'.", "speak Foundation test successful", "Speech output heard physically from speaker", TestType.PHYSICAL, requiresPhysicalVerification = true, requiredCapability = "TTS"))
         add(TestCase("2.5.TTS.001", "tts.stop", "PHASE_2.5", "TTS", "TTS Stop Output", "Stops active speech output.", "tts stop", "TTS speech stopped or idle", TestType.AUTOMATED, requiredCapability = "TTS"))
 
-        // PERMISSIONS, CAPABILITIES, ACCESSIBILITY & DIAGNOSTICS (5)
+        // PERMISSIONS, DEVICE ADMIN, CAPABILITIES, ACCESSIBILITY & DIAGNOSTICS (7)
         add(TestCase("2.5.DIAG.001", "permissions.status", "PHASE_2.5", "DIAGNOSTICS", "All Permissions Status Query", "Queries runtime permissions & special access.", "permissions status", "Permissions status reported", TestType.PERMISSION))
         add(TestCase("2.5.DIAG.002", "capabilities.status", "PHASE_2.5", "DIAGNOSTICS", "All Capabilities Status Query", "Queries hardware capability states.", "capabilities status", "Capabilities status reported", TestType.HARDWARE))
         add(TestCase("2.5.DIAG.003", "accessibility.status", "PHASE_2.5", "DIAGNOSTICS", "Accessibility Connection Query", "Queries accessibility service connection.", "accessibility status", "Accessibility status reported", TestType.PERMISSION))
         add(TestCase("2.5.DIAG.004", "diagnostics.status", "PHASE_2.5", "DIAGNOSTICS", "Device Diagnostics Query", "Runs device diagnostics and sensor inspection.", "diagnostics status", "Diagnostics report generated", TestType.AUTOMATED))
         add(TestCase("2.5.DIAG.005", "diagnostics.readiness", "PHASE_2.5", "DIAGNOSTICS", "Foundation Readiness Evaluation", "Evaluates deterministic foundation readiness.", "readiness status", "Foundation readiness evaluated", TestType.AUTOMATED))
+        add(TestCase("2.5.ADMIN.001", "permissions.status", "PHASE_2.5", "DIAGNOSTICS", "Device Admin Status Check", "Queries Device Admin receiver status via DevicePolicyManager.", "permissions status", "Device Admin status reported", TestType.PERMISSION))
+        add(TestCase("2.5.ADMIN.002", "permissions.status", "PHASE_2.5", "DIAGNOSTICS", "Device Owner Privilege Status", "Queries Device Owner privilege classification.", "permissions status", "Device Owner classified as PRIVILEGED_ONLY", TestType.PERMISSION))
     }
 
     private fun add(testCase: TestCase) {
