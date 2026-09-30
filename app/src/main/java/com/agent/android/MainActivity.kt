@@ -19,12 +19,26 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.agent.android.agent.device.AppDiscoveryController
+import com.agent.android.agent.device.BackgroundExecutionPolicy
+import com.agent.android.agent.device.CameraController
 import com.agent.android.agent.device.CapabilityRegistry
+import com.agent.android.agent.device.ClipboardController
 import com.agent.android.agent.device.ConnectivityControllers
+import com.agent.android.agent.device.DeviceStateController
+import com.agent.android.agent.device.DisplayController
+import com.agent.android.agent.device.FileAccessController
 import com.agent.android.agent.device.FlashlightController
 import com.agent.android.agent.device.HapticController
 import com.agent.android.agent.device.HardwareObservationControllers
+import com.agent.android.agent.device.InputStateController
+import com.agent.android.agent.device.LocationController
+import com.agent.android.agent.device.NetworkController
+import com.agent.android.agent.device.NotificationController
+import com.agent.android.agent.device.PowerStateController
+import com.agent.android.agent.device.ScreenCaptureController
 import com.agent.android.agent.device.SystemControlControllers
+import com.agent.android.agent.device.UsageStatsController
 import com.agent.android.agent.device.VolumeController
 import com.agent.android.agent.skills.CalculatorSkill
 import com.agent.android.agent.skills.IntentSkills
@@ -175,7 +189,26 @@ class MainActivity : Activity() {
         appLauncher = AppLauncherImpl(this)
         val sysCtrl = SystemControlControllers(this)
 
-        goalDispatcher = GoalDispatcherImpl(executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers, appLauncher, sysCtrl, commandRegistry)
+        val clipboardCtrl = ClipboardController(this)
+        val notifCtrl = NotificationController(this)
+        val usageStatsCtrl = UsageStatsController(this)
+        val displayCtrl = DisplayController(this)
+        val screenCapCtrl = ScreenCaptureController(this)
+        val inputStateCtrl = InputStateController(this)
+        val cameraCtrl = CameraController(this)
+        val fileAccessCtrl = FileAccessController(this)
+        val locationCtrl = LocationController(this)
+        val networkCtrl = NetworkController(this)
+        val powerStateCtrl = PowerStateController(this)
+        val bgPolicy = BackgroundExecutionPolicy()
+        val appDiscCtrl = AppDiscoveryController(this)
+        val deviceSnapCtrl = DeviceStateController(this)
+
+        goalDispatcher = GoalDispatcherImpl(
+            executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers, appLauncher, sysCtrl, commandRegistry,
+            clipboardCtrl, notifCtrl, usageStatsCtrl, displayCtrl, screenCapCtrl, inputStateCtrl, cameraCtrl, fileAccessCtrl, locationCtrl, networkCtrl,
+            powerStateCtrl, bgPolicy, appDiscCtrl, deviceSnapCtrl
+        )
 
         testRegistry = FoundationTestRegistry()
         resultStore = TestResultStore(this)

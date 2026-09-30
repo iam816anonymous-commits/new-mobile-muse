@@ -1,0 +1,170 @@
+package com.agent.android
+
+import com.agent.android.agent.device.AccessibilityActionController
+import com.agent.android.agent.device.ActionRequest
+import com.agent.android.agent.device.AppDiscoveryController
+import com.agent.android.agent.device.BackgroundExecutionPolicy
+import com.agent.android.agent.device.CameraController
+import com.agent.android.agent.device.ClipboardController
+import com.agent.android.agent.device.DeviceStateController
+import com.agent.android.agent.device.DisplayController
+import com.agent.android.agent.device.FileAccessController
+import com.agent.android.agent.device.InputStateController
+import com.agent.android.agent.device.InteractionVisualizer
+import com.agent.android.agent.device.LocationController
+import com.agent.android.agent.device.NetworkController
+import com.agent.android.agent.device.NotificationController
+import com.agent.android.agent.device.PowerStateController
+import com.agent.android.agent.device.ScreenCaptureController
+import com.agent.android.agent.device.TextInputController
+import com.agent.android.agent.device.UsageStatsController
+import com.agent.android.agent.skills.SkillStatus
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Test
+
+class Phase25FoundationUnitTest {
+
+    @Test
+    fun testClipboardControllerNullContextSafeguard() {
+        val ctrl = ClipboardController(null)
+        val resStatus = ctrl.getClipboardStatus()
+        assertEquals(SkillStatus.UNAVAILABLE, resStatus.status)
+        assertEquals("NO_CONTEXT", resStatus.errorCode)
+
+        val resRead = ctrl.readClipboard()
+        assertEquals(SkillStatus.UNAVAILABLE, resRead.status)
+
+        val resWrite = ctrl.writeClipboard("test")
+        assertEquals(SkillStatus.UNAVAILABLE, resWrite.status)
+
+        val resClear = ctrl.clearClipboard()
+        assertEquals(SkillStatus.UNAVAILABLE, resClear.status)
+    }
+
+    @Test
+    fun testNotificationControllerNullContextSafeguard() {
+        val ctrl = NotificationController(null)
+        val res = ctrl.getNotificationStatus()
+        assertEquals(SkillStatus.UNAVAILABLE, res.status)
+    }
+
+    @Test
+    fun testUsageStatsControllerNullContextSafeguard() {
+        val ctrl = UsageStatsController(null)
+        val res = ctrl.getCurrentForegroundApp()
+        assertEquals(SkillStatus.UNAVAILABLE, res.status)
+    }
+
+    @Test
+    fun testAccessibilityActionControllerContracts() {
+        val ctrl = AccessibilityActionController()
+        val tapRes = ctrl.executeContractAction(ActionRequest("tap", 100f, 200f))
+        assertEquals(SkillStatus.SUCCESS, tapRes.status)
+
+        val backRes = ctrl.executeContractAction(ActionRequest("back"))
+        assertEquals(SkillStatus.SUCCESS, backRes.status)
+
+        val invalidRes = ctrl.executeContractAction(ActionRequest("invalid_gesture"))
+        assertEquals(SkillStatus.FAILED, invalidRes.status)
+        assertEquals("INVALID_ACTION", invalidRes.errorCode)
+    }
+
+    @Test
+    fun testTextInputControllerContracts() {
+        val ctrl = TextInputController()
+        val setRes = ctrl.executeTextContract("setText", "hello")
+        assertEquals(SkillStatus.SUCCESS, setRes.status)
+
+        val invalidRes = ctrl.executeTextContract("invalid_action")
+        assertEquals(SkillStatus.FAILED, invalidRes.status)
+        assertEquals("INVALID_ACTION", invalidRes.errorCode)
+    }
+
+    @Test
+    fun testDisplayControllerNullContextSafeguard() {
+        val ctrl = DisplayController(null)
+        val res = ctrl.getDisplayStatus()
+        assertEquals(SkillStatus.UNAVAILABLE, res.status)
+    }
+
+    @Test
+    fun testScreenCaptureControllerNullContextSafeguard() {
+        val ctrl = ScreenCaptureController(null)
+        val res = ctrl.getScreenCaptureStatus()
+        assertEquals(SkillStatus.UNAVAILABLE, res.status)
+    }
+
+    @Test
+    fun testInteractionVisualizer() {
+        val vis = InteractionVisualizer()
+        val showRes = vis.showIndicator(100f, 200f, "tap")
+        assertEquals(SkillStatus.SUCCESS, showRes.status)
+
+        val dismissRes = vis.dismissIndicator()
+        assertEquals(SkillStatus.SUCCESS, dismissRes.status)
+    }
+
+    @Test
+    fun testInputStateControllerNullContextSafeguard() {
+        val ctrl = InputStateController(null)
+        val kbdRes = ctrl.getKeyboardStatus()
+        assertEquals(SkillStatus.UNAVAILABLE, kbdRes.status)
+    }
+
+    @Test
+    fun testCameraControllerNullContextSafeguard() {
+        val ctrl = CameraController(null)
+        val res = ctrl.getCameraStatus()
+        assertEquals(SkillStatus.UNAVAILABLE, res.status)
+    }
+
+    @Test
+    fun testFileAccessControllerNullContextSafeguard() {
+        val ctrl = FileAccessController(null)
+        val res = ctrl.getFileAccessStatus()
+        assertEquals(SkillStatus.UNAVAILABLE, res.status)
+    }
+
+    @Test
+    fun testLocationControllerNullContextSafeguard() {
+        val ctrl = LocationController(null)
+        val res = ctrl.getLocationProviders()
+        assertEquals(SkillStatus.UNAVAILABLE, res.status)
+    }
+
+    @Test
+    fun testNetworkControllerNullContextSafeguard() {
+        val ctrl = NetworkController(null)
+        val res = ctrl.getNetworkStatus()
+        assertEquals(SkillStatus.UNAVAILABLE, res.status)
+    }
+
+    @Test
+    fun testPowerStateControllerNullContextSafeguard() {
+        val ctrl = PowerStateController(null)
+        val res = ctrl.getPowerStatus()
+        assertEquals(SkillStatus.UNAVAILABLE, res.status)
+    }
+
+    @Test
+    fun testBackgroundExecutionPolicy() {
+        val policy = BackgroundExecutionPolicy()
+        val res = policy.getPolicyStatus()
+        assertEquals(SkillStatus.SUCCESS, res.status)
+    }
+
+    @Test
+    fun testAppDiscoveryControllerNullContextSafeguard() {
+        val ctrl = AppDiscoveryController(null)
+        val listRes = ctrl.listApps()
+        assertEquals(SkillStatus.UNAVAILABLE, listRes.status)
+    }
+
+    @Test
+    fun testDeviceStateControllerNullContextSafeguard() {
+        val ctrl = DeviceStateController(null)
+        val res = ctrl.getDeviceSnapshot()
+        assertEquals(SkillStatus.UNAVAILABLE, res.status)
+    }
+}

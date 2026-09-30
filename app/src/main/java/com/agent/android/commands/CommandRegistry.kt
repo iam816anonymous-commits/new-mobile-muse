@@ -29,8 +29,12 @@ class CommandRegistry {
         // 5. WEB SEARCH
         register(CommandDefinition("web.search", "Web Search", CommandCategory.HEADLESS_CORE, "Launches web search intent for query", CommandStatus.IMPLEMENTED, "web search <query>", listOf("web search localagent", "search localagent"), listOf("query"), CommandRequirement(launchesApplication = true), handlerIdentifier = "IntentSkills"))
 
-        // 6. APP LAUNCHING
+        // 6. APP LAUNCHING & DISCOVERY
         register(CommandDefinition("app.launch", "Launch Application", CommandCategory.APPLICATION, "Resolves and opens installed application", CommandStatus.IMPLEMENTED, "open <app_name>", listOf("open settings", "launch settings"), listOf("query"), CommandRequirement(launchesApplication = true, physicalObservationRequired = true), handlerIdentifier = "AppLauncherImpl"))
+        register(CommandDefinition("app.current", "Current Foreground App", CommandCategory.APPLICATION, "Queries current active foreground application package", CommandStatus.IMPLEMENTED, "app current", listOf("app current"), requirement = CommandRequirement(requiredSpecialAccess = listOf("USAGE_STATS_ACCESS")), handlerIdentifier = "UsageStatsController"))
+        register(CommandDefinition("app.list", "List Installed Apps", CommandCategory.APPLICATION, "Lists launchable installed applications", CommandStatus.IMPLEMENTED, "app list", listOf("app list"), handlerIdentifier = "AppDiscoveryController"))
+        register(CommandDefinition("app.find", "Find Application", CommandCategory.APPLICATION, "Finds installed application by name query", CommandStatus.IMPLEMENTED, "app find <query>", listOf("app find settings"), listOf("query"), handlerIdentifier = "AppDiscoveryController"))
+        register(CommandDefinition("app.info", "Application Package Info", CommandCategory.APPLICATION, "Queries package version and info", CommandStatus.IMPLEMENTED, "app info <package>", listOf("app info com.android.settings"), listOf("package"), handlerIdentifier = "AppDiscoveryController"))
 
         // 7. FLASHLIGHT
         register(CommandDefinition("flashlight.status", "Flashlight Status", CommandCategory.DEVICE, "Queries camera torch state", CommandStatus.IMPLEMENTED, "flashlight status", listOf("flashlight status"), requirement = CommandRequirement(requiredCapabilities = listOf("FLASHLIGHT")), handlerIdentifier = "FlashlightController"))
@@ -41,7 +45,7 @@ class CommandRegistry {
         register(CommandDefinition("haptics.status", "Haptics Status", CommandCategory.DEVICE, "Queries vibrator service status", CommandStatus.IMPLEMENTED, "vibrate status", listOf("vibrate status"), requirement = CommandRequirement(requiredCapabilities = listOf("VIBRATION")), handlerIdentifier = "HapticController"))
         register(CommandDefinition("haptics.vibrate", "Trigger Vibration", CommandCategory.DEVICE, "Triggers haptic vibration for duration (1-2000ms)", CommandStatus.IMPLEMENTED, "vibrate <duration_ms>", listOf("vibrate 200"), listOf("durationMs"), CommandRequirement(requiredCapabilities = listOf("VIBRATION"), physicalObservationRequired = true), handlerIdentifier = "HapticController"))
 
-        // 9. VOLUME STREAMS (ALARM, RING, NOTIFICATION, MUSIC)
+        // 9. VOLUME STREAMS
         val streams = listOf("alarm", "ring", "notification", "music")
         for (s in streams) {
             register(CommandDefinition("volume.$s.status", "${s.uppercase()} Volume Status", CommandCategory.DEVICE, "Queries complete $s volume status", CommandStatus.IMPLEMENTED, "volume $s status", listOf("volume $s status"), handlerIdentifier = "VolumeController"))
@@ -59,26 +63,54 @@ class CommandRegistry {
         register(CommandDefinition("bluetooth.on", "Bluetooth Enable Request", CommandCategory.CONNECTIVITY, "Requests Bluetooth enablement", CommandStatus.IMPLEMENTED, "bluetooth on", listOf("bluetooth on"), requirement = CommandRequirement(requiredCapabilities = listOf("BLUETOOTH")), handlerIdentifier = "ConnectivityControllers"))
         register(CommandDefinition("bluetooth.off", "Bluetooth Disable Request", CommandCategory.CONNECTIVITY, "Requests Bluetooth disablement", CommandStatus.IMPLEMENTED, "bluetooth off", listOf("bluetooth off"), requirement = CommandRequirement(requiredCapabilities = listOf("BLUETOOTH")), handlerIdentifier = "ConnectivityControllers"))
 
-        // 11. BATTERY
-        register(CommandDefinition("battery.status", "Battery Status", CommandCategory.OBSERVATION, "Queries battery level and power charging state", CommandStatus.IMPLEMENTED, "battery status", listOf("battery status"), handlerIdentifier = "SystemControlControllers"))
+        // 11. CLIPBOARD
+        register(CommandDefinition("clipboard.status", "Clipboard Status", CommandCategory.DEVICE, "Queries system clipboard state", CommandStatus.IMPLEMENTED, "clipboard status", listOf("clipboard status"), handlerIdentifier = "ClipboardController"))
+        register(CommandDefinition("clipboard.read", "Read Clipboard", CommandCategory.DEVICE, "Reads text from system clipboard", CommandStatus.IMPLEMENTED, "clipboard read", listOf("clipboard read"), handlerIdentifier = "ClipboardController"))
+        register(CommandDefinition("clipboard.write", "Write Clipboard", CommandCategory.DEVICE, "Writes text to system clipboard", CommandStatus.IMPLEMENTED, "clipboard write <text>", listOf("clipboard write hello"), listOf("text"), handlerIdentifier = "ClipboardController"))
+        register(CommandDefinition("clipboard.clear", "Clear Clipboard", CommandCategory.DEVICE, "Clears system clipboard contents", CommandStatus.IMPLEMENTED, "clipboard clear", listOf("clipboard clear"), handlerIdentifier = "ClipboardController"))
 
-        // 12. SENSORS
+        // 12. NOTIFICATION LISTENER
+        register(CommandDefinition("notification.status", "Notification Listener Status", CommandCategory.OBSERVATION, "Queries NotificationListenerService connection and access status", CommandStatus.IMPLEMENTED, "notification status", listOf("notification status"), requirement = CommandRequirement(requiredSpecialAccess = listOf("Notification Listener Access")), handlerIdentifier = "NotificationController"))
+        register(CommandDefinition("notification.latest", "Latest Notification", CommandCategory.OBSERVATION, "Reads latest received notification snapshot", CommandStatus.IMPLEMENTED, "notification latest", listOf("notification latest"), requirement = CommandRequirement(requiredSpecialAccess = listOf("Notification Listener Access")), handlerIdentifier = "NotificationController"))
+
+        // 13. DISPLAY & INPUT
+        register(CommandDefinition("display.status", "Display Status", CommandCategory.DEVICE, "Queries screen dimensions, density, and orientation", CommandStatus.IMPLEMENTED, "display status", listOf("display status"), handlerIdentifier = "DisplayController"))
+        register(CommandDefinition("display.dimensions", "Display Dimensions", CommandCategory.DEVICE, "Queries screen pixel width and height", CommandStatus.IMPLEMENTED, "display dimensions", listOf("display dimensions"), handlerIdentifier = "DisplayController"))
+        register(CommandDefinition("display.orientation", "Display Orientation", CommandCategory.DEVICE, "Queries screen orientation state", CommandStatus.IMPLEMENTED, "display orientation", listOf("display orientation"), handlerIdentifier = "DisplayController"))
+        register(CommandDefinition("screen.capture.status", "Screen Capture Status", CommandCategory.DEVICE, "Queries screen capture capability and consent state", CommandStatus.IMPLEMENTED, "screen capture status", listOf("screen capture status"), handlerIdentifier = "ScreenCaptureController"))
+        register(CommandDefinition("keyboard.status", "Keyboard Status", CommandCategory.OBSERVATION, "Queries soft keyboard visibility state", CommandStatus.IMPLEMENTED, "keyboard status", listOf("keyboard status"), handlerIdentifier = "InputStateController"))
+        register(CommandDefinition("input.status", "Input Method Status", CommandCategory.OBSERVATION, "Queries input capability status", CommandStatus.IMPLEMENTED, "input status", listOf("input status"), handlerIdentifier = "InputStateController"))
+
+        // 14. CAMERA
+        register(CommandDefinition("camera.status", "Camera Status", CommandCategory.DEVICE, "Queries hardware camera availability and count", CommandStatus.IMPLEMENTED, "camera status", listOf("camera status"), handlerIdentifier = "CameraController"))
+        register(CommandDefinition("camera.permission", "Camera Permission", CommandCategory.DEVICE, "Queries CAMERA permission status", CommandStatus.IMPLEMENTED, "camera permission", listOf("camera permission"), handlerIdentifier = "CameraController"))
+        register(CommandDefinition("camera.list", "Camera ID List", CommandCategory.DEVICE, "Lists installed camera device IDs", CommandStatus.IMPLEMENTED, "camera list", listOf("camera list"), handlerIdentifier = "CameraController"))
+
+        // 15. NETWORK, LOCATION, POWER & DEVICE SNAPSHOT
+        register(CommandDefinition("network.status", "Network Status", CommandCategory.OBSERVATION, "Queries active network connection state", CommandStatus.IMPLEMENTED, "network status", listOf("network status"), handlerIdentifier = "NetworkController"))
+        register(CommandDefinition("location.status", "Location Status", CommandCategory.SYSTEM_CONTROLS, "Queries GPS and Network location provider states", CommandStatus.IMPLEMENTED, "location status", listOf("location status"), handlerIdentifier = "SystemControlControllers"))
+        register(CommandDefinition("location.providers", "Location Providers", CommandCategory.OBSERVATION, "Queries location provider details", CommandStatus.IMPLEMENTED, "location providers", listOf("location providers"), handlerIdentifier = "LocationController"))
+        register(CommandDefinition("battery.status", "Battery Status", CommandCategory.OBSERVATION, "Queries battery level and power charging state", CommandStatus.IMPLEMENTED, "battery status", listOf("battery status"), handlerIdentifier = "SystemControlControllers"))
+        register(CommandDefinition("power.status", "Power State Status", CommandCategory.OBSERVATION, "Queries screen interactivity power state", CommandStatus.IMPLEMENTED, "power status", listOf("power status"), handlerIdentifier = "PowerStateController"))
+        register(CommandDefinition("background.policy", "Background Execution Policy", CommandCategory.DIAGNOSTICS, "Queries foreground background execution policy", CommandStatus.IMPLEMENTED, "background policy", listOf("background policy"), handlerIdentifier = "BackgroundExecutionPolicy"))
+        register(CommandDefinition("device.snapshot", "Device State Snapshot", CommandCategory.DIAGNOSTICS, "Aggregates unified device state snapshot", CommandStatus.IMPLEMENTED, "device snapshot", listOf("device snapshot"), handlerIdentifier = "DeviceStateController"))
+
+        // 16. SENSORS
         register(CommandDefinition("sensor.list", "List Hardware Sensors", CommandCategory.OBSERVATION, "Enumerates hardware sensors on device via SensorManager", CommandStatus.IMPLEMENTED, "sensor list", listOf("sensor list"), handlerIdentifier = "HardwareObservationControllers"))
         register(CommandDefinition("sensor.accelerometer.sample", "Accelerometer Reading", CommandCategory.OBSERVATION, "Samples 3-axis accelerometer values", CommandStatus.IMPLEMENTED, "sensor accelerometer", listOf("sensor accelerometer"), requirement = CommandRequirement(requiredCapabilities = listOf("ACCELEROMETER")), handlerIdentifier = "HardwareObservationControllers"))
         register(CommandDefinition("sensor.gyroscope.sample", "Gyroscope Reading", CommandCategory.OBSERVATION, "Samples 3-axis gyroscope values", CommandStatus.IMPLEMENTED, "sensor gyroscope", listOf("sensor gyroscope"), requirement = CommandRequirement(requiredCapabilities = listOf("GYROSCOPE")), handlerIdentifier = "HardwareObservationControllers"))
         register(CommandDefinition("sensor.proximity.sample", "Proximity Reading", CommandCategory.OBSERVATION, "Samples proximity sensor distance (cm)", CommandStatus.IMPLEMENTED, "sensor proximity", listOf("sensor proximity"), requirement = CommandRequirement(requiredCapabilities = listOf("PROXIMITY"), physicalObservationRequired = true), handlerIdentifier = "HardwareObservationControllers"))
         register(CommandDefinition("sensor.light.sample", "Light Sensor Reading", CommandCategory.OBSERVATION, "Samples ambient light illuminance (lux)", CommandStatus.IMPLEMENTED, "sensor light", listOf("sensor light"), requirement = CommandRequirement(requiredCapabilities = listOf("LIGHT"), physicalObservationRequired = true), handlerIdentifier = "HardwareObservationControllers"))
 
-        // 13. SYSTEM CONTROLS
+        // 17. SYSTEM CONTROLS
         register(CommandDefinition("brightness.status", "Brightness Status", CommandCategory.SYSTEM_CONTROLS, "Queries screen brightness level", CommandStatus.IMPLEMENTED, "brightness status", listOf("brightness status"), handlerIdentifier = "SystemControlControllers"))
         register(CommandDefinition("brightness.set", "Set Brightness", CommandCategory.SYSTEM_CONTROLS, "Sets screen brightness (0-100%)", CommandStatus.IMPLEMENTED, "brightness <percentage>", listOf("brightness 50"), listOf("percentage"), CommandRequirement(requiredSpecialAccess = listOf("android.permission.WRITE_SETTINGS"), physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "SystemControlControllers"))
         register(CommandDefinition("ringer.status", "Ringer Mode Status", CommandCategory.SYSTEM_CONTROLS, "Queries current ringer mode", CommandStatus.IMPLEMENTED, "ringer status", listOf("ringer status"), handlerIdentifier = "SystemControlControllers"))
         register(CommandDefinition("ringer.normal", "Ringer Mode Normal", CommandCategory.SYSTEM_CONTROLS, "Sets ringer mode to NORMAL", CommandStatus.IMPLEMENTED, "ringer normal", listOf("ringer normal"), requirement = CommandRequirement(physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "SystemControlControllers"))
         register(CommandDefinition("ringer.vibrate", "Ringer Mode Vibrate", CommandCategory.SYSTEM_CONTROLS, "Sets ringer mode to VIBRATE", CommandStatus.IMPLEMENTED, "ringer vibrate", listOf("ringer vibrate"), requirement = CommandRequirement(physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "SystemControlControllers"))
         register(CommandDefinition("ringer.silent", "Ringer Mode Silent", CommandCategory.SYSTEM_CONTROLS, "Sets ringer mode to SILENT", CommandStatus.IMPLEMENTED, "ringer silent", listOf("ringer silent"), requirement = CommandRequirement(requiredSpecialAccess = listOf("Notification Policy Access"), physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "SystemControlControllers"))
-        register(CommandDefinition("location.status", "Location Status", CommandCategory.SYSTEM_CONTROLS, "Queries location provider states", CommandStatus.IMPLEMENTED, "location status", listOf("location status"), handlerIdentifier = "SystemControlControllers"))
 
-        // 14. SPEECH (STT / TTS)
+        // 18. SPEECH (STT / TTS)
         register(CommandDefinition("stt.status", "STT Availability", CommandCategory.SPEECH, "Queries SpeechRecognizer availability", CommandStatus.IMPLEMENTED, "stt status", listOf("stt status"), requirement = CommandRequirement(requiredCapabilities = listOf("STT")), handlerIdentifier = "SpeechToTextEngine"))
         register(CommandDefinition("stt.listen", "STT Listen", CommandCategory.SPEECH, "Starts built-in speech recognition listener", CommandStatus.IMPLEMENTED, "stt listen", listOf("stt listen"), requirement = CommandRequirement(requiredPermissions = listOf("android.permission.RECORD_AUDIO"), requiredCapabilities = listOf("STT"), physicalObservationRequired = true), handlerIdentifier = "SpeechToTextEngine"))
         register(CommandDefinition("stt.cancel", "STT Cancel", CommandCategory.SPEECH, "Cancels active speech recognition", CommandStatus.IMPLEMENTED, "stt cancel", listOf("stt cancel"), requirement = CommandRequirement(requiredCapabilities = listOf("STT")), handlerIdentifier = "SpeechToTextEngine"))
@@ -86,7 +118,7 @@ class CommandRegistry {
         register(CommandDefinition("tts.speak", "TTS Speak", CommandCategory.SPEECH, "Speaks text string using built-in TTS", CommandStatus.IMPLEMENTED, "speak <text>", listOf("speak Foundation test successful"), listOf("text"), CommandRequirement(requiredCapabilities = listOf("TTS"), physicalObservationRequired = true), handlerIdentifier = "TextToSpeechEngine"))
         register(CommandDefinition("tts.stop", "TTS Stop", CommandCategory.SPEECH, "Stops active speech output", CommandStatus.IMPLEMENTED, "tts stop", listOf("tts stop"), requirement = CommandRequirement(requiredCapabilities = listOf("TTS")), handlerIdentifier = "TextToSpeechEngine"))
 
-        // 15. PERMISSIONS / DIAGNOSTICS
+        // 19. PERMISSIONS / DIAGNOSTICS
         register(CommandDefinition("permissions.status", "Permissions Status", CommandCategory.DIAGNOSTICS, "Queries all runtime permissions & special access status", CommandStatus.IMPLEMENTED, "permissions status", listOf("permissions status"), handlerIdentifier = "CapabilityRegistry"))
         register(CommandDefinition("capabilities.status", "Capabilities Status", CommandCategory.DIAGNOSTICS, "Queries all hardware capability states", CommandStatus.IMPLEMENTED, "capabilities status", listOf("capabilities status"), handlerIdentifier = "CapabilityRegistry"))
         register(CommandDefinition("accessibility.status", "Accessibility Status", CommandCategory.DIAGNOSTICS, "Queries accessibility service connection status", CommandStatus.IMPLEMENTED, "accessibility status", listOf("accessibility status"), handlerIdentifier = "LocalAgentAccessibilityService"))
@@ -107,7 +139,6 @@ class CommandRegistry {
         if (trimmed.isEmpty()) return null
         val inputTokens = trimmed.split("\\s+".toRegex())
 
-        // Sort commands descending by fixed token count (longest/most specific prefix first)
         val sortedCmds = registry.values.sortedByDescending { cmd ->
             cmd.syntax.lowercase().split("\\s+".toRegex()).takeWhile { !it.startsWith("<") }.size
         }
@@ -175,6 +206,19 @@ class CommandRegistry {
             "app.launch" -> {
                 val qArg = if (trimmed.startsWith("open")) trimmed.substringAfter("open").trim() else trimmed.substringAfter("launch").trim()
                 params["query"] = qArg
+            }
+            "app.find" -> {
+                if (trimmed.length > "app find".length) {
+                    params["query"] = trimmed.substring("app find".length).trim()
+                }
+            }
+            "app.info" -> {
+                if (parts.size >= 3) params["package"] = parts[2]
+            }
+            "clipboard.write" -> {
+                if (trimmed.length > "clipboard write".length) {
+                    params["text"] = trimmed.substring("clipboard write".length).trim()
+                }
             }
             "haptics.vibrate" -> {
                 if (parts.size >= 2) params["durationMs"] = parts[1]

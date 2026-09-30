@@ -1,10 +1,25 @@
 package com.agent.android.execution
 
+import com.agent.android.agent.device.AgentNotificationController
+import com.agent.android.agent.device.AppDiscoveryController
+import com.agent.android.agent.device.BackgroundExecutionPolicy
+import com.agent.android.agent.device.CameraController
+import com.agent.android.agent.device.ClipboardController
 import com.agent.android.agent.device.ConnectivityControllers
+import com.agent.android.agent.device.DeviceStateController
+import com.agent.android.agent.device.DisplayController
+import com.agent.android.agent.device.FileAccessController
 import com.agent.android.agent.device.FlashlightController
 import com.agent.android.agent.device.HapticController
 import com.agent.android.agent.device.HardwareObservationControllers
+import com.agent.android.agent.device.InputStateController
+import com.agent.android.agent.device.LocationController
+import com.agent.android.agent.device.NetworkController
+import com.agent.android.agent.device.NotificationController
+import com.agent.android.agent.device.PowerStateController
+import com.agent.android.agent.device.ScreenCaptureController
 import com.agent.android.agent.device.SystemControlControllers
+import com.agent.android.agent.device.UsageStatsController
 import com.agent.android.agent.device.VolumeController
 import com.agent.android.agent.skills.CalculatorSkill
 import com.agent.android.agent.skills.IntentSkills
@@ -37,7 +52,21 @@ class GoalDispatcherImpl(
     private val hardwareObservationControllers: HardwareObservationControllers? = null,
     private val appLauncher: AppLauncher? = null,
     private val systemControlControllers: SystemControlControllers? = null,
-    val commandRegistry: CommandRegistry = CommandRegistry()
+    val commandRegistry: CommandRegistry = CommandRegistry(),
+    private val clipboardController: ClipboardController? = null,
+    private val notificationController: NotificationController? = null,
+    private val usageStatsController: UsageStatsController? = null,
+    private val displayController: DisplayController? = null,
+    private val screenCaptureController: ScreenCaptureController? = null,
+    private val inputStateController: InputStateController? = null,
+    private val cameraController: CameraController? = null,
+    private val fileAccessController: FileAccessController? = null,
+    private val locationController: LocationController? = null,
+    private val networkController: NetworkController? = null,
+    private val powerStateController: PowerStateController? = null,
+    private val backgroundExecutionPolicy: BackgroundExecutionPolicy = BackgroundExecutionPolicy(),
+    private val appDiscoveryController: AppDiscoveryController? = null,
+    private val deviceStateController: DeviceStateController? = null
 ) : GoalDispatcher {
 
     override fun dispatchGoal(goal: String): Boolean {
@@ -153,6 +182,105 @@ class GoalDispatcherImpl(
                     DispatchDetails(trimmed, opName, "AppLauncherImpl", errRes, "No Launcher")
                 }
             }
+            "app.current" -> {
+                val res = usageStatsController?.getCurrentForegroundApp() ?: SkillResult("USAGE_STATS", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "app.list" -> {
+                val res = appDiscoveryController?.listApps() ?: SkillResult("APP_DISCOVERY", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "app.find" -> {
+                val q = parsedArgs.getString("query") ?: ""
+                val res = appDiscoveryController?.findApp(q) ?: SkillResult("APP_DISCOVERY", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "app.info" -> {
+                val pkg = parsedArgs.getString("package") ?: ""
+                val res = appDiscoveryController?.getAppInfo(pkg) ?: SkillResult("APP_DISCOVERY", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "clipboard.status" -> {
+                val res = clipboardController?.getClipboardStatus() ?: SkillResult("CLIPBOARD", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "clipboard.read" -> {
+                val res = clipboardController?.readClipboard() ?: SkillResult("CLIPBOARD", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "clipboard.write" -> {
+                val text = parsedArgs.getString("text") ?: ""
+                val res = clipboardController?.writeClipboard(text) ?: SkillResult("CLIPBOARD", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "clipboard.clear" -> {
+                val res = clipboardController?.clearClipboard() ?: SkillResult("CLIPBOARD", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "notification.status" -> {
+                val res = notificationController?.getNotificationStatus() ?: SkillResult("NOTIFICATION", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "notification.latest" -> {
+                val res = notificationController?.getLatestNotification() ?: SkillResult("NOTIFICATION", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "display.status" -> {
+                val res = displayController?.getDisplayStatus() ?: SkillResult("DISPLAY", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "display.dimensions" -> {
+                val res = displayController?.getDisplayDimensions() ?: SkillResult("DISPLAY", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "display.orientation" -> {
+                val res = displayController?.getDisplayOrientation() ?: SkillResult("DISPLAY", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "screen.capture.status" -> {
+                val res = screenCaptureController?.getScreenCaptureStatus() ?: SkillResult("SCREEN_CAPTURE", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "keyboard.status" -> {
+                val res = inputStateController?.getKeyboardStatus() ?: SkillResult("INPUT_STATE", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "input.status" -> {
+                val res = inputStateController?.getInputStatus() ?: SkillResult("INPUT_STATE", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "camera.status" -> {
+                val res = cameraController?.getCameraStatus() ?: SkillResult("CAMERA", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "camera.permission" -> {
+                val res = cameraController?.getCameraPermissionStatus() ?: SkillResult("CAMERA", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "camera.list" -> {
+                val res = cameraController?.getCameraList() ?: SkillResult("CAMERA", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "network.status" -> {
+                val res = networkController?.getNetworkStatus() ?: SkillResult("NETWORK", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "location.providers" -> {
+                val res = locationController?.getLocationProviders() ?: SkillResult("LOCATION", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "power.status" -> {
+                val res = powerStateController?.getPowerStatus() ?: SkillResult("POWER", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "background.policy" -> {
+                val res = backgroundExecutionPolicy.getPolicyStatus()
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "device.snapshot" -> {
+                val res = deviceStateController?.getDeviceSnapshot() ?: SkillResult("DEVICE_SNAPSHOT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
             "flashlight.status" -> {
                 val res = flashlightController?.setFlashlight(false) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
@@ -233,10 +361,6 @@ class GoalDispatcherImpl(
             "battery.status" -> {
                 val res = hardwareObservationControllers?.getBatteryStatus() ?: SkillResult("BATTERY", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, "BATTERY", cmdDef.handlerIdentifier, res, res.message)
-            }
-            "sensor.list" -> {
-                val res = hardwareObservationControllers?.getSensorList() ?: SkillResult("SENSOR_LIST", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
-                DispatchDetails(trimmed, "SENSOR_LIST", cmdDef.handlerIdentifier, res, res.message)
             }
             "sensor.accelerometer.sample" -> {
                 val res = hardwareObservationControllers?.sampleSensor(android.hardware.Sensor.TYPE_ACCELEROMETER, "accelerometer")
