@@ -1,31 +1,21 @@
-# LocalAgent Permissions & Special Access
+# LocalAgent Permission & Special Access Model
 
-## Overview
-LocalAgent manages permissions through a structured, transparent model categorized by runtime perms, special access, device capabilities, and system services.
+## Centralized Subsystem
+The permission system is governed by `com.agent.android.permissions`:
+- `PermissionDefinition`
+- `PermissionCategory`
+- `PermissionStatus`
+- `PermissionRegistry`
+- `PermissionManager`
 
 ## Permission Categories
+1. **RUNTIME**: Runtime dangerous permissions requested dynamically (`RECORD_AUDIO`, `CAMERA`, `LOCATION`, `STORAGE`, `READ_PHONE_STATE`).
+2. **SYSTEM_SETTING**: Write Settings special access (`WRITE_SETTINGS`).
+3. **SPECIAL_ACCESS**: Notification Policy Access (DND).
+4. **NOTIFICATION_ACCESS**: Notification Listener Service (`BIND_NOTIFICATION_LISTENER_SERVICE`).
+5. **USAGE_ACCESS**: Usage Access (`PACKAGE_USAGE_STATS`).
+6. **ACCESSIBILITY**: Accessibility Service (`BIND_ACCESSIBILITY_SERVICE`).
+7. **PRIVILEGED_ONLY**: System/Device-owner privileges (classified as non-grantable for ordinary applications).
 
-### 1. Runtime Permissions
-- `android.permission.WRITE_EXTERNAL_STORAGE`: Required for Notes skill persistent file writing on Android 8.1 / API 27.
-- `android.permission.CAMERA`: Required for Flashlight (Camera torch) hardware control.
-- `android.permission.RECORD_AUDIO`: Required for Android built-in SpeechRecognizer (Speech-to-Text).
-
-### 2. Special Access
-- `Accessibility Service` (`com.agent.android.service.LocalAgentAccessibilityService`): Required for hardware Volume-Up panic gesture observation and return-to-home navigation. Guided via `Settings.ACTION_ACCESSIBILITY_SETTINGS`.
-- `Write System Settings` (`android.permission.WRITE_SETTINGS`): Required for screen brightness and screen timeout controls. Checked via `Settings.System.canWrite(context)`. Guided via `Settings.ACTION_MANAGE_WRITE_SETTINGS`.
-- `Notification Policy Access`: Required for Silent / Do Not Disturb ringer mode toggle. Guided via `Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS`.
-
-### 3. Device Capabilities
-- `FLASHLIGHT`: Camera torch feature check.
-- `VIBRATION`: Vibrator service check.
-- `WIFI` & `BLUETOOTH`: Radio status and settings intents. Direct toggling restricted on Android 10+.
-- `SENSORS`: Accelerometer, Gyroscope, Proximity, Light.
-
-### 4. System Services
-- `SpeechToTextEngine`: Platform `SpeechRecognizer` API.
-- `TextToSpeechEngine`: Platform `TextToSpeech` API.
-
-### 5. Future Capabilities (Phase 3+)
-- `SYSTEM_ALERT_WINDOW` (Overlay): Not requested in Phase 2.4.
-- `RECEIVE_BOOT_COMPLETED`: Not requested in Phase 2.4.
-- `ACCESS_FINE_LOCATION`: Optional for future location precision.
+## Settings Fallbacks
+When direct programmatic permission grants are prohibited by Android 8.1, `PermissionManager.openSettings(perm)` launches the targeted Android System Settings screen (`ACTION_MANAGE_WRITE_SETTINGS`, `ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS`, `ACTION_NOTIFICATION_LISTENER_SETTINGS`, `ACTION_USAGE_ACCESS_SETTINGS`, `ACTION_ACCESSIBILITY_SETTINGS`).

@@ -21,13 +21,30 @@ import com.agent.android.agent.device.UsageStatsController
 import com.agent.android.agent.skills.SkillStatus
 import com.agent.android.commands.CommandRegistry
 import com.agent.android.commands.CommandStatus
+import com.agent.android.permissions.PermissionRegistry
 import com.agent.android.test.FoundationTestRegistry
+import com.agent.android.test.model.TestType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class Phase25FoundationUnitTest {
+
+    @Test
+    fun testPermissionRegistryIntegrity() {
+        val permRegistry = PermissionRegistry()
+        val allPerms = permRegistry.getAllPermissions()
+
+        val permIds = allPerms.map { it.id }
+        assertEquals("No duplicate permission IDs permitted", permIds.size, permIds.toSet().size)
+
+        for (p in allPerms) {
+            assertNotNull("Permission ID must not be null", p.id)
+            assertTrue("Permission ID must not be blank", p.id.isNotBlank())
+            assertNotNull("Permission Category must not be null", p.category)
+        }
+    }
 
     @Test
     fun testCommandRegistryTestCoverageIntegrity() {
@@ -45,6 +62,34 @@ class Phase25FoundationUnitTest {
             "Every implemented command in CommandRegistry must have corresponding test coverage in FoundationTestRegistry. Uncovered commands: ${uncovered.map { it.commandId }}",
             uncovered.isEmpty()
         )
+
+        val testIds = testCases.map { it.id }
+        assertEquals("No duplicate test IDs allowed in FoundationTestRegistry", testIds.size, testIds.toSet().size)
+    }
+
+    @Test
+    fun testCommandPermissionReferenceIntegrity() {
+        val commandRegistry = CommandRegistry()
+        val permissionRegistry = PermissionRegistry()
+
+        val validPermIds = permissionRegistry.getAllPermissions().map { it.id }.toSet()
+        val validPermAndroidIds = permissionRegistry.getAllPermissions().map { it.androidIdentifier }.toSet()
+
+        for (cmd in commandRegistry.getAllCommands()) {
+            val req = cmd.requirement
+            for (p in req.requiredPermissions) {
+                assertTrue(
+                    "Command '${cmd.commandId}' references unregistered permission '$p'",
+                    validPermIds.contains(p) || validPermAndroidIds.contains(p)
+                )
+            }
+            for (sa in req.requiredSpecialAccess) {
+                assertTrue(
+                    "Command '${cmd.commandId}' references unregistered special access '$sa'",
+                    validPermIds.contains(sa) || validPermAndroidIds.contains(sa) || sa.isNotBlank()
+                )
+            }
+        }
     }
 
     @Test

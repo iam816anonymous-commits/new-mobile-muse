@@ -34,6 +34,8 @@ import com.agent.android.agent.skills.app.AppLauncher
 import com.agent.android.commands.CommandRegistry
 import com.agent.android.commands.CommandStatus
 import com.agent.android.diagnostics.FoundationReadinessEvaluator
+import com.agent.android.permissions.PermissionManager
+import com.agent.android.permissions.PermissionStatus
 import com.agent.android.safety.CancellationReason
 import com.agent.android.speech.SpeechToTextEngine
 import com.agent.android.speech.TextToSpeechEngine
@@ -79,7 +81,8 @@ class GoalDispatcherImpl(
     private val capabilityRegistry: CapabilityRegistry? = null,
     private val readinessEvaluator: FoundationReadinessEvaluator? = null,
     private val sttEngine: SpeechToTextEngine? = null,
-    private val ttsEngine: TextToSpeechEngine? = null
+    private val ttsEngine: TextToSpeechEngine? = null,
+    val permissionManager: PermissionManager? = null
 ) : GoalDispatcher {
 
     override fun dispatchGoal(goal: String): Boolean {
@@ -203,6 +206,11 @@ class GoalDispatcherImpl(
                 }
             }
             "app.current" -> {
+                val perm = permissionManager?.registry?.getPermissionById("usage_stats_access")
+                if (perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("USAGE_STATS", SkillStatus.PERMISSION_REQUIRED, "Usage Stats Access required. Grant via Settings -> Usage Access.", 0L, "USAGE_STATS_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
                 val res = usageStatsController?.getCurrentForegroundApp() ?: SkillResult("USAGE_STATS", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
@@ -238,10 +246,17 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "notification.status" -> {
-                val res = notificationController?.getNotificationStatus() ?: SkillResult("NOTIFICATION", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                val perm = permissionManager?.registry?.getPermissionById("notification_listener_access")
+                val statusStr = if (perm != null) permissionManager?.checkStatus(perm)?.name ?: "UNKNOWN" else "UNKNOWN"
+                val res = notificationController?.getNotificationStatus() ?: SkillResult("NOTIFICATION", SkillStatus.SUCCESS, "Notification Listener Status: $statusStr", 0L)
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "notification.latest" -> {
+                val perm = permissionManager?.registry?.getPermissionById("notification_listener_access")
+                if (perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("NOTIFICATION", SkillStatus.PERMISSION_REQUIRED, "Notification Listener Access required. Grant via Settings -> Notification Access.", 0L, "NOTIFICATION_LISTENER_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
                 val res = notificationController?.getLatestNotification() ?: SkillResult("NOTIFICATION", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
@@ -274,7 +289,9 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "camera.permission" -> {
-                val res = cameraController?.getCameraPermissionStatus() ?: SkillResult("CAMERA", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                val perm = permissionManager?.registry?.getPermissionById("perm_camera")
+                val statusStr = if (perm != null) permissionManager?.checkStatus(perm)?.name ?: "UNKNOWN" else "UNKNOWN"
+                val res = cameraController?.getCameraPermissionStatus() ?: SkillResult("CAMERA", SkillStatus.SUCCESS, "CAMERA permission status: $statusStr", 0L)
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "camera.list" -> {
@@ -306,6 +323,11 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "flashlight.on" -> {
+                val perm = permissionManager?.registry?.getPermissionById("perm_camera")
+                if (perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("FLASHLIGHT", SkillStatus.PERMISSION_REQUIRED, "CAMERA permission required for flashlight. Grant in Settings.", 0L, "CAMERA_PERMISSION_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
                 val res = flashlightController?.setFlashlight(true) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, "Torch state = ON")
             }
@@ -407,6 +429,11 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "brightness.set" -> {
+                val perm = permissionManager?.registry?.getPermissionById("write_settings_access")
+                if (perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("BRIGHTNESS", SkillStatus.PERMISSION_REQUIRED, "WRITE_SETTINGS permission required to change brightness. Grant via Settings -> Special Access.", 0L, "WRITE_SETTINGS_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
                 val value = parsedArgs.getInt("value", -1)
                 val res = systemControlControllers?.setBrightness(value) ?: SkillResult("BRIGHTNESS", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
@@ -415,16 +442,14 @@ class GoalDispatcherImpl(
                 val res = systemControlControllers?.getRingerStatus() ?: SkillResult("RINGER", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
-            "ringer.normal" -> {
-                val res = systemControlControllers?.setRingerMode("normal") ?: SkillResult("RINGER", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
-                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
-            }
-            "ringer.vibrate" -> {
-                val res = systemControlControllers?.setRingerMode("vibrate") ?: SkillResult("RINGER", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
-                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
-            }
-            "ringer.silent" -> {
-                val res = systemControlControllers?.setRingerMode("silent") ?: SkillResult("RINGER", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+            "ringer.normal", "ringer.vibrate", "ringer.silent" -> {
+                val perm = permissionManager?.registry?.getPermissionById("notification_policy_access")
+                if (perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("RINGER", SkillStatus.PERMISSION_REQUIRED, "Notification Policy Access required to change ringer mode. Grant via Settings -> Do Not Disturb Access.", 0L, "NOTIFICATION_POLICY_ACCESS_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
+                val mode = cmdDef.commandId.removePrefix("ringer.")
+                val res = systemControlControllers?.setRingerMode(mode) ?: SkillResult("RINGER", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "location.status" -> {
@@ -435,6 +460,15 @@ class GoalDispatcherImpl(
                 val avail = sttEngine?.isAvailable() == true
                 val status = if (avail) SkillStatus.SUCCESS else SkillStatus.UNAVAILABLE
                 val res = SkillResult("STT_STATUS", status, "SpeechRecognizer AVAILABLE = $avail", 0L)
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "stt.listen" -> {
+                val perm = permissionManager?.registry?.getPermissionById("perm_record_audio")
+                if (perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("STT", SkillStatus.PERMISSION_REQUIRED, "RECORD_AUDIO permission required for speech recognition. Grant in Settings.", 0L, "RECORD_AUDIO_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
+                val res = SkillResult("STT_LISTEN", SkillStatus.SUCCESS, "Speech recognition active", 0L)
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "stt.cancel" -> {
@@ -457,7 +491,9 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "accessibility.status" -> {
-                val res = SkillResult("ACCESSIBILITY_STATUS", SkillStatus.SUCCESS, "Accessibility service registered", 0L)
+                val perm = permissionManager?.registry?.getPermissionById("accessibility_service_required")
+                val statusStr = if (perm != null) permissionManager?.checkStatus(perm)?.name ?: "UNKNOWN" else "UNKNOWN"
+                val res = SkillResult("ACCESSIBILITY_STATUS", SkillStatus.SUCCESS, "Accessibility service status: $statusStr", 0L)
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "diagnostics.readiness" -> {

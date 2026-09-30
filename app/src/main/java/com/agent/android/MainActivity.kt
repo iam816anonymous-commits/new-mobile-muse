@@ -49,6 +49,9 @@ import com.agent.android.commands.CommandRegistry
 import com.agent.android.diagnostics.FoundationReadinessEvaluator
 import com.agent.android.execution.ExecutionController
 import com.agent.android.execution.GoalDispatcherImpl
+import com.agent.android.permissions.PermissionCategory
+import com.agent.android.permissions.PermissionManager
+import com.agent.android.permissions.PermissionStatus
 import com.agent.android.safety.HarnessSuiteSummary
 import com.agent.android.safety.Phase1SafetyTestHarness
 import com.agent.android.service.LocalAgentAccessibilityService
@@ -83,6 +86,7 @@ class MainActivity : Activity() {
     private lateinit var appLauncher: AppLauncherImpl
     private lateinit var capabilityRegistry: CapabilityRegistry
     private lateinit var commandRegistry: CommandRegistry
+    private lateinit var permissionManager: PermissionManager
 
     private lateinit var testRegistry: FoundationTestRegistry
     private lateinit var resultStore: TestResultStore
@@ -175,6 +179,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        permissionManager = PermissionManager(this)
         testHarness = Phase1SafetyTestHarness(executionController, logger)
         capabilityRegistry = CapabilityRegistry(this)
         commandRegistry = CommandRegistry()
@@ -204,20 +209,20 @@ class MainActivity : Activity() {
         val appDiscCtrl = AppDiscoveryController(this)
         val deviceSnapCtrl = DeviceStateController(this)
 
-        goalDispatcher = GoalDispatcherImpl(
-            executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers, appLauncher, sysCtrl, commandRegistry,
-            clipboardCtrl, notifCtrl, usageStatsCtrl, displayCtrl, screenCapCtrl, inputStateCtrl, cameraCtrl, fileAccessCtrl, locationCtrl, networkCtrl,
-            powerStateCtrl, bgPolicy, appDiscCtrl, deviceSnapCtrl
-        )
+        sttEngine = SpeechToTextEngine(this)
+        ttsEngine = TextToSpeechEngine(this)
+        ttsEngine.initialize()
 
         testRegistry = FoundationTestRegistry()
         resultStore = TestResultStore(this)
         evidenceManager = EvidenceManager(this)
         readinessEvaluator = FoundationReadinessEvaluator(this, executionController, capabilityRegistry, testRegistry, commandRegistry)
 
-        sttEngine = SpeechToTextEngine(this)
-        ttsEngine = TextToSpeechEngine(this)
-        ttsEngine.initialize()
+        goalDispatcher = GoalDispatcherImpl(
+            executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers, appLauncher, sysCtrl, commandRegistry,
+            clipboardCtrl, notifCtrl, usageStatsCtrl, displayCtrl, screenCapCtrl, inputStateCtrl, cameraCtrl, fileAccessCtrl, locationCtrl, networkCtrl,
+            powerStateCtrl, bgPolicy, appDiscCtrl, deviceSnapCtrl, null, null, capabilityRegistry, readinessEvaluator, sttEngine, ttsEngine, permissionManager
+        )
 
         resultStore.loadResults(testRegistry)
 
@@ -344,17 +349,13 @@ class MainActivity : Activity() {
         // Permissions
         btnGrantRuntimePerms.setOnClickListener { checkAndRequestRuntimePermissions() }
         btnOpenAccessibilitySettings.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            permissionManager.openSettings(permissionManager.registry.getPermissionById("accessibility_service_required")!!)
         }
         btnOpenWriteSettings.setOnClickListener {
-            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
-                data = Uri.parse("package:$packageName")
-            }
-            startActivity(intent)
+            permissionManager.openSettings(permissionManager.registry.getPermissionById("write_settings_access")!!)
         }
         btnOpenNotificationPolicy.setOnClickListener {
-            val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-            startActivity(intent)
+            permissionManager.openSettings(permissionManager.registry.getPermissionById("notification_policy_access")!!)
         }
 
         btnTestTtsSpeak.setOnClickListener {
@@ -394,7 +395,7 @@ class MainActivity : Activity() {
 
         // Console & Harness
         btnEnableAccessibility.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            permissionManager.openSettings(permissionManager.registry.getPermissionById("accessibility_service_required")!!)
         }
         btnValidateApp.setOnClickListener {
             val q = etAppLaunchQuery.text.toString()
@@ -653,30 +654,30 @@ class MainActivity : Activity() {
     }
 
     private fun updatePermissionsUI() {
-        val storagePerm = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        val cameraPerm = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        val audioPerm = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        permissionManager.refreshStatus()
+        val all = permissionManager.registry.getAllPermissions()
 
-        tvRuntimePermDisplay.text = """
-            WRITE_EXTERNAL_STORAGE: ${if (storagePerm) "✓ GRANTED" else "✗ DENIED (Required for notes)"}
-            CAMERA: ${if (cameraPerm) "✓ GRANTED" else "✗ DENIED (Required for flashlight)"}
-            RECORD_AUDIO: ${if (audioPerm) "✓ GRANTED" else "✗ DENIED (Required for STT)"}
-        """.trimIndent()
+        val runtimeList = all.filter { it.category == PermissionCategory.RUNTIME }
+        val specialList = all.filter { it.category != PermissionCategory.RUNTIME }
 
-        val isAcc = isAccessibilityServiceEnabled(this, LocalAgentAccessibilityService::class.java)
-        val canWrite = Settings.System.canWrite(this)
-        val notifPolicy = try {
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-            notificationManager.isNotificationPolicyAccessGranted
-        } catch (e: Exception) {
-            false
+        val runtimeSb = StringBuilder()
+        for (p in runtimeList) {
+            val statusStr = if (p.currentStatus == PermissionStatus.OBTAINED) "✓ GRANTED" else "✗ DENIED"
+            runtimeSb.append("${p.displayName}: $statusStr (${p.explanation})\n")
         }
+        tvRuntimePermDisplay.text = runtimeSb.toString().trim()
 
-        tvSpecialAccessDisplay.text = """
-            Accessibility Service: ${if (isAcc) "✓ ENABLED" else "✗ NOT ENABLED"}
-            Write System Settings: ${if (canWrite) "✓ GRANTED" else "✗ NOT GRANTED"}
-            Notification Policy Access: ${if (notifPolicy) "✓ GRANTED" else "✗ NOT GRANTED"}
-        """.trimIndent()
+        val specialSb = StringBuilder()
+        for (p in specialList) {
+            val statusStr = when (p.currentStatus) {
+                PermissionStatus.OBTAINED -> "✓ GRANTED / ENABLED"
+                PermissionStatus.SETTINGS_REQUIRED -> "✗ SETTINGS REQUIRED"
+                PermissionStatus.PRIVILEGED_ONLY -> "SYSTEM ONLY (NOT OBTAINABLE)"
+                else -> "✗ NOT GRANTED"
+            }
+            specialSb.append("${p.displayName}: $statusStr\n")
+        }
+        tvSpecialAccessDisplay.text = specialSb.toString().trim()
 
         val caps = capabilityRegistry.checkDetailedCapabilities()
         val capSb = StringBuilder()
@@ -690,6 +691,7 @@ class MainActivity : Activity() {
 
         val sttAvail = sttEngine.isAvailable()
         val ttsAvail = ttsEngine.isAvailable()
+        val audioPerm = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         tvSpeechServicesDisplay.text = """
             Speech Recognition (STT): ${if (sttAvail) "✓ AVAILABLE" else "✗ UNAVAILABLE"} (Permitted: ${if (audioPerm) "YES" else "NO"})
             Text To Speech (TTS): ${if (ttsAvail) "✓ AVAILABLE" else "✗ INITIALIZING/UNAVAILABLE"}

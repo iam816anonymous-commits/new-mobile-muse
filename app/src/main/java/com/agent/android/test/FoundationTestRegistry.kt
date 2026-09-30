@@ -97,24 +97,17 @@ class FoundationTestRegistry {
 
         // VOLUME STREAMS: MUSIC, RING, ALARM, NOTIFICATION (16)
         val streams = listOf("music", "ring", "alarm", "notification")
-        var vIdx = 11
+        var volIdx = 11
         for (s in streams) {
-            add(TestCase("2.3.$vIdx", "volume.$s.status", "PHASE_2", "VOLUME", "${s.uppercase()} Stream Status", "Queries $s stream status, indices, and percentage.", "volume $s status", "Reports stream $s status", TestType.AUTOMATED))
-            vIdx++
-            add(TestCase("2.3.$vIdx", "volume.$s.current", "PHASE_2", "VOLUME", "${s.uppercase()} Current Index", "Queries current $s stream index.", "volume $s current", "Reports current index", TestType.AUTOMATED))
-            vIdx++
-            add(TestCase("2.3.$vIdx", "volume.$s.maximum", "PHASE_2", "VOLUME", "${s.uppercase()} Maximum Index", "Queries maximum $s stream index.", "volume $s maximum", "Reports maximum index", TestType.AUTOMATED))
-            vIdx++
-            add(TestCase("2.3.$vIdx", "volume.$s.percentage", "PHASE_2", "VOLUME", "${s.uppercase()} Stream Percentage", "Queries current $s stream percentage.", "volume $s percentage", "Reports percentage", TestType.AUTOMATED))
-            vIdx++
-            add(TestCase("2.3.$vIdx", "volume.$s.set", "PHASE_2", "VOLUME", "${s.uppercase()} Volume Set 50%", "Sets $s stream volume to 50%.", "volume $s 50", "Volume set to 50%", TestType.PHYSICAL, requiresPhysicalVerification = true))
-            vIdx++
-            add(TestCase("2.3.$vIdx", "volume.$s.set", "PHASE_2", "VOLUME", "${s.uppercase()} Volume Invalid Negative", "Rejects negative percentage.", "volume $s -1", "INVALID_ARGUMENT", TestType.NEGATIVE))
-            vIdx++
-            add(TestCase("2.3.$vIdx", "volume.$s.set", "PHASE_2", "VOLUME", "${s.uppercase()} Volume Invalid Excess", "Rejects percentage > 100.", "volume $s 101", "INVALID_ARGUMENT", TestType.NEGATIVE))
-            vIdx++
-            add(TestCase("2.3.$vIdx", "volume.$s.set", "PHASE_2", "VOLUME", "${s.uppercase()} Volume Non-Numeric", "Rejects non-numeric percentage.", "volume $s abc", "INVALID_ARGUMENT", TestType.NEGATIVE))
-            vIdx++
+            add(TestCase("2.3.VOL.$volIdx.1", "volume.$s.status", "PHASE_2", "VOLUME", "${s.uppercase()} Stream Status", "Queries $s stream status, indices, and percentage.", "volume $s status", "Reports stream $s status", TestType.AUTOMATED))
+            add(TestCase("2.3.VOL.$volIdx.2", "volume.$s.current", "PHASE_2", "VOLUME", "${s.uppercase()} Current Index", "Queries current $s stream index.", "volume $s current", "Reports current index", TestType.AUTOMATED))
+            add(TestCase("2.3.VOL.$volIdx.3", "volume.$s.maximum", "PHASE_2", "VOLUME", "${s.uppercase()} Maximum Index", "Queries maximum $s stream index.", "volume $s maximum", "Reports maximum index", TestType.AUTOMATED))
+            add(TestCase("2.3.VOL.$volIdx.4", "volume.$s.percentage", "PHASE_2", "VOLUME", "${s.uppercase()} Stream Percentage", "Queries current $s stream percentage.", "volume $s percentage", "Reports percentage", TestType.AUTOMATED))
+            add(TestCase("2.3.VOL.$volIdx.5", "volume.$s.set", "PHASE_2", "VOLUME", "${s.uppercase()} Volume Set 50%", "Sets $s stream volume to 50%.", "volume $s 50", "Volume set to 50%", TestType.PHYSICAL, requiresPhysicalVerification = true))
+            add(TestCase("2.3.VOL.$volIdx.6", "volume.$s.set", "PHASE_2", "VOLUME", "${s.uppercase()} Volume Invalid Negative", "Rejects negative percentage.", "volume $s -1", "INVALID_ARGUMENT", TestType.NEGATIVE))
+            add(TestCase("2.3.VOL.$volIdx.7", "volume.$s.set", "PHASE_2", "VOLUME", "${s.uppercase()} Volume Invalid Excess", "Rejects percentage > 100.", "volume $s 101", "INVALID_ARGUMENT", TestType.NEGATIVE))
+            add(TestCase("2.3.VOL.$volIdx.8", "volume.$s.set", "PHASE_2", "VOLUME", "${s.uppercase()} Volume Non-Numeric", "Rejects non-numeric percentage.", "volume $s abc", "INVALID_ARGUMENT", TestType.NEGATIVE))
+            volIdx++
         }
 
         // PHYSICAL VOLUME BUTTON PASS-THROUGH TEST
