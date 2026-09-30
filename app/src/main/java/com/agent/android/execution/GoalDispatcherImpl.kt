@@ -100,6 +100,7 @@ class GoalDispatcherImpl(
             "brightness.status", "brightness.set" -> "BRIGHTNESS"
             "ringer.status", "ringer.normal", "ringer.vibrate", "ringer.silent" -> "RINGER"
             "diagnostics.status" -> "DEVICE_INFO"
+            "sensor.list" -> "SENSOR_LIST"
             else -> cmdDef.commandId
         }
 
@@ -213,6 +214,10 @@ class GoalDispatcherImpl(
             "battery.status" -> {
                 val res = hardwareObservationControllers?.getBatteryStatus() ?: SkillResult("BATTERY", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, "BATTERY", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "sensor.list" -> {
+                val res = hardwareObservationControllers?.getSensorList() ?: SkillResult("SENSOR_LIST", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, "SENSOR_LIST", cmdDef.handlerIdentifier, res, res.message)
             }
             "sensor.accelerometer.sample" -> {
                 val res = hardwareObservationControllers?.sampleSensor(android.hardware.Sensor.TYPE_ACCELEROMETER, "accelerometer")

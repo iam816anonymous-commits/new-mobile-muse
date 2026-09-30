@@ -1,22 +1,17 @@
-# LocalAgent Foundation Gaps & OS Constraints
+# LocalAgent Foundation Gaps & OS Constraints (Phase 2.4.1)
 
 ## Overview
-This document logs verified Android OS limits and hardware capability constraints encountered on API 27 / Android 8.1 and target devices.
+This document logs verified Android OS platform constraints and special access requirements.
 
-## Identified Constraints & Fallback Solutions
+## Verified Platform Constraints
+1. **Bluetooth & Wi-Fi Direct Toggle Restrictions**:
+   - *Constraint*: Android 10+ (API 29+) and certain OEM ROMs restrict apps from programmatically toggling Bluetooth and Wi-Fi adapters directly.
+   - *Resolution*: Direct toggles return `BLOCKED / UNSUPPORTED_DIRECT_CONTROL` and launch system settings intents (`Settings.ACTION_BLUETOOTH_SETTINGS`, `Settings.ACTION_WIFI_SETTINGS`) as fallback. No shell/root/reflection hacks are used.
 
-1. **Wi-Fi & Bluetooth Direct Toggle Restrictions**:
-   - *Constraint*: Android 10+ (API 29+) restricts apps from directly enabling/disabling Wi-Fi and Bluetooth programmatically via `WifiManager.setWifiEnabled()` or `BluetoothAdapter.enable()`.
-   - *Solution*: LocalAgent queries status accurately (`WIFI` and `BLUETOOTH` capabilities reported as `AVAILABLE` if hardware present) and launches system settings intents (`Settings.ACTION_WIFI_SETTINGS`, `Settings.ACTION_BLUETOOTH_SETTINGS`) when direct toggles are restricted.
+2. **Notification Policy Access (Do Not Disturb / Silent Ringer Mode)**:
+   - *Constraint*: Changing ringer mode to SILENT on Android 7.0+ (API 24+) requires Notification Policy Access (`isNotificationPolicyAccessGranted`).
+   - *Resolution*: `ringer.silent` returns `BLOCKED / NOTIFICATION_POLICY_ACCESS_REQUIRED` when access is not granted, guiding the user to `Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS`. Read-only `ringer.status` operates independently without requiring special access.
 
-2. **Special Settings Access (`WRITE_SETTINGS` & Notification Policy Access)**:
-   - *Constraint*: Android does not allow apps to request or grant special settings access directly via runtime permission dialogs.
-   - *Solution*: Dedicated Permissions UI detects status (`Settings.System.canWrite()`, `isNotificationPolicyAccessGranted()`) and provides direct guided navigation buttons (`Settings.ACTION_MANAGE_WRITE_SETTINGS`, `Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS`).
-
-3. **Screenshot Restrictions & Evidence Fallback**:
-   - *Constraint*: Certain protected views or background Activity states prevent PixelCopy API screenshot capture.
-   - *Solution*: `EvidenceManager` uses decorView drawing fallback and records `EVIDENCE_UNAVAILABLE` when capture is disallowed, preventing app crashes or fake screenshots.
-
-4. **Speech Recognition On-Device Availability**:
-   - *Constraint*: On some low-end or customized ROM devices, Android's built-in `SpeechRecognizer` service may be missing or uninstalled.
-   - *Solution*: `SpeechToTextEngine.isAvailable()` detects availability and marks capability as `UNSUPPORTED` without crashing.
+3. **Write System Settings (`WRITE_SETTINGS`)**:
+   - *Constraint*: Modifying system brightness or screen timeout requires `WRITE_SETTINGS` special access.
+   - *Resolution*: `brightness.set` returns `BLOCKED / WRITE_SETTINGS_REQUIRED` when access is missing, guiding the user to `Settings.ACTION_MANAGE_WRITE_SETTINGS`. Read-only `brightness.status` queries level independently.

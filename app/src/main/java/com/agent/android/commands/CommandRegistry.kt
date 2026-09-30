@@ -20,7 +20,7 @@ class CommandRegistry {
         register(CommandDefinition("calculator.calculate", "Calculate Math Expression", CommandCategory.HEADLESS_CORE, "Evaluates arithmetic math expressions", CommandStatus.IMPLEMENTED, "calculate <expression>", listOf("calculate 12 + 34", "calculate (2 + 3) * 4"), listOf("expression"), handlerIdentifier = "CalculatorSkill"))
 
         // 3. NOTES
-        register(CommandDefinition("notes.append", "Append Note", CommandCategory.HEADLESS_CORE, "Appends text entry to persistent note file", CommandStatus.IMPLEMENTED, "note append <text>", listOf("note append buy milk", "note down buy milk"), listOf("text"), CommandRequirement(requiredPermissions = listOf("android.permission.WRITE_EXTERNAL_STORAGE"), changesDeviceState = true), handlerIdentifier = "NotesSkill"))
+        register(CommandDefinition("notes.append", "Append Note", CommandCategory.HEADLESS_CORE, "Appends text entry to persistent note file", CommandStatus.IMPLEMENTED, "note down <text>", listOf("note down buy milk"), listOf("text"), CommandRequirement(requiredPermissions = listOf("android.permission.WRITE_EXTERNAL_STORAGE"), changesDeviceState = true), handlerIdentifier = "NotesSkill"))
 
         // 4. TIMER / ALARM
         register(CommandDefinition("timer.create", "Set Timer", CommandCategory.HEADLESS_CORE, "Launches system timer intent for specified seconds", CommandStatus.IMPLEMENTED, "timer <seconds>", listOf("timer 60"), listOf("seconds"), CommandRequirement(launchesApplication = true), handlerIdentifier = "IntentSkills"))
@@ -65,6 +65,7 @@ class CommandRegistry {
         register(CommandDefinition("battery.status", "Battery Status", CommandCategory.OBSERVATION, "Queries battery level and power charging state", CommandStatus.IMPLEMENTED, "battery status", listOf("battery status"), handlerIdentifier = "SystemControlControllers"))
 
         // 12. SENSORS
+        register(CommandDefinition("sensor.list", "List Hardware Sensors", CommandCategory.OBSERVATION, "Enumerates hardware sensors on device via SensorManager", CommandStatus.IMPLEMENTED, "sensor list", listOf("sensor list"), handlerIdentifier = "HardwareObservationControllers"))
         register(CommandDefinition("sensor.accelerometer.sample", "Accelerometer Reading", CommandCategory.OBSERVATION, "Samples 3-axis accelerometer values", CommandStatus.IMPLEMENTED, "sensor accelerometer", listOf("sensor accelerometer"), requirement = CommandRequirement(requiredCapabilities = listOf("ACCELEROMETER")), handlerIdentifier = "HardwareObservationControllers"))
         register(CommandDefinition("sensor.gyroscope.sample", "Gyroscope Reading", CommandCategory.OBSERVATION, "Samples 3-axis gyroscope values", CommandStatus.IMPLEMENTED, "sensor gyroscope", listOf("sensor gyroscope"), requirement = CommandRequirement(requiredCapabilities = listOf("GYROSCOPE")), handlerIdentifier = "HardwareObservationControllers"))
         register(CommandDefinition("sensor.proximity.sample", "Proximity Reading", CommandCategory.OBSERVATION, "Samples proximity sensor distance (cm)", CommandStatus.IMPLEMENTED, "sensor proximity", listOf("sensor proximity"), requirement = CommandRequirement(requiredCapabilities = listOf("PROXIMITY"), physicalObservationRequired = true), handlerIdentifier = "HardwareObservationControllers"))
@@ -72,7 +73,7 @@ class CommandRegistry {
 
         // 13. SYSTEM CONTROLS
         register(CommandDefinition("brightness.status", "Brightness Status", CommandCategory.SYSTEM_CONTROLS, "Queries screen brightness level", CommandStatus.IMPLEMENTED, "brightness status", listOf("brightness status"), handlerIdentifier = "SystemControlControllers"))
-        register(CommandDefinition("brightness.set", "Set Brightness", CommandCategory.SYSTEM_CONTROLS, "Sets screen brightness (0-255)", CommandStatus.IMPLEMENTED, "brightness <value>", listOf("brightness 128"), listOf("value"), CommandRequirement(requiredSpecialAccess = listOf("android.permission.WRITE_SETTINGS"), physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "SystemControlControllers"))
+        register(CommandDefinition("brightness.set", "Set Brightness", CommandCategory.SYSTEM_CONTROLS, "Sets screen brightness (0-100%)", CommandStatus.IMPLEMENTED, "brightness <percentage>", listOf("brightness 50"), listOf("percentage"), CommandRequirement(requiredSpecialAccess = listOf("android.permission.WRITE_SETTINGS"), physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "SystemControlControllers"))
         register(CommandDefinition("ringer.status", "Ringer Mode Status", CommandCategory.SYSTEM_CONTROLS, "Queries current ringer mode", CommandStatus.IMPLEMENTED, "ringer status", listOf("ringer status"), handlerIdentifier = "SystemControlControllers"))
         register(CommandDefinition("ringer.normal", "Ringer Mode Normal", CommandCategory.SYSTEM_CONTROLS, "Sets ringer mode to NORMAL", CommandStatus.IMPLEMENTED, "ringer normal", listOf("ringer normal"), requirement = CommandRequirement(physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "SystemControlControllers"))
         register(CommandDefinition("ringer.vibrate", "Ringer Mode Vibrate", CommandCategory.SYSTEM_CONTROLS, "Sets ringer mode to VIBRATE", CommandStatus.IMPLEMENTED, "ringer vibrate", listOf("ringer vibrate"), requirement = CommandRequirement(physicalObservationRequired = true, changesDeviceState = true), handlerIdentifier = "SystemControlControllers"))
@@ -140,10 +141,10 @@ class CommandRegistry {
                 }
             }
             "notes.append" -> {
-                if (trimmed.length > "note append".length) {
-                    params["text"] = trimmed.substring("note append".length).trim()
-                } else if (trimmed.length > "note down".length) {
+                if (trimmed.length > "note down".length) {
                     params["text"] = trimmed.substring("note down".length).trim()
+                } else if (trimmed.length > "note append".length) {
+                    params["text"] = trimmed.substring("note append".length).trim()
                 }
             }
             "timer.create" -> {

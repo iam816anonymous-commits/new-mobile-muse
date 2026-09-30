@@ -489,12 +489,22 @@ class MainActivity : Activity() {
                 current.error = details.result.errorCode
                 current.duration = dur
 
-                if (details.result.errorCode == "PERMISSION_REQUIRED" || details.result.errorCode == "SPECIAL_ACCESS_REQUIRED") {
+                if (details.result.status == SkillStatus.PERMISSION_REQUIRED ||
+                    details.result.errorCode == "PERMISSION_REQUIRED" ||
+                    details.result.errorCode == "SPECIAL_ACCESS_REQUIRED" ||
+                    details.result.errorCode == "NOTIFICATION_POLICY_ACCESS_REQUIRED" ||
+                    details.result.errorCode == "WRITE_SETTINGS_REQUIRED" ||
+                    details.result.errorCode == "UNSUPPORTED_DIRECT_CONTROL") {
                     current.status = TestStatus.BLOCKED
+                } else if (current.testType == TestType.NEGATIVE) {
+                    val expectedErr = current.expectedResult.trim()
+                    val actualErr = details.result.errorCode ?: ""
+                    val isExpectedErrorMatch = details.result.status != SkillStatus.SUCCESS &&
+                            (actualErr.equals(expectedErr, ignoreCase = true) || details.result.message.contains(expectedErr, ignoreCase = true))
+
+                    current.status = if (isExpectedErrorMatch) TestStatus.PASSED else TestStatus.FAILED
                 } else if (current.testType == TestType.AUTOMATED) {
                     current.status = if (details.result.status == SkillStatus.SUCCESS) TestStatus.PASSED else TestStatus.FAILED
-                } else if (current.testType == TestType.NEGATIVE) {
-                    current.status = if (details.result.status != SkillStatus.SUCCESS) TestStatus.PASSED else TestStatus.FAILED
                 } else {
                     current.status = if (details.result.status == SkillStatus.SUCCESS) TestStatus.PASSED else TestStatus.FAILED
                 }

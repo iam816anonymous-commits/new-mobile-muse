@@ -64,6 +64,29 @@ class HardwareObservationControllers(private val context: Context?) {
         }
     }
 
+    fun getSensorList(): SkillResult {
+        val start = System.currentTimeMillis()
+        if (context == null) return SkillResult("SENSOR_LIST", SkillStatus.UNAVAILABLE, "Context unavailable", System.currentTimeMillis() - start, "NO_CONTEXT")
+
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+            ?: return SkillResult("SENSOR_LIST", SkillStatus.UNAVAILABLE, "SensorManager unavailable", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
+
+        return try {
+            val allSensors = sensorManager.getSensorList(Sensor.TYPE_ALL)
+            if (allSensors.isNullOrEmpty()) {
+                SkillResult("SENSOR_LIST", SkillStatus.SUCCESS, "No hardware sensors detected on device", System.currentTimeMillis() - start)
+            } else {
+                val sb = StringBuilder("Sensors (${allSensors.size} total):\n")
+                for (s in allSensors) {
+                    sb.append("- ${s.name} [Type: ${s.type}, Vendor: ${s.vendor}, Ver: ${s.version}, Power: ${s.power}mA, MaxRange: ${s.maximumRange}, Res: ${s.resolution}]\n")
+                }
+                SkillResult("SENSOR_LIST", SkillStatus.SUCCESS, sb.toString().trim(), System.currentTimeMillis() - start)
+            }
+        } catch (e: Exception) {
+            SkillResult("SENSOR_LIST", SkillStatus.FAILED, "Error listing sensors: ${e.message}", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
+        }
+    }
+
     fun sampleSensor(sensorType: Int, sensorName: String, timeoutMs: Long = 1000L): SkillResult {
         val start = System.currentTimeMillis()
         if (context == null) return SkillResult("SENSOR", SkillStatus.UNAVAILABLE, "Context unavailable", System.currentTimeMillis() - start, "NO_CONTEXT")
