@@ -3,28 +3,61 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:padding="12dp"
     android:background="#121212">
 
     <TextView
         android:id="@+id/tvHeader"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="LOCALAGENT // CONTROL PLANE"
+        android:text="LOCALAGENT // FOUNDATION COMPLETION"
         android:textColor="#00E5FF"
-        android:textSize="18sp"
+        android:textSize="16sp"
         android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/tvNoticeBanner"
+    <!-- TAB NAVIGATION BAR -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:background="#332196F3"
-        android:padding="8dp"
-        android:text="PHASE 0, 1, 2.2 &amp; 2.3 ACTIVE: Hardened Core &amp; System Controls Operational."
-        android:textColor="#90CAF9"
-        android:textSize="12sp" />
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnTabTestRunner"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:textSize="10sp"
+            android:text="TEST RUNNER" />
+
+        <Button
+            android:id="@+id/btnTabPermissions"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:textSize="10sp"
+            android:text="PERMISSIONS" />
+
+        <Button
+            android:id="@+id/btnTabDiagnostics"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:textSize="10sp"
+            android:text="DIAGNOSTICS" />
+
+        <Button
+            android:id="@+id/btnTabConsole"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:textSize="10sp"
+            android:text="CONSOLE" />
+    </LinearLayout>
 
     <ScrollView
         android:layout_width="match_parent"
@@ -37,354 +70,798 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/tvAgentStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Agent Status: IDLE"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/tvExecutionState"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Execution State: IDLE"
-                android:textColor="#AAAAAA"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/tvSafetyStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Safety Status: SAFE_IDLE"
-                android:textColor="#66BB6A"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/tvAccessibilityStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Accessibility Service: NOT ENABLED"
-                android:textColor="#EF5350"
-                android:textSize="14sp" />
-
-            <Button
-                android:id="@+id/btnEnableAccessibility"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Configure Accessibility Service" />
-
-            <!-- DEVICE CAPABILITIES REGISTRY DISPLAY -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="DEVICE CAPABILITIES REGISTRY"
-                android:textColor="#FFD54F"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tvCapabilityRegistryDisplay"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:background="#263238"
-                android:padding="8dp"
-                android:text="Capability registry loading..."
-                android:textColor="#ECEFF1"
-                android:typeface="monospace"
-                android:textSize="11sp" />
-
-            <!-- APP LAUNCH TEST PANEL -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="PHASE 2.2 — SAFE APP LAUNCH TEST"
-                android:textColor="#CE93D8"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <EditText
-                android:id="@+id/etAppLaunchQuery"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:hint="Enter app name or package (e.g., Settings)"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#777777"
-                android:background="#222222"
-                android:padding="10dp"
-                android:textSize="14sp" />
-
+            <!-- ========================================================= -->
+            <!-- TAB 1: FOUNDATION TEST RUNNER PANEL                       -->
+            <!-- ========================================================= -->
             <LinearLayout
+                android:id="@+id/panelTestRunner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
+                android:orientation="vertical"
+                android:visibility="visible">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FOUNDATION TEST RUNNER"
+                    android:textColor="#FFD54F"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvRunnerProgress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Progress: 0 / 0 completed"
+                    android:textColor="#81C784"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="#1E272C"
+                    android:padding="10dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvTestIndex"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Test: 1 / 42"
+                        android:textColor="#00E5FF"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvTestMeta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Phase: PHASE_1 | Category: SAFETY | Type: AUTOMATED"
+                        android:textColor="#B0BEC5"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvTestName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Execution State Transitions"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvTestDescription"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Verifies state machine transitions..."
+                        android:textColor="#CFD8DC"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Command:"
+                        android:textColor="#FFB74D"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvTestCommand"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="calculate 12 + 34"
+                        android:textColor="#80D8FF"
+                        android:typeface="monospace"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Expected Result:"
+                        android:textColor="#FFB74D"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvTestExpected"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="Result: 46"
+                        android:textColor="#A5D6A7"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tvTestStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Status: PENDING"
+                        android:textColor="#FFCC80"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Observed Result:"
+                        android:textColor="#B0BEC5"
+                        android:textSize="11sp" />
+
+                    <EditText
+                        android:id="@+id/etObservedResult"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="#121212"
+                        android:hint="Enter physical observation or notes..."
+                        android:textColor="#FFFFFF"
+                        android:textColorHint="#666666"
+                        android:padding="6dp"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Error / Exception:"
+                        android:textColor="#B0BEC5"
+                        android:textSize="11sp" />
+
+                    <EditText
+                        android:id="@+id/etTestError"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="#121212"
+                        android:hint="Error details if applicable..."
+                        android:textColor="#FF8A80"
+                        android:textColorHint="#666666"
+                        android:padding="6dp"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tvTestDuration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Duration: - ms"
+                        android:textColor="#B0BEC5"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvTestEvidence"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Evidence: NONE"
+                        android:textColor="#B0BEC5"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <!-- RUNNER CONTROLS -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnExecuteTest"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="EXECUTE" />
+
+                    <Button
+                        android:id="@+id/btnCaptureEvidence"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="EVIDENCE" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnMarkPass"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="2dp"
+                        android:text="PASS" />
+
+                    <Button
+                        android:id="@+id/btnMarkFail"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="2dp"
+                        android:layout_marginEnd="2dp"
+                        android:text="FAIL" />
+
+                    <Button
+                        android:id="@+id/btnMarkBlocked"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="2dp"
+                        android:layout_marginEnd="2dp"
+                        android:text="BLOCKED" />
+
+                    <Button
+                        android:id="@+id/btnMarkSkip"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="2dp"
+                        android:text="SKIP" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnPrevTest"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="2dp"
+                        android:text="PREV" />
+
+                    <Button
+                        android:id="@+id/btnNextTest"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="2dp"
+                        android:layout_marginEnd="2dp"
+                        android:text="NEXT" />
+
+                    <Button
+                        android:id="@+id/btnClearTestResult"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="2dp"
+                        android:layout_marginEnd="2dp"
+                        android:text="CLEAR" />
+
+                    <Button
+                        android:id="@+id/btnClearAllTestResults"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="2dp"
+                        android:text="CLEAR ALL" />
+                </LinearLayout>
 
                 <Button
-                    android:id="@+id/btnValidateApp"
-                    android:layout_width="0dp"
+                    android:id="@+id/btnRunAutomatedBatch"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="4dp"
-                    android:text="VALIDATE APP" />
-
-                <Button
-                    android:id="@+id/btnLaunchApp"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="4dp"
-                    android:text="LAUNCH APP" />
+                    android:layout_marginTop="4dp"
+                    android:text="RUN ALL AUTOMATED TESTS" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/tvAppLaunchDisplay"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:background="#2A1B2D"
-                android:padding="8dp"
-                android:text="Requested: -\nResolved: -\nPackage: -\nActivity: -\nStatus: IDLE\nDuration: - ms"
-                android:textColor="#E1BEE7"
-                android:typeface="monospace"
-                android:textSize="11sp" />
-
-            <!-- FIRST-RUN RUNTIME PERMISSIONS SETUP -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="FIRST-RUN PERMISSION SETUP"
-                android:textColor="#FFB74D"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tvPermissionStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:background="#263238"
-                android:padding="8dp"
-                android:text="Storage Permission (Notes): CHECKING...\nCamera Permission (Torch): CHECKING..."
-                android:textColor="#ECEFF1"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/btnRequestPermissions"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Grant Required Runtime Permissions" />
-
-            <!-- DEVICE DIAGNOSTICS SECTION -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="DEVICE DIAGNOSTICS"
-                android:textColor="#00E5FF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/btnRunDiagnostics"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="RUN DEVICE DIAGNOSTICS" />
-
-            <TextView
-                android:id="@+id/tvDiagnosticsDisplay"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:background="#1C2833"
-                android:padding="8dp"
-                android:text="Diagnostics report not run."
-                android:textColor="#A3E4D7"
-                android:typeface="monospace"
-                android:textSize="11sp" />
-
-            <!-- LIVE COMMAND TEST CONSOLE -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="LIVE COMMAND TEST CONSOLE"
-                android:textColor="#00E5FF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <EditText
-                android:id="@+id/etLiveCommand"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:hint="Enter command (e.g. brightness 80)"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#777777"
-                android:background="#222222"
-                android:padding="10dp"
-                android:textSize="14sp" />
-
+            <!-- ========================================================= -->
+            <!-- TAB 2: PERMISSIONS & CAPABILITIES PANEL                   -->
+            <!-- ========================================================= -->
             <LinearLayout
+                android:id="@+id/panelPermissions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PERMISSIONS &amp; CAPABILITIES"
+                    android:textColor="#FFD54F"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <!-- RUNTIME PERMISSIONS -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="RUNTIME PERMISSIONS"
+                    android:textColor="#00E5FF"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvRuntimePermDisplay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#1C2833"
+                    android:padding="8dp"
+                    android:textColor="#ECEFF1"
+                    android:textSize="11sp" />
 
                 <Button
-                    android:id="@+id/btnExecuteLiveCommand"
-                    android:layout_width="0dp"
+                    android:id="@+id/btnGrantRuntimePerms"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="4dp"
-                    android:text="EXECUTE" />
+                    android:layout_marginTop="4dp"
+                    android:text="Request Runtime Permissions (Storage, Camera, Audio)" />
 
-                <Button
-                    android:id="@+id/btnTestConcurrency"
-                    android:layout_width="0dp"
+                <!-- SPECIAL ACCESS -->
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="2dp"
-                    android:layout_marginEnd="2dp"
-                    android:text="Test Concurrency" />
+                    android:layout_marginTop="12dp"
+                    android:text="SPECIAL ACCESS"
+                    android:textColor="#00E5FF"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
 
-                <Button
-                    android:id="@+id/btnClearConsole"
-                    android:layout_width="0dp"
+                <TextView
+                    android:id="@+id/tvSpecialAccessDisplay"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="4dp"
-                    android:text="CLEAR" />
+                    android:layout_marginTop="4dp"
+                    android:background="#1C2833"
+                    android:padding="8dp"
+                    android:textColor="#ECEFF1"
+                    android:textSize="11sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnOpenAccessibilitySettings"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="2dp"
+                        android:textSize="10sp"
+                        android:text="ACCESSIBILITY" />
+
+                    <Button
+                        android:id="@+id/btnOpenWriteSettings"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="2dp"
+                        android:layout_marginEnd="2dp"
+                        android:textSize="10sp"
+                        android:text="WRITE SETTINGS" />
+
+                    <Button
+                        android:id="@+id/btnOpenNotificationPolicy"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="2dp"
+                        android:textSize="10sp"
+                        android:text="NOTIF POLICY" />
+                </LinearLayout>
+
+                <!-- DEVICE CAPABILITIES -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="DEVICE CAPABILITIES &amp; SENSORS"
+                    android:textColor="#00E5FF"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvCapabilitiesCategorizedDisplay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#1C2833"
+                    android:padding="8dp"
+                    android:textColor="#ECEFF1"
+                    android:typeface="monospace"
+                    android:textSize="11sp" />
+
+                <!-- SYSTEM SERVICES (STT/TTS) -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="SYSTEM SERVICES (STT / TTS)"
+                    android:textColor="#00E5FF"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvSpeechServicesDisplay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#1C2833"
+                    android:padding="8dp"
+                    android:textColor="#ECEFF1"
+                    android:textSize="11sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnTestTtsSpeak"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="TEST TTS SPEAK" />
+
+                    <Button
+                        android:id="@+id/btnTestSttListen"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="TEST STT LISTEN" />
+                </LinearLayout>
+
+                <!-- FUTURE CAPABILITIES -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="FUTURE CAPABILITIES (PHASE 3+ PLAN)"
+                    android:textColor="#AAAAAA"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvFutureCapabilitiesDisplay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#1A1A1A"
+                    android:padding="8dp"
+                    android:text="- Overlay Permission (SYSTEM_ALERT_WINDOW): Not required in Phase 2.4\n- Boot Receiver (RECEIVE_BOOT_COMPLETED): Not required in Phase 2.4\n- Fine Location (ACCESS_FINE_LOCATION): Optional for future phases\n- Camera Automation / OCR: Planned for Phase 3"
+                    android:textColor="#777777"
+                    android:textSize="11sp" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/tvLiveConsoleDisplay"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="#1B2631"
-                android:padding="10dp"
-                android:text="COMMAND: -\nOPERATION: -\nCONTROLLER: -\nSTATUS: IDLE\nVERIFICATION: -\nDURATION: - ms"
-                android:textColor="#A3E4D7"
-                android:typeface="monospace"
-                android:textSize="12sp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="RECENT EXECUTION HISTORY (MAX 20):"
-                android:textColor="#FFD54F"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tvExecutionHistoryLog"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:background="#1C2833"
-                android:padding="8dp"
-                android:text="No recent executions."
-                android:textColor="#F5B041"
-                android:typeface="monospace"
-                android:textSize="11sp" />
-
-            <!-- PHASE 1 SAFETY HARNESS PANEL -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="PHASE 1 — SAFETY HARNESS TEST PANEL"
-                android:textColor="#FFD54F"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tvSuiteSummary"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Suite Status: NOT RUN (Passed: 0, Failed: 0, Total: 0)"
-                android:textColor="#E0E0E0"
-                android:textSize="13sp" />
-
+            <!-- ========================================================= -->
+            <!-- TAB 3: FOUNDATION DIAGNOSTICS & READINESS PANEL           -->
+            <!-- ========================================================= -->
             <LinearLayout
+                android:id="@+id/panelDiagnostics"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FOUNDATION STATUS &amp; DIAGNOSTICS"
+                    android:textColor="#FFD54F"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvReadinessOverallBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="#3300E5FF"
+                    android:padding="10dp"
+                    android:text="READINESS STATUS: EVALUATING..."
+                    android:textColor="#00E5FF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
                 <Button
-                    android:id="@+id/btnRunAllTests"
-                    android:layout_width="0dp"
+                    android:id="@+id/btnEvaluateReadiness"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="4dp"
-                    android:text="Run All Phase 1 Tests" />
+                    android:layout_marginTop="8dp"
+                    android:text="RE-EVALUATE FOUNDATION READINESS" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="SYSTEM &amp; ENVIRONMENT INFORMATION"
+                    android:textColor="#00E5FF"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvSystemInfoDisplay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#1C2833"
+                    android:padding="8dp"
+                    android:textColor="#A3E4D7"
+                    android:typeface="monospace"
+                    android:textSize="11sp" />
 
                 <Button
-                    android:id="@+id/btnClearResults"
-                    android:layout_width="0dp"
+                    android:id="@+id/btnRunFullDiagnostics"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="4dp"
-                    android:text="Clear Results" />
+                    android:layout_marginTop="8dp"
+                    android:text="RUN HARDWARE DIAGNOSTICS" />
+
+                <TextView
+                    android:id="@+id/tvFullDiagnosticsDisplay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#1C2833"
+                    android:padding="8dp"
+                    android:text="Diagnostics not run."
+                    android:textColor="#A3E4D7"
+                    android:typeface="monospace"
+                    android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- HARDWARE VERIFICATION STATUS SECTION -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="HARDWARE VERIFICATION"
-                android:textColor="#00E5FF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tvHardwareVerificationStatus"
+            <!-- ========================================================= -->
+            <!-- TAB 4: CONSOLE & HARNESS PANEL                            -->
+            <!-- ========================================================= -->
+            <LinearLayout
+                android:id="@+id/panelConsole"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:background="#263238"
-                android:padding="8dp"
-                android:text="Volume-Up Double Press: [ NOT VERIFIED ]\nPhysical Flashlight/Haptics/Sensors: [ MANUAL DEVICE TEST REQUIRED ]"
-                android:textColor="#FFB74D"
-                android:textSize="12sp" />
+                android:orientation="vertical"
+                android:visibility="gone">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Harness &amp; Activity Log:"
-                android:textColor="#00E5FF"
-                android:textSize="14sp" />
+                <TextView
+                    android:id="@+id/tvAgentStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Agent Status: IDLE"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp" />
 
-            <TextView
-                android:id="@+id/tvLogArea"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="#1E1E1E"
-                android:padding="8dp"
-                android:text="[SYSTEM] Phase 2.3 LocalAgent active."
-                android:textColor="#00FF66"
-                android:typeface="monospace"
-                android:textSize="12sp" />
+                <TextView
+                    android:id="@+id/tvExecutionState"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Execution State: IDLE"
+                    android:textColor="#AAAAAA"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvSafetyStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Safety Status: SAFE_IDLE"
+                    android:textColor="#66BB6A"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvAccessibilityStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Accessibility Service: NOT ENABLED"
+                    android:textColor="#EF5350"
+                    android:textSize="14sp" />
+
+                <Button
+                    android:id="@+id/btnEnableAccessibility"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Configure Accessibility Service" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="LIVE COMMAND TEST CONSOLE"
+                    android:textColor="#00E5FF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/etLiveCommand"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:hint="Enter command (e.g. brightness 80)"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#777777"
+                    android:background="#222222"
+                    android:padding="10dp"
+                    android:textSize="14sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnExecuteLiveCommand"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="EXECUTE" />
+
+                    <Button
+                        android:id="@+id/btnTestConcurrency"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="2dp"
+                        android:layout_marginEnd="2dp"
+                        android:text="Test Concurrency" />
+
+                    <Button
+                        android:id="@+id/btnClearConsole"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="CLEAR" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvLiveConsoleDisplay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="#1B2631"
+                    android:padding="10dp"
+                    android:text="COMMAND: -\nOPERATION: -\nCONTROLLER: -\nSTATUS: IDLE\nVERIFICATION: -\nDURATION: - ms"
+                    android:textColor="#A3E4D7"
+                    android:typeface="monospace"
+                    android:textSize="12sp" />
+
+                <!-- APP LAUNCH TEST PANEL -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="SAFE APP LAUNCH TEST"
+                    android:textColor="#CE93D8"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/etAppLaunchQuery"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:hint="Enter app name (e.g., Settings)"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#777777"
+                    android:background="#222222"
+                    android:padding="10dp"
+                    android:textSize="14sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnValidateApp"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="VALIDATE APP" />
+
+                    <Button
+                        android:id="@+id/btnLaunchApp"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="LAUNCH APP" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvAppLaunchDisplay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#2A1B2D"
+                    android:padding="8dp"
+                    android:text="Requested: -\nResolved: -\nPackage: -\nActivity: -\nStatus: IDLE\nDuration: - ms"
+                    android:textColor="#E1BEE7"
+                    android:typeface="monospace"
+                    android:textSize="11sp" />
+
+                <!-- PHASE 1 SAFETY HARNESS PANEL -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="PHASE 1 — SAFETY HARNESS TEST PANEL"
+                    android:textColor="#FFD54F"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvSuiteSummary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Suite Status: NOT RUN"
+                    android:textColor="#E0E0E0"
+                    android:textSize="13sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnRunAllTests"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="Run Phase 1 Tests" />
+
+                    <Button
+                        android:id="@+id/btnClearResults"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="Clear Results" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Harness &amp; Activity Log:"
+                    android:textColor="#00E5FF"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvLogArea"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="#1E1E1E"
+                    android:padding="8dp"
+                    android:text="[SYSTEM] Phase 2.4 LocalAgent active."
+                    android:textColor="#00FF66"
+                    android:typeface="monospace"
+                    android:textSize="12sp" />
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>

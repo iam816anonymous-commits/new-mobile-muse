@@ -1,12 +1,16 @@
 package com.agent.android.agent.device
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.os.Vibrator
 import android.provider.Settings
+import androidx.core.content.ContextCompat
+import com.agent.android.speech.SpeechToTextEngine
 
 enum class CapabilityStatus {
     AVAILABLE,
@@ -14,6 +18,15 @@ enum class CapabilityStatus {
     UNSUPPORTED,
     PERMISSION_REQUIRED
 }
+
+data class DetailedCapabilityInfo(
+    val capabilityName: String,
+    val capabilityExists: Boolean,
+    val capabilityPermitted: Boolean,
+    val capabilityUsable: Boolean,
+    val status: CapabilityStatus,
+    val reason: String
+)
 
 data class CapabilityInfo(
     val capabilityName: String,
@@ -23,27 +36,78 @@ data class CapabilityInfo(
 
 class CapabilityRegistry(private val context: Context?) {
 
-    fun checkAllCapabilities(): Map<String, CapabilityInfo> {
-        val map = mutableMapOf<String, CapabilityInfo>()
+    fun checkDetailedCapabilities(): Map<String, DetailedCapabilityInfo> {
+        val map = mutableMapOf<String, DetailedCapabilityInfo>()
 
         // Torch / Flashlight
         val cameraManager = context?.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
-        val torchOk = (cameraManager?.cameraIdList?.size ?: 0) > 0
-        map["FLASHLIGHT"] = CapabilityInfo("FLASHLIGHT", if (torchOk) CapabilityStatus.AVAILABLE else CapabilityStatus.UNSUPPORTED, if (torchOk) "Camera torch present" else "No camera torch")
+        val torchExists = (cameraManager?.cameraIdList?.size ?: 0) > 0
+        val cameraPermitted = context != null && ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        val torchUsable = torchExists && cameraPermitted
+        map["FLASHLIGHT"] = DetailedCapabilityInfo(
+            "FLASHLIGHT",
+            torchExists,
+            cameraPermitted,
+            torchUsable,
+            if (!torchExists) CapabilityStatus.UNSUPPORTED else if (cameraPermitted) CapabilityStatus.AVAILABLE else CapabilityStatus.PERMISSION_REQUIRED,
+            if (!torchExists) "No camera torch hardware" else if (cameraPermitted) "Torch available & permitted" else "CAMERA permission required"
+        )
 
         // Vibration
         val vibrator = context?.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        val vibOk = vibrator?.hasVibrator() == true
-        map["VIBRATION"] = CapabilityInfo("VIBRATION", if (vibOk) CapabilityStatus.AVAILABLE else CapabilityStatus.UNSUPPORTED, if (vibOk) "Vibrator present" else "No vibrator hardware")
+        val vibExists = vibrator?.hasVibrator() == true
+        map["VIBRATION"] = DetailedCapabilityInfo(
+            "VIBRATION",
+            vibExists,
+            true,
+            vibExists,
+            if (vibExists) CapabilityStatus.AVAILABLE else CapabilityStatus.UNSUPPORTED,
+            if (vibExists) "Vibrator present" else "No vibrator hardware"
+        )
 
-        // Volume / Audio
+        // Audio Streams / Volume
         val audio = context?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-        val audioOk = audio != null
-        map["VOLUME"] = CapabilityInfo("VOLUME", if (audioOk) CapabilityStatus.AVAILABLE else CapabilityStatus.UNAVAILABLE, if (audioOk) "AudioManager present" else "No AudioManager")
+        val audioExists = audio != null
+        map["VOLUME"] = DetailedCapabilityInfo(
+            "VOLUME",
+            audioExists,
+            true,
+            audioExists,
+            if (audioExists) CapabilityStatus.AVAILABLE else CapabilityStatus.UNAVAILABLE,
+            if (audioExists) "AudioManager present" else "No AudioManager"
+        )
 
-        // Wi-Fi & Bluetooth
-        map["WIFI"] = CapabilityInfo("WIFI", CapabilityStatus.AVAILABLE, "Wi-Fi manager accessible")
-        map["BLUETOOTH"] = CapabilityInfo("BLUETOOTH", CapabilityStatus.AVAILABLE, "Bluetooth adapter accessible")
+        // Wi-Fi
+        val wifiExists = context?.packageManager?.hasSystemFeature(PackageManager.FEATURE_WIFI) ?: true
+        map["WIFI"] = DetailedCapabilityInfo(
+            "WIFI",
+            wifiExists,
+            true,
+            wifiExists,
+            if (wifiExists) CapabilityStatus.AVAILABLE else CapabilityStatus.UNSUPPORTED,
+            if (wifiExists) "Wi-Fi hardware present" else "No Wi-Fi hardware"
+        )
+
+        // Bluetooth
+        val btExists = context?.packageManager?.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH) ?: true
+        map["BLUETOOTH"] = DetailedCapabilityInfo(
+            "BLUETOOTH",
+            btExists,
+            true,
+            btExists,
+            if (btExists) CapabilityStatus.AVAILABLE else CapabilityStatus.UNSUPPORTED,
+            if (btExists) "Bluetooth hardware present" else "No Bluetooth hardware"
+        )
+
+        // Battery
+        map["BATTERY"] = DetailedCapabilityInfo(
+            "BATTERY",
+            true,
+            true,
+            true,
+            CapabilityStatus.AVAILABLE,
+            "Battery manager accessible"
+        )
 
         // Sensors
         val sensorManager = context?.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -51,33 +115,146 @@ class CapabilityRegistry(private val context: Context?) {
             "ACCELEROMETER" to Sensor.TYPE_ACCELEROMETER,
             "GYROSCOPE" to Sensor.TYPE_GYROSCOPE,
             "PROXIMITY" to Sensor.TYPE_PROXIMITY,
-            "LIGHT" to Sensor.TYPE_LIGHT,
-            "MAGNETOMETER" to Sensor.TYPE_MAGNETIC_FIELD
+            "LIGHT" to Sensor.TYPE_LIGHT
         )
         for ((name, type) in sensorTypes) {
             val sensor = sensorManager?.getDefaultSensor(type)
-            if (sensor != null) {
-                map[name] = CapabilityInfo(name, CapabilityStatus.AVAILABLE, "Sensor ${sensor.name} present")
-            } else {
-                map[name] = CapabilityInfo(name, CapabilityStatus.UNSUPPORTED, "Hardware sensor not present on device")
-            }
+            val exists = sensor != null
+            map[name] = DetailedCapabilityInfo(
+                name,
+                exists,
+                true,
+                exists,
+                if (exists) CapabilityStatus.AVAILABLE else CapabilityStatus.UNSUPPORTED,
+                if (exists) "Sensor ${sensor?.name} present" else "Sensor not present on device"
+            )
         }
 
         // Brightness
         val canWriteSettings = context != null && Settings.System.canWrite(context)
-        map["BRIGHTNESS"] = CapabilityInfo(
+        map["BRIGHTNESS"] = DetailedCapabilityInfo(
             "BRIGHTNESS",
+            true,
+            canWriteSettings,
+            canWriteSettings,
             if (canWriteSettings) CapabilityStatus.AVAILABLE else CapabilityStatus.PERMISSION_REQUIRED,
-            if (canWriteSettings) "System brightness control available" else "WRITE_SETTINGS special permission required"
+            if (canWriteSettings) "WRITE_SETTINGS granted" else "WRITE_SETTINGS permission required"
         )
 
-        map["SCREEN_TIMEOUT"] = CapabilityInfo("SCREEN_TIMEOUT", if (canWriteSettings) CapabilityStatus.AVAILABLE else CapabilityStatus.PERMISSION_REQUIRED, if (canWriteSettings) "Screen timeout setting available" else "WRITE_SETTINGS special permission required")
-        map["RINGER"] = CapabilityInfo("RINGER", CapabilityStatus.AVAILABLE, "Ringer mode read/write available")
-        map["MEDIA"] = CapabilityInfo("MEDIA", CapabilityStatus.AVAILABLE, "Media key dispatch available")
-        map["LOCATION_STATUS"] = CapabilityInfo("LOCATION_STATUS", CapabilityStatus.AVAILABLE, "Read-only location provider status available")
-        map["APP_LAUNCH"] = CapabilityInfo("APP_LAUNCH", CapabilityStatus.AVAILABLE, "PackageManager app discovery & launch available")
-        map["SYSTEM_SETTINGS_INTENTS"] = CapabilityInfo("SYSTEM_SETTINGS_INTENTS", CapabilityStatus.AVAILABLE, "System Settings intents available")
+        map["SCREEN_TIMEOUT"] = DetailedCapabilityInfo(
+            "SCREEN_TIMEOUT",
+            true,
+            canWriteSettings,
+            canWriteSettings,
+            if (canWriteSettings) CapabilityStatus.AVAILABLE else CapabilityStatus.PERMISSION_REQUIRED,
+            if (canWriteSettings) "WRITE_SETTINGS granted" else "WRITE_SETTINGS permission required"
+        )
+
+        map["RINGER"] = DetailedCapabilityInfo(
+            "RINGER",
+            true,
+            true,
+            true,
+            CapabilityStatus.AVAILABLE,
+            "Ringer mode available"
+        )
+
+        map["MEDIA"] = DetailedCapabilityInfo(
+            "MEDIA",
+            true,
+            true,
+            true,
+            CapabilityStatus.AVAILABLE,
+            "Media controls available"
+        )
+
+        map["LOCATION_STATUS"] = DetailedCapabilityInfo(
+            "LOCATION_STATUS",
+            true,
+            true,
+            true,
+            CapabilityStatus.AVAILABLE,
+            "Location status available"
+        )
+
+        map["APP_LAUNCH"] = DetailedCapabilityInfo(
+            "APP_LAUNCH",
+            true,
+            true,
+            true,
+            CapabilityStatus.AVAILABLE,
+            "App launcher available"
+        )
+
+        map["SYSTEM_SETTINGS_INTENTS"] = DetailedCapabilityInfo(
+            "SYSTEM_SETTINGS_INTENTS",
+            true,
+            true,
+            true,
+            CapabilityStatus.AVAILABLE,
+            "Settings intents available"
+        )
+
+        // STT
+        val sttEngine = if (context != null) SpeechToTextEngine(context) else null
+        val sttExists = sttEngine?.isAvailable() ?: false
+        val sttPermitted = sttEngine?.hasRecordAudioPermission() ?: false
+        map["STT"] = DetailedCapabilityInfo(
+            "STT",
+            sttExists,
+            sttPermitted,
+            sttExists && sttPermitted,
+            if (!sttExists) CapabilityStatus.UNSUPPORTED else if (sttPermitted) CapabilityStatus.AVAILABLE else CapabilityStatus.PERMISSION_REQUIRED,
+            if (!sttExists) "SpeechRecognizer unavailable" else if (sttPermitted) "STT available & permitted" else "RECORD_AUDIO permission required"
+        )
+
+        // TTS
+        map["TTS"] = DetailedCapabilityInfo(
+            "TTS",
+            true,
+            true,
+            true,
+            CapabilityStatus.AVAILABLE,
+            "TextToSpeech API available"
+        )
+
+        // Accessibility
+        val accEnabled = if (context != null) isAccessibilityServiceEnabled(context) else false
+        map["ACCESSIBILITY"] = DetailedCapabilityInfo(
+            "ACCESSIBILITY",
+            true,
+            accEnabled,
+            accEnabled,
+            if (accEnabled) CapabilityStatus.AVAILABLE else CapabilityStatus.PERMISSION_REQUIRED,
+            if (accEnabled) "LocalAgentAccessibilityService enabled" else "Accessibility service not enabled in Android Settings"
+        )
 
         return map
+    }
+
+    fun checkAllCapabilities(): Map<String, CapabilityInfo> {
+        val detailed = checkDetailedCapabilities()
+        return detailed.mapValues {
+            CapabilityInfo(it.value.capabilityName, it.value.status, it.value.reason)
+        }
+    }
+
+    private fun isAccessibilityServiceEnabled(context: Context): Boolean {
+        val expectedComponentName = "${context.packageName}/com.agent.android.service.LocalAgentAccessibilityService"
+        val enabledServices = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+
+        val colonSplitter = android.text.TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServices)
+
+        while (colonSplitter.hasNext()) {
+            val componentName = colonSplitter.next()
+            if (componentName.equals(expectedComponentName, ignoreCase = true)) {
+                return true
+            }
+        }
+        return false
     }
 }
