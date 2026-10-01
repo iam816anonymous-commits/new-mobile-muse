@@ -407,4 +407,30 @@ class Phase31CrossAppObservationUnitTest {
         // Null service returns empty window list without crashing
         assertNotNull(windows)
     }
+
+    @Test
+    fun testObservationSourceScopeAndStateSerialization() {
+        val snap = ObservationSnapshot(
+            timestampMs = 1721510200000L,
+            packageName = "com.android.chrome",
+            activityName = "ChromeTabbedActivity",
+            windowType = "TYPE_APPLICATION",
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 120,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null,
+            classification = com.agent.android.observation.WindowClassification.APPLICATION,
+            source = com.agent.android.observation.ObservationSource.GUIDED_TEST,
+            scope = com.agent.android.observation.ObservationScope.TARGET_APPLICATION
+        )
+
+        val jsonStr = snap.toJsonString()
+        val restored = ObservationSnapshot.fromJsonString(jsonStr)
+
+        assertEquals(com.agent.android.observation.ObservationSource.GUIDED_TEST, restored.source)
+        assertEquals(com.agent.android.observation.ObservationScope.TARGET_APPLICATION, restored.scope)
+        assertEquals(com.agent.android.observation.WindowClassification.APPLICATION, restored.classification)
+    }
 }

@@ -9,6 +9,22 @@ enum class ObservationMode {
     OBSERVING
 }
 
+enum class ObservationSource {
+    LIVE_ACTIVE_WINDOW,
+    ACCESSIBLE_WINDOW_QUERY,
+    GUIDED_TEST,
+    EXPLICIT_CAPTURE,
+    RESTORED_SNAPSHOT
+}
+
+enum class ObservationScope {
+    CURRENT_WINDOW,
+    TARGET_APPLICATION,
+    SYSTEM_UI,
+    LOCAL_AGENT,
+    ACCESSIBLE_WINDOWS
+}
+
 data class ObservationBounds(
     val left: Int,
     val top: Int,
@@ -138,7 +154,10 @@ enum class ObservationState {
     SUCCESS,
     ACCESSIBILITY_DISABLED,
     NO_ACTIVE_WINDOW,
+    NO_ACCESSIBLE_WINDOWS,
     ROOT_NODE_UNAVAILABLE,
+    WINDOW_NOT_EXPOSED,
+    TARGET_NOT_FOUND,
     OBSERVATION_FAILED,
     CANCELLED
 }
@@ -154,7 +173,9 @@ data class ObservationSnapshot(
     val allNodesList: List<ObservationNode>,
     val state: ObservationState,
     val error: String? = null,
-    val classification: WindowClassification = WindowClassification.classify(packageName, activityName)
+    val classification: WindowClassification = WindowClassification.classify(packageName, activityName),
+    val source: ObservationSource = ObservationSource.LIVE_ACTIVE_WINDOW,
+    val scope: ObservationScope = ObservationScope.CURRENT_WINDOW
 ) {
     fun toJsonString(): String {
         val obj = JSONObject()
@@ -166,6 +187,8 @@ data class ObservationSnapshot(
         obj.put("nodeCount", nodeCount)
         obj.put("state", state.name)
         obj.put("classification", classification.name)
+        obj.put("source", source.name)
+        obj.put("scope", scope.name)
         obj.put("error", error ?: JSONObject.NULL)
         obj.put("rootNode", rootNode?.toJsonObject() ?: JSONObject.NULL)
         return obj.toString(2)
@@ -178,6 +201,18 @@ data class ObservationSnapshot(
                 ObservationState.valueOf(json.optString("state", ObservationState.OBSERVATION_FAILED.name))
             } catch (e: Exception) {
                 ObservationState.OBSERVATION_FAILED
+            }
+
+            val source = try {
+                ObservationSource.valueOf(json.optString("source", ObservationSource.LIVE_ACTIVE_WINDOW.name))
+            } catch (e: Exception) {
+                ObservationSource.LIVE_ACTIVE_WINDOW
+            }
+
+            val scope = try {
+                ObservationScope.valueOf(json.optString("scope", ObservationScope.CURRENT_WINDOW.name))
+            } catch (e: Exception) {
+                ObservationScope.CURRENT_WINDOW
             }
 
             val rootNodeObj = json.optJSONObject("rootNode")
@@ -193,17 +228,23 @@ data class ObservationSnapshot(
             }
             collectNodes(rootNode)
 
+            val pkg = json.optString("packageName", "UNKNOWN")
+            val act = if (json.isNull("activityName")) null else json.optString("activityName")
+
             return ObservationSnapshot(
                 timestampMs = json.optLong("timestampMs", 0L),
-                packageName = json.optString("packageName", "UNKNOWN"),
-                activityName = if (json.isNull("activityName")) null else json.optString("activityName"),
+                packageName = pkg,
+                activityName = act,
                 windowType = if (json.isNull("windowType")) null else json.optString("windowType"),
                 rootBounds = ObservationBounds.fromJsonObject(json.optJSONObject("rootBounds")),
                 nodeCount = json.optInt("nodeCount", allNodes.size),
                 rootNode = rootNode,
                 allNodesList = allNodes,
                 state = state,
-                error = if (json.isNull("error")) null else json.optString("error")
+                error = if (json.isNull("error")) null else json.optString("error"),
+                classification = WindowClassification.classify(pkg, act),
+                source = source,
+                scope = scope
             )
         }
     }
