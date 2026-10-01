@@ -9,6 +9,23 @@ import com.agent.android.agent.skills.SkillStatus
 
 class HapticController(private val context: Context?) {
 
+    fun getVibratorStatus(): SkillResult {
+        val start = System.currentTimeMillis()
+        if (context == null) return SkillResult("VIBRATION", SkillStatus.UNAVAILABLE, "Context unavailable", System.currentTimeMillis() - start, "NO_CONTEXT")
+
+        return try {
+            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            val hasVib = vibrator?.hasVibrator() == true
+            if (hasVib) {
+                SkillResult("VIBRATION", SkillStatus.SUCCESS, "Vibrator status: AVAILABLE [Hardware present]", System.currentTimeMillis() - start)
+            } else {
+                SkillResult("VIBRATION", SkillStatus.UNSUPPORTED, "Vibrator status: UNSUPPORTED [No vibrator hardware]", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
+            }
+        } catch (e: Exception) {
+            SkillResult("VIBRATION", SkillStatus.FAILED, "Error querying vibrator status: ${e.message}", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
+        }
+    }
+
     fun vibrate(durationMs: Long = 300L): SkillResult {
         val start = System.currentTimeMillis()
         if (durationMs <= 0 || durationMs > 2000) {
