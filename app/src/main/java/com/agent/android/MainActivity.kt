@@ -55,7 +55,6 @@ import com.agent.android.execution.GoalDispatcherImpl
 import com.agent.android.permissions.PermissionCategory
 import com.agent.android.permissions.PermissionManager
 import com.agent.android.permissions.PermissionStatus
-import com.agent.android.safety.HarnessSuiteSummary
 import com.agent.android.safety.Phase1SafetyTestHarness
 import com.agent.android.service.LocalAgentAccessibilityService
 import com.agent.android.speech.SpeechToTextEngine
@@ -103,22 +102,29 @@ class MainActivity : Activity() {
     private val historyLog: Deque<HistoryEntry> = ArrayDeque()
 
     // Tab buttons & Panels
-    private lateinit var btnTabTestRunner: Button
+    private lateinit var btnTabDashboard: Button
     private lateinit var btnTabPermissions: Button
     private lateinit var btnTabDiagnostics: Button
     private lateinit var btnTabConsole: Button
 
-    private lateinit var panelTestRunner: LinearLayout
+    private lateinit var panelDashboard: LinearLayout
     private lateinit var panelPermissions: LinearLayout
     private lateinit var panelDiagnostics: LinearLayout
     private lateinit var panelConsole: LinearLayout
 
+    // Dashboard Badges
+    private lateinit var tvAgentStatusBadge: TextView
+    private lateinit var tvExecutionBadge: TextView
+    private lateinit var tvSafetyBadge: TextView
+    private lateinit var tvAccessibilityBadge: TextView
+    private lateinit var btnQuickAccessibility: Button
+    private lateinit var btnQuickWriteSettings: Button
+    private lateinit var btnQuickNotifPolicy: Button
+
     // Runner UI Views
     private lateinit var tvRunnerProgress: TextView
     private lateinit var tvTestIndex: TextView
-    private lateinit var tvTestMeta: TextView
     private lateinit var tvTestName: TextView
-    private lateinit var tvTestDescription: TextView
     private lateinit var tvTestCommand: TextView
     private lateinit var tvTestExpected: TextView
     private lateinit var tvTestStatus: TextView
@@ -173,9 +179,6 @@ class MainActivity : Activity() {
     private lateinit var btnTestConcurrency: Button
     private lateinit var btnClearConsole: Button
     private lateinit var tvLiveConsoleDisplay: TextView
-    private lateinit var tvSuiteSummary: TextView
-    private lateinit var btnRunAllTests: Button
-    private lateinit var btnClearResults: Button
     private lateinit var tvLogArea: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -254,22 +257,30 @@ class MainActivity : Activity() {
     }
 
     private fun bindViews() {
-        btnTabTestRunner = findViewById(R.id.btnTabTestRunner)
+        btnTabDashboard = findViewById(R.id.btnTabDashboard)
         btnTabPermissions = findViewById(R.id.btnTabPermissions)
         btnTabDiagnostics = findViewById(R.id.btnTabDiagnostics)
         btnTabConsole = findViewById(R.id.btnTabConsole)
 
-        panelTestRunner = findViewById(R.id.panelTestRunner)
+        panelDashboard = findViewById(R.id.panelDashboard)
         panelPermissions = findViewById(R.id.panelPermissions)
         panelDiagnostics = findViewById(R.id.panelDiagnostics)
         panelConsole = findViewById(R.id.panelConsole)
 
+        // Dashboard Badges & Quick Actions
+        tvAgentStatusBadge = findViewById(R.id.tvAgentStatusBadge)
+        tvExecutionBadge = findViewById(R.id.tvExecutionBadge)
+        tvSafetyBadge = findViewById(R.id.tvSafetyBadge)
+        tvAccessibilityBadge = findViewById(R.id.tvAccessibilityBadge)
+
+        btnQuickAccessibility = findViewById(R.id.btnQuickAccessibility)
+        btnQuickWriteSettings = findViewById(R.id.btnQuickWriteSettings)
+        btnQuickNotifPolicy = findViewById(R.id.btnQuickNotifPolicy)
+
         // Runner
         tvRunnerProgress = findViewById(R.id.tvRunnerProgress)
         tvTestIndex = findViewById(R.id.tvTestIndex)
-        tvTestMeta = findViewById(R.id.tvTestMeta)
         tvTestName = findViewById(R.id.tvTestName)
-        tvTestDescription = findViewById(R.id.tvTestDescription)
         tvTestCommand = findViewById(R.id.tvTestCommand)
         tvTestExpected = findViewById(R.id.tvTestExpected)
         tvTestStatus = findViewById(R.id.tvTestStatus)
@@ -324,17 +335,25 @@ class MainActivity : Activity() {
         btnTestConcurrency = findViewById(R.id.btnTestConcurrency)
         btnClearConsole = findViewById(R.id.btnClearConsole)
         tvLiveConsoleDisplay = findViewById(R.id.tvLiveConsoleDisplay)
-        tvSuiteSummary = findViewById(R.id.tvSuiteSummary)
-        btnRunAllTests = findViewById(R.id.btnRunAllTests)
-        btnClearResults = findViewById(R.id.btnClearResults)
         tvLogArea = findViewById(R.id.tvLogArea)
     }
 
     private fun setupListeners() {
-        btnTabTestRunner.setOnClickListener { switchTab(0) }
+        btnTabDashboard.setOnClickListener { switchTab(0) }
         btnTabPermissions.setOnClickListener { switchTab(1) }
         btnTabDiagnostics.setOnClickListener { switchTab(2) }
         btnTabConsole.setOnClickListener { switchTab(3) }
+
+        // Dashboard Quick Actions
+        btnQuickAccessibility.setOnClickListener {
+            permissionManager.openSettings(permissionManager.registry.getPermissionById("accessibility_service_required")!!)
+        }
+        btnQuickWriteSettings.setOnClickListener {
+            permissionManager.openSettings(permissionManager.registry.getPermissionById("write_settings_access")!!)
+        }
+        btnQuickNotifPolicy.setOnClickListener {
+            permissionManager.openSettings(permissionManager.registry.getPermissionById("notification_policy_access")!!)
+        }
 
         // Test Runner
         btnExecuteTest.setOnClickListener { executeCurrentTest() }
@@ -431,24 +450,15 @@ class MainActivity : Activity() {
             historyLog.clear()
             updateUIState()
         }
-        btnRunAllTests.setOnClickListener {
-            val summary = testHarness.runAllTests()
-            updateSuiteSummary(summary)
-        }
-        btnClearResults.setOnClickListener {
-            tvSuiteSummary.text = "Suite Status: NOT RUN"
-            logger.clear()
-            updateUIState()
-        }
     }
 
     private fun switchTab(tabIndex: Int) {
-        panelTestRunner.visibility = if (tabIndex == 0) View.VISIBLE else View.GONE
+        panelDashboard.visibility = if (tabIndex == 0) View.VISIBLE else View.GONE
         panelPermissions.visibility = if (tabIndex == 1) View.VISIBLE else View.GONE
         panelDiagnostics.visibility = if (tabIndex == 2) View.VISIBLE else View.GONE
         panelConsole.visibility = if (tabIndex == 3) View.VISIBLE else View.GONE
 
-        btnTabTestRunner.setBackgroundColor(if (tabIndex == 0) 0xFF00E5FF.toInt() else 0xFF333333.toInt())
+        btnTabDashboard.setBackgroundColor(if (tabIndex == 0) 0xFF00E5FF.toInt() else 0xFF333333.toInt())
         btnTabPermissions.setBackgroundColor(if (tabIndex == 1) 0xFF00E5FF.toInt() else 0xFF333333.toInt())
         btnTabDiagnostics.setBackgroundColor(if (tabIndex == 2) 0xFF00E5FF.toInt() else 0xFF333333.toInt())
         btnTabConsole.setBackgroundColor(if (tabIndex == 3) 0xFF00E5FF.toInt() else 0xFF333333.toInt())
@@ -466,9 +476,7 @@ class MainActivity : Activity() {
 
         val current = testCases[currentTestIndex]
         tvTestIndex.text = "Test ${currentTestIndex + 1} / ${testCases.size} (ID: ${current.id})"
-        tvTestMeta.text = "Command ID: ${current.commandId} | Phase: ${current.phase} | Category: ${current.category} | Type: ${current.testType.name}"
         tvTestName.text = current.name
-        tvTestDescription.text = current.description
         tvTestCommand.text = current.command ?: "NONE (NO COMMAND)"
         tvTestExpected.text = current.expectedResult
         tvTestStatus.text = "Status: ${current.status.name}"
@@ -785,6 +793,15 @@ class MainActivity : Activity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
         }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.READ_PHONE_STATE)
+        }
 
         if (permissionsToRequest.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), PERMISSION_REQUEST_CODE)
@@ -851,11 +868,22 @@ class MainActivity : Activity() {
     private fun updateUIState() {
         val state = executionController.stateMachine.currentState
         val safety = executionController.safetyState
+        tvAgentStatusBadge.text = "Agent Status: ${state.name}"
+        tvExecutionBadge.text = "Execution State: ${state.name}"
+        tvSafetyBadge.text = "Safety Status: ${safety.status.name}"
+
+        val isAccEnabled = isAccessibilityServiceEnabled(this, LocalAgentAccessibilityService::class.java)
+        if (isAccEnabled) {
+            tvAccessibilityBadge.text = "Accessibility Service: ENABLED"
+            tvAccessibilityBadge.setTextColor(0xFF66BB6A.toInt())
+        } else {
+            tvAccessibilityBadge.text = "Accessibility Service: NOT ENABLED"
+            tvAccessibilityBadge.setTextColor(0xFFEF5350.toInt())
+        }
+
         tvAgentStatus.text = "Agent Status: ${state.name}"
         tvExecutionState.text = "Execution State: ${state.name}"
         tvSafetyStatus.text = "Safety Status: ${safety.status.name}"
-
-        val isAccEnabled = isAccessibilityServiceEnabled(this, LocalAgentAccessibilityService::class.java)
         if (isAccEnabled) {
             tvAccessibilityStatus.text = "Accessibility Service: ENABLED"
             tvAccessibilityStatus.setTextColor(0xFF66BB6A.toInt())
@@ -869,20 +897,12 @@ class MainActivity : Activity() {
         refreshLogs()
     }
 
-    private fun updateSuiteSummary(summary: HarnessSuiteSummary) {
-        val overallText = if (summary.overallPassed) "PASS" else "FAIL"
-        val color = if (summary.overallPassed) 0xFF66BB6A.toInt() else 0xFFEF5350.toInt()
-        tvSuiteSummary.text = "PHASE 1 TEST RESULTS\nPassed: ${summary.passedCount} | Failed: ${summary.failedCount} | Total: ${summary.totalCount}\nOverall: $overallText"
-        tvSuiteSummary.setTextColor(color)
-        updateUIState()
-    }
-
     private fun refreshLogs() {
         val sb = StringBuilder()
         for (log in logger.getLogs()) {
             sb.append("[${log.category}] ${log.message}\n")
         }
-        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 2.4 LocalAgent active."
+        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 2.5 LocalAgent active."
     }
 
     private fun isAccessibilityServiceEnabled(context: Context, service: Class<*>): Boolean {
