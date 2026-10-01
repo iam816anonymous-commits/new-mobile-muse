@@ -10,7 +10,10 @@ Phase 3.1 Observation Foundation and Cross-App Hardening for LocalAgent is **IMP
 1. **Cross-Application Observation Mode**: Controlled state transition (`STOPPED`, `READY`, `OBSERVING`) with `startObservationMode()` and `stopObservationMode()`.
 2. **Debounced Capture**: Minimum 1000ms capture interval (`DEBOUNCE_INTERVAL_MS = 1000L`) on accessibility events to prevent event storms, race conditions, memory leaks, and ANRs.
 3. **External Snapshot Storage**: Atomic tracking of `lastExternalSnapshot` for non-LocalAgent packages, allowing users to leave LocalAgent, open an external app, and view its captured snapshot upon return.
-4. **Isolated Cross-App Test Suite (`P3.1-XAPP-001` through `P3.1-XAPP-008`)**:
+4. **Two Distinct UI Validation Cards (Card A & Card B)**:
+   - **Card A (Observation Engine Validation - Current Screen)**: `btnRunEngineValidation` runs all 25 observation engine unit/integration criteria on the active LocalAgent UI screen and reports PASS/FAIL with package, activity, node count, duration, and tree bounds.
+   - **Card B (External Application Observation Validation)**: `btnStartExternalValidation` enables Observation Mode, observes external app launches (Settings/Calc/Clock), and automatically validates target package != LocalAgent and != SystemUI/launcher/recents, outputting PASS/FAIL status and saving evidence to `evidence/phase3.1/external-app/`.
+5. **Isolated Cross-App Test Suite (`P3.1-XAPP-001` through `P3.1-XAPP-008`)**:
    - `P3.1-XAPP-001`: Android Settings Observation
    - `P3.1-XAPP-002`: Settings Subscreen Change
    - `P3.1-XAPP-003`: Calculator Observation (SKIPPED if uninstalled)
@@ -19,7 +22,7 @@ Phase 3.1 Observation Foundation and Cross-App Hardening for LocalAgent is **IMP
    - `P3.1-XAPP-006`: Return to LocalAgent
    - `P3.1-XAPP-007`: Rapid Application Switching
    - `P3.1-XAPP-008`: Stable Observation
-5. **Sequential Test Execution**: Single-test step-by-step harness flow preventing concurrent app launch race conditions or thread starvation.
+6. **Sequential Test Execution**: Single-test step-by-step harness flow preventing concurrent app launch race conditions or thread starvation.
 
 ## 4. Test Summary
 - **Phase 2 / 2.5 Tests**: 82 / 82 PASSED (Frozen Foundation Unchanged)

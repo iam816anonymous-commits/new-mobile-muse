@@ -53,6 +53,7 @@ import com.agent.android.diagnostics.FoundationReadinessEvaluator
 import com.agent.android.execution.ExecutionController
 import com.agent.android.execution.GoalDispatcherImpl
 import com.agent.android.observation.AccessibilityObservationEngine
+import com.agent.android.observation.ExternalAppTestValidator
 import com.agent.android.observation.ObservationNode
 import com.agent.android.observation.ObservationSnapshot
 import com.agent.android.observation.ObservationState
@@ -95,6 +96,7 @@ class MainActivity : Activity() {
     private lateinit var permissionManager: PermissionManager
     private lateinit var locationController: LocationController
     private lateinit var observationEngine: AccessibilityObservationEngine
+    private lateinit var externalAppValidator: ExternalAppTestValidator
 
     private lateinit var testRegistry: FoundationTestRegistry
     private lateinit var resultStore: TestResultStore
@@ -177,6 +179,17 @@ class MainActivity : Activity() {
     private lateinit var tvObsTreeDisplay: TextView
     private lateinit var tvObsSelectedNodeDisplay: TextView
 
+    // Card A Views
+    private lateinit var btnRunEngineValidation: Button
+    private lateinit var tvEngineValidationResult: TextView
+    private lateinit var tvEngineValidationDetails: TextView
+
+    // Card B Views
+    private lateinit var btnStartExternalValidation: Button
+    private lateinit var tvExternalValStatus: TextView
+    private lateinit var tvExternalValObservedPackage: TextView
+    private lateinit var tvExternalValDetails: TextView
+
     private lateinit var tvReadinessOverallBanner: TextView
     private lateinit var btnToggleFoundationTestRunner: Button
     private lateinit var subpanelFoundationTestRunner: LinearLayout
@@ -240,6 +253,7 @@ class MainActivity : Activity() {
         permissionManager = PermissionManager(this)
         locationController = LocationController(this)
         observationEngine = AccessibilityObservationEngine()
+        externalAppValidator = ExternalAppTestValidator(this)
         testHarness = Phase1SafetyTestHarness(executionController, logger)
         capabilityRegistry = CapabilityRegistry(this)
         commandRegistry = CommandRegistry()
@@ -390,6 +404,17 @@ class MainActivity : Activity() {
         tvObsTreeDisplay = findViewById(R.id.tvObsTreeDisplay)
         tvObsSelectedNodeDisplay = findViewById(R.id.tvObsSelectedNodeDisplay)
 
+        // Card A Views
+        btnRunEngineValidation = findViewById(R.id.btnRunEngineValidation)
+        tvEngineValidationResult = findViewById(R.id.tvEngineValidationResult)
+        tvEngineValidationDetails = findViewById(R.id.tvEngineValidationDetails)
+
+        // Card B Views
+        btnStartExternalValidation = findViewById(R.id.btnStartExternalValidation)
+        tvExternalValStatus = findViewById(R.id.tvExternalValStatus)
+        tvExternalValObservedPackage = findViewById(R.id.tvExternalValObservedPackage)
+        tvExternalValDetails = findViewById(R.id.tvExternalValDetails)
+
         tvReadinessOverallBanner = findViewById(R.id.tvReadinessOverallBanner)
         btnToggleFoundationTestRunner = findViewById(R.id.btnToggleFoundationTestRunner)
         subpanelFoundationTestRunner = findViewById(R.id.subpanelFoundationTestRunner)
@@ -527,6 +552,21 @@ class MainActivity : Activity() {
             observationEngine.clearLastSnapshot()
             updateObservationUI()
             Toast.makeText(this, "Observation cleared", Toast.LENGTH_SHORT).show()
+        }
+
+        // Card A & B Validation Listeners
+        btnRunEngineValidation.setOnClickListener {
+            runEngineValidationCardA()
+        }
+
+        btnStartExternalValidation.setOnClickListener {
+            observationEngine.startObservationMode()
+            showingExternalSnapshot = false
+            tvExternalValStatus.text = "Validation Status: OBSERVING EXTERNAL APPS..."
+            tvExternalValStatus.setTextColor(0xFFFFD54F.toInt())
+            tvExternalValObservedPackage.text = "Target App: Waiting for external app launch..."
+            tvExternalValDetails.text = "Observation Mode STARTED.\n1. Leave LocalAgent & open Settings, Calculator, or Clock.\n2. Return to LocalAgent to automatically validate the external snapshot."
+            Toast.makeText(this, "Observation Mode STARTED. Open an external app and return.", Toast.LENGTH_LONG).show()
         }
 
         // Diagnostics
@@ -709,6 +749,43 @@ class MainActivity : Activity() {
             tvObsTreeDisplay.text = "[No observation captured yet. Tap START OBSERVATION or CAPTURE SCREEN]"
             tvObsSelectedNodeDisplay.text = "Class: -\nText: -\nResource ID: -\nClickable: -\nEnabled: -\nBounds: -"
         }
+
+        // Auto-update Card B External Validation status when external snapshot changes
+        val extSnapshot = observationEngine.getLastExternalSnapshot()
+        if (extSnapshot != null) {
+            val valRes = externalAppValidator.validateExternalAppSnapshot(extSnapshot, evidenceManager)
+            tvExternalValStatus.text = "Validation Status: ${valRes.status.name}"
+            tvExternalValStatus.setTextColor(
+                when (valRes.status) {
+                    TestStatus.PASSED -> 0xFF66BB6A.toInt()
+                    TestStatus.FAILED -> 0xFFEF5350.toInt()
+                    else -> 0xFFFFD54F.toInt()
+                }
+            )
+            tvExternalValObservedPackage.text = "Target App: ${valRes.targetPackage ?: "NONE"} (${valRes.targetActivity ?: "N/A"})"
+            tvExternalValDetails.text = valRes.errorDetails ?: valRes.summaryText
+        }
+    }
+
+    private fun runEngineValidationCardA() {
+        val res = externalAppValidator.validateEngine(observationEngine)
+        tvEngineValidationResult.text = "Validation Result: ${res.status.name} (${res.summaryText})"
+        tvEngineValidationResult.setTextColor(
+            when (res.status) {
+                TestStatus.PASSED -> 0xFF66BB6A.toInt()
+                TestStatus.FAILED -> 0xFFEF5350.toInt()
+                else -> 0xFFFFD54F.toInt()
+            }
+        )
+        tvEngineValidationDetails.text = """
+            Package: ${res.packageName ?: "N/A"}
+            Activity: ${res.activityName ?: "N/A"}
+            Nodes Captured: ${res.nodeCount}
+            Duration: ${res.durationMs} ms
+
+            ${res.errorDetails ?: "All 25 Observation Engine checks verified."}
+        """.trimIndent()
+        Toast.makeText(this, "Card A Validation: ${res.status.name}", Toast.LENGTH_SHORT).show()
     }
 
     private fun switchTab(tabIndex: Int) {

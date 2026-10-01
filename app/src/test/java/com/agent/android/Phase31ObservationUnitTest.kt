@@ -141,4 +141,62 @@ class Phase31ObservationUnitTest {
         assertEquals(500, AccessibilityObservationEngine.MAX_NODE_LIMIT)
         assertEquals(30, AccessibilityObservationEngine.MAX_DEPTH_LIMIT)
     }
+
+    @Test
+    fun testExternalAppTestValidatorValidationLogic() {
+        val validator = com.agent.android.observation.ExternalAppTestValidator()
+
+        // Null snapshot
+        val nullRes = validator.validateExternalAppSnapshot(null)
+        assertEquals(com.agent.android.test.model.TestStatus.BLOCKED, nullRes.status)
+
+        // LocalAgent snapshot (must fail target app check)
+        val localAgentSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.agent.android",
+            activityName = "com.agent.android.MainActivity",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 10,
+            rootNode = ObservationNode("1", null, "android.widget.FrameLayout", "com.agent.android", null, null, null, ObservationBounds(0, 0, 1080, 1920), false, false, false, false, true, false, false, false, false, false, true, false, 0),
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+        val localRes = validator.validateExternalAppSnapshot(localAgentSnap)
+        assertEquals(com.agent.android.test.model.TestStatus.FAILED, localRes.status)
+
+        // SystemUI snapshot (must fail system ui check)
+        val sysUiSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.systemui",
+            activityName = "com.android.systemui.StatusBar",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 5,
+            rootNode = ObservationNode("1", null, "android.widget.FrameLayout", "com.android.systemui", null, null, null, ObservationBounds(0, 0, 1080, 1920), false, false, false, false, true, false, false, false, false, false, true, false, 0),
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+        val sysUiRes = validator.validateExternalAppSnapshot(sysUiSnap)
+        assertEquals(com.agent.android.test.model.TestStatus.FAILED, sysUiRes.status)
+
+        // Valid External App snapshot (com.android.settings)
+        val extSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.settings",
+            activityName = "com.android.settings.Settings",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 25,
+            rootNode = ObservationNode("1", null, "android.widget.FrameLayout", "com.android.settings", null, null, null, ObservationBounds(0, 0, 1080, 1920), false, false, false, false, true, false, false, false, false, false, true, false, 0),
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+        val validRes = validator.validateExternalAppSnapshot(extSnap)
+        assertEquals(com.agent.android.test.model.TestStatus.PASSED, validRes.status)
+        assertEquals("com.android.settings", validRes.targetPackage)
+    }
 }

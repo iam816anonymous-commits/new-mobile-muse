@@ -31,8 +31,22 @@ ObservationSnapshot / ObservationNode (Immutable Data Models)
 JSON Serialization / Phase 3.1 UI Inspector / Target Resolver
 ```
 
-## 5. Phase 3 Test Isolation
+## 5. Dedicated Phase 3.1 UI Validation Cards
+The Diagnostics UI contains two distinct validation cards powered by `ExternalAppTestValidator`:
+
+### Card A: Observation Engine Validation (Current Screen)
+- **Button**: `[ RUN ENGINE VALIDATION ]`
+- **Execution**: Evaluates all 25 observation engine unit/integration criteria on the currently active screen.
+- **Reporting**: Displays PASS/FAIL status along with target package, activity, total node count, duration (ms), and tree bounds.
+
+### Card B: External Application Observation Validation
+- **Button**: `[ START EXTERNAL VALIDATION ]`
+- **Execution**: Activates Observation Mode and waits for the user to launch an external target application (e.g. Settings, Calculator, Clock).
+- **Validation**: Automatically validates the external snapshot upon returning to LocalAgent, verifying that target package != `com.agent.android` and package != `com.android.systemui`/launcher/recents.
+- **Reporting**: Displays PASS/FAIL status, target package name, target activity, root node count, and evidence reference path (`evidence/phase3.1/external-app/...`).
+
+## 6. Phase 3 Test Isolation
 - **Core Observation Tests**: `P3.1-OBS-001` through `P3.1-OBS-025`
 - **Cross-App Validation Tests**: `P3.1-XAPP-001` through `P3.1-XAPP-008`
-- **Evidence Storage**: `evidence/phase3.1/xapp/TEST-P3.1-XAPP-*/`
+- **Evidence Storage**: `evidence/phase3.1/xapp/TEST-P3.1-XAPP-*/` and `evidence/phase3.1/external-app/`
 - All Phase 2 foundation tests and evidence remain strictly frozen and independent.

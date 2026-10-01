@@ -836,6 +836,109 @@
                         android:textSize="10sp" />
                 </LinearLayout>
 
+                <!-- CARD A: OBSERVATION ENGINE VALIDATION (CURRENT SCREEN) -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="CARD A — OBSERVATION ENGINE VALIDATION (CURRENT SCREEN)"
+                    android:textColor="#80D8FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#1A2327"
+                    android:padding="10dp"
+                    android:orientation="vertical">
+
+                    <Button
+                        android:id="@+id/btnRunEngineValidation"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="RUN ENGINE VALIDATION" />
+
+                    <TextView
+                        android:id="@+id/tvEngineValidationResult"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Validation Result: UNTESTED"
+                        android:textColor="#FFD54F"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvEngineValidationDetails"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="Tap 'RUN ENGINE VALIDATION' to evaluate observation engine criteria (25 checks)."
+                        android:textColor="#B0BEC5"
+                        android:typeface="monospace"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <!-- CARD B: EXTERNAL APPLICATION OBSERVATION VALIDATION -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="CARD B — EXTERNAL APPLICATION OBSERVATION VALIDATION"
+                    android:textColor="#CE93D8"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#231A27"
+                    android:padding="10dp"
+                    android:orientation="vertical">
+
+                    <Button
+                        android:id="@+id/btnStartExternalValidation"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="START EXTERNAL VALIDATION" />
+
+                    <TextView
+                        android:id="@+id/tvExternalValStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Validation Status: IDLE"
+                        android:textColor="#FFD54F"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvExternalValObservedPackage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Target App: NONE"
+                        android:textColor="#E1BEE7"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvExternalValDetails"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="Tap 'START EXTERNAL VALIDATION', open target app, and return to LocalAgent."
+                        android:textColor="#B0BEC5"
+                        android:typeface="monospace"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
                 <!-- FOUNDATION READINESS SUMMARY -->
                 <TextView
                     android:id="@+id/tvReadinessOverallBanner"
