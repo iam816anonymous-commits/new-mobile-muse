@@ -6,13 +6,9 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.agent.android.service.LocalAgentAccessibilityService
 import java.util.concurrent.atomic.AtomicInteger
 
-enum class ObservationMode {
-    STOPPED,
-    READY,
-    OBSERVING
-}
-
-class AccessibilityObservationEngine {
+class AccessibilityObservationEngine(
+    val snapshotStore: ObservationSnapshotStore = ObservationSnapshotStore()
+) {
 
     companion object {
         private const val TAG = "AccessibilityObsEngine"
@@ -21,14 +17,8 @@ class AccessibilityObservationEngine {
         const val DEBOUNCE_INTERVAL_MS = 1000L
     }
 
-    var observationMode: ObservationMode = ObservationMode.READY
-        private set
-
-    @Volatile
-    private var lastObservationSnapshot: ObservationSnapshot? = null
-
-    @Volatile
-    private var lastExternalSnapshot: ObservationSnapshot? = null
+    val observationMode: ObservationMode
+        get() = snapshotStore.observationMode
 
     @Volatile
     private var lastErrorText: String? = null
@@ -37,16 +27,15 @@ class AccessibilityObservationEngine {
     private var lastCaptureTimeMs: Long = 0L
 
     fun startObservationMode() {
-        observationMode = ObservationMode.OBSERVING
+        snapshotStore.startObservationMode()
     }
 
     fun stopObservationMode() {
-        observationMode = ObservationMode.STOPPED
-        // STOP observation keeps lastExternalSnapshot intact!
+        snapshotStore.stopObservationMode()
     }
 
     fun resetToReadyMode() {
-        observationMode = ObservationMode.READY
+        snapshotStore.resetToReadyMode()
     }
 
     fun getServiceInstance(): LocalAgentAccessibilityService? {
@@ -58,12 +47,7 @@ class AccessibilityObservationEngine {
     }
 
     fun isExcludedExternalPackage(pkgName: String?): Boolean {
-        if (pkgName == null || pkgName == "UNKNOWN") return true
-        if (pkgName == "com.agent.android") return true
-        if (pkgName == "com.android.systemui") return true
-        if (pkgName.contains("launcher", ignoreCase = true)) return true
-        if (pkgName.contains("recents", ignoreCase = true)) return true
-        return false
+        return snapshotStore.isExcludedExternalPackage(pkgName)
     }
 
     fun handleAccessibilityEvent(packageName: String?, eventType: Int) {
@@ -74,11 +58,12 @@ class AccessibilityObservationEngine {
             return
         }
 
+        val sessionToken = snapshotStore.getSessionId()
         lastCaptureTimeMs = now
         val snapshot = captureCurrentScreen()
 
+        snapshotStore.updateFromCapture(snapshot, sessionToken)
         if (snapshot.state == ObservationState.SUCCESS && !isExcludedExternalPackage(snapshot.packageName)) {
-            lastExternalSnapshot = snapshot
             Log.i(TAG, "Captured external app observation: ${snapshot.packageName} (${snapshot.nodeCount} nodes)")
         }
     }
@@ -91,6 +76,7 @@ class AccessibilityObservationEngine {
             false
         }
 
+        val dispSnap = getDisplayedSnapshot()
         return ObservationMetadata(
             isAccessibilityInstalled = true,
             isAccessibilityEnabled = service != null,
@@ -99,9 +85,9 @@ class AccessibilityObservationEngine {
             lastEventTimestampMs = service?.lastEventTimeMs,
             lastEventPackageName = service?.lastEventPackageName,
             lastEventType = service?.lastEventType,
-            lastObservationTimestampMs = lastObservationSnapshot?.timestampMs,
-            lastObservationNodeCount = lastObservationSnapshot?.nodeCount,
-            lastError = lastErrorText ?: lastObservationSnapshot?.error
+            lastObservationTimestampMs = dispSnap?.timestampMs,
+            lastObservationNodeCount = dispSnap?.nodeCount,
+            lastError = lastErrorText ?: dispSnap?.error
         )
     }
 
@@ -122,7 +108,7 @@ class AccessibilityObservationEngine {
                 state = ObservationState.ACCESSIBILITY_DISABLED,
                 error = "LocalAgentAccessibilityService is not enabled or connected."
             )
-            lastObservationSnapshot = errSnapshot
+            snapshotStore.updateFromCapture(errSnapshot, snapshotStore.getSessionId())
             lastErrorText = errSnapshot.error
             return errSnapshot
         }
@@ -147,7 +133,7 @@ class AccessibilityObservationEngine {
                 state = ObservationState.ROOT_NODE_UNAVAILABLE,
                 error = "Root Accessibility node is unavailable (No active window)."
             )
-            lastObservationSnapshot = errSnapshot
+            snapshotStore.updateFromCapture(errSnapshot, snapshotStore.getSessionId())
             lastErrorText = errSnapshot.error
             return errSnapshot
         }
@@ -200,7 +186,7 @@ class AccessibilityObservationEngine {
                 state = ObservationState.OBSERVATION_FAILED,
                 error = "Failed to parse root node hierarchy."
             )
-            lastObservationSnapshot = errSnapshot
+            snapshotStore.updateFromCapture(errSnapshot, snapshotStore.getSessionId())
             lastErrorText = errSnapshot.error
             return errSnapshot
         }
@@ -218,10 +204,7 @@ class AccessibilityObservationEngine {
             error = null
         )
 
-        lastObservationSnapshot = snapshot
-        if (!isExcludedExternalPackage(pkgName)) {
-            lastExternalSnapshot = snapshot
-        }
+        snapshotStore.updateFromCapture(snapshot, snapshotStore.getSessionId())
         lastErrorText = null
         return snapshot
     }
@@ -309,12 +292,12 @@ class AccessibilityObservationEngine {
         return obsNode
     }
 
-    fun getLastSnapshot(): ObservationSnapshot? = lastObservationSnapshot
-    fun getLastExternalSnapshot(): ObservationSnapshot? = lastExternalSnapshot
+    fun getLastSnapshot(): ObservationSnapshot? = snapshotStore.displayedSnapshot ?: snapshotStore.currentLiveSnapshot
+    fun getLastExternalSnapshot(): ObservationSnapshot? = snapshotStore.lastValidExternalSnapshot
+    fun getDisplayedSnapshot(): ObservationSnapshot? = snapshotStore.displayedSnapshot
 
     fun clearLastSnapshot() {
-        lastObservationSnapshot = null
-        lastExternalSnapshot = null
+        snapshotStore.clearSnapshots()
         lastErrorText = null
     }
 }

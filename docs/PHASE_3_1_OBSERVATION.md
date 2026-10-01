@@ -15,8 +15,10 @@ LocalAgent supports background cross-application observation:
 ## 3. Core Architectural Rules & Safety
 1. **STRICTLY READ-ONLY**: The Observation Engine (`AccessibilityObservationEngine`) performs zero UI actions, gestures, taps, clicks, text input, or app launches.
 2. **DEBOUNCED CAPTURE**: Capture events are debounced with a 1000ms minimum interval (`DEBOUNCE_INTERVAL_MS = 1000L`) to prevent event storms, race conditions, memory leaks, or ANRs.
-3. **ZERO RECURSIVE LEAKS**: All `AccessibilityNodeInfo` instances are recycled (`nodeInfo.recycle()`) during traversal.
-4. **TRAVERSAL BOUNDS**: Maximum node count is strictly capped at `500` nodes and depth is capped at `30` levels to protect target Tecno Camon i (4GB RAM) hardware.
+3. **CANONICAL SNAPSHOT STORE (`ObservationSnapshotStore`)**: Centralized single source of truth managing `currentLiveSnapshot`, `lastValidExternalSnapshot`, `displayedSnapshot`, `observationMode`, and session token invalidation (`sessionId`).
+4. **STOP DOES NOT CAPTURE**: Tapping `STOP OBSERVATION` or returning to LocalAgent stops future capture and invalidates background sessions without invoking `rootInActiveWindow` or overwriting `lastValidExternalSnapshot`.
+5. **ZERO RECURSIVE LEAKS**: All `AccessibilityNodeInfo` instances are recycled (`nodeInfo.recycle()`) during traversal.
+6. **TRAVERSAL BOUNDS**: Maximum node count is strictly capped at `500` nodes and depth is capped at `30` levels to protect target Tecno Camon i (4GB RAM) hardware.
 
 ## 4. Architecture Component Diagram
 ```

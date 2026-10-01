@@ -161,4 +161,204 @@ class Phase31CrossAppObservationUnitTest {
         assertEquals("com.android.settings", com.agent.android.observation.GuidedTestApp.SETTINGS.staticPackage)
         assertEquals(null, com.agent.android.observation.GuidedTestApp.CALCULATOR.staticPackage)
     }
+
+    @Test
+    fun testStopDoesNotCaptureNewSnapshot() {
+        val engine = AccessibilityObservationEngine()
+        val initialSnap = engine.getDisplayedSnapshot()
+
+        engine.stopObservationMode()
+
+        assertEquals(com.agent.android.observation.ObservationMode.STOPPED, engine.observationMode)
+        assertEquals(initialSnap, engine.getDisplayedSnapshot())
+    }
+
+    @Test
+    fun testStopPreservesLastExternalSnapshot() {
+        val engine = AccessibilityObservationEngine()
+        val chromeSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.chrome",
+            activityName = "org.chromium.chrome.browser.ChromeTabbedActivity",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 200,
+            rootNode = ObservationNode("1", null, "android.widget.FrameLayout", "com.android.chrome", null, null, null, ObservationBounds(0, 0, 1080, 1920), false, false, false, false, true, false, false, false, false, false, true, false, 0),
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+
+        engine.snapshotStore.updateFromCapture(chromeSnap)
+        assertEquals("com.android.chrome", engine.getDisplayedSnapshot()?.packageName)
+
+        engine.stopObservationMode()
+
+        assertEquals(com.agent.android.observation.ObservationMode.STOPPED, engine.observationMode)
+        assertEquals("com.android.chrome", engine.getDisplayedSnapshot()?.packageName)
+        assertEquals("com.android.chrome", engine.getLastExternalSnapshot()?.packageName)
+    }
+
+    @Test
+    fun testLocalAgentDoesNotOverwriteExternalSnapshot() {
+        val engine = AccessibilityObservationEngine()
+        val chromeSnap = ObservationSnapshot(
+            timestampMs = 100000L,
+            packageName = "com.android.chrome",
+            activityName = "org.chromium.chrome.browser.ChromeTabbedActivity",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 150,
+            rootNode = ObservationNode("1", null, "android.widget.FrameLayout", "com.android.chrome", null, null, null, ObservationBounds(0, 0, 1080, 1920), false, false, false, false, true, false, false, false, false, false, true, false, 0),
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+        engine.snapshotStore.updateFromCapture(chromeSnap)
+
+        val localAgentSnap = ObservationSnapshot(
+            timestampMs = 100500L,
+            packageName = "com.agent.android",
+            activityName = "com.agent.android.MainActivity",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 45,
+            rootNode = ObservationNode("1", null, "android.widget.LinearLayout", "com.agent.android", null, null, null, ObservationBounds(0, 0, 1080, 1920), false, false, false, false, true, false, false, false, false, false, true, false, 0),
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+        engine.snapshotStore.updateFromCapture(localAgentSnap)
+
+        assertEquals("com.android.chrome", engine.getLastExternalSnapshot()?.packageName)
+        assertEquals("com.android.chrome", engine.getDisplayedSnapshot()?.packageName)
+        assertEquals(150, engine.getDisplayedSnapshot()?.nodeCount)
+    }
+
+    @Test
+    fun testClearActuallyClearsSnapshot() {
+        val engine = AccessibilityObservationEngine()
+        val settingsSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.settings",
+            activityName = "com.android.settings.Settings",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 80,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+        engine.snapshotStore.updateFromCapture(settingsSnap)
+        assertNotNull(engine.getDisplayedSnapshot())
+
+        engine.clearLastSnapshot()
+
+        assertEquals(null, engine.getDisplayedSnapshot())
+        assertEquals(null, engine.getLastExternalSnapshot())
+    }
+
+    @Test
+    fun testLateObservationCallbackCannotOverwriteAfterStop() {
+        val engine = AccessibilityObservationEngine()
+        engine.startObservationMode()
+        val activeSession = engine.snapshotStore.getSessionId()
+
+        val chromeSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.chrome",
+            activityName = "Chrome",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 100,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+        engine.snapshotStore.updateFromCapture(chromeSnap, activeSession)
+        assertEquals("com.android.chrome", engine.getDisplayedSnapshot()?.packageName)
+
+        // User presses STOP
+        engine.stopObservationMode()
+
+        // Late callback with old session token
+        val lateLocalAgentSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis() + 500,
+            packageName = "com.agent.android",
+            activityName = "MainActivity",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 50,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+        engine.snapshotStore.updateFromCapture(lateLocalAgentSnap, activeSession)
+
+        // Late callback must be discarded!
+        assertEquals("com.android.chrome", engine.getDisplayedSnapshot()?.packageName)
+        assertEquals("com.android.chrome", engine.getLastExternalSnapshot()?.packageName)
+    }
+
+    @Test
+    fun testDisplayedSnapshotUsesStoredPackage() {
+        val snap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.google.android.youtube",
+            activityName = "WatchActivity",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 300,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+
+        val store = com.agent.android.observation.ObservationSnapshotStore()
+        store.setExplicitDisplayedSnapshot(snap)
+
+        assertEquals("com.google.android.youtube", store.displayedSnapshot?.packageName)
+        assertEquals("com.google.android.youtube", store.lastValidExternalSnapshot?.packageName)
+    }
+
+    @Test
+    fun testCardBAndObservationFoundationShareCanonicalSnapshot() {
+        val sharedStore = com.agent.android.observation.ObservationSnapshotStore()
+        val engine = AccessibilityObservationEngine(sharedStore)
+
+        val externalSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.calculator2",
+            activityName = "Calculator",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 42,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+
+        sharedStore.updateFromCapture(externalSnap)
+
+        assertEquals(sharedStore.displayedSnapshot, engine.getDisplayedSnapshot())
+        assertEquals("com.android.calculator2", engine.getDisplayedSnapshot()?.packageName)
+    }
+
+    @Test
+    fun testRepeatedStartStopProducesDeterministicState() {
+        val engine = AccessibilityObservationEngine()
+
+        for (i in 1..5) {
+            engine.startObservationMode()
+            assertEquals(com.agent.android.observation.ObservationMode.OBSERVING, engine.observationMode)
+
+            engine.stopObservationMode()
+            assertEquals(com.agent.android.observation.ObservationMode.STOPPED, engine.observationMode)
+        }
+    }
 }

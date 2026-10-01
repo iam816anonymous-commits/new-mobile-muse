@@ -3,6 +3,12 @@ package com.agent.android.observation
 import org.json.JSONArray
 import org.json.JSONObject
 
+enum class ObservationMode {
+    STOPPED,
+    READY,
+    OBSERVING
+}
+
 data class ObservationBounds(
     val left: Int,
     val top: Int,

@@ -740,18 +740,15 @@ class MainActivity : Activity() {
 
         tvObsModeStatus.text = "Observation Mode: ${observationEngine.observationMode.name}"
 
-        val snapshot = if (showingExternalSnapshot) {
-            observationEngine.getLastExternalSnapshot() ?: observationEngine.getLastSnapshot()
-        } else {
-            observationEngine.getLastSnapshot()
-        }
+        val snapshot = observationEngine.getDisplayedSnapshot() ?: observationEngine.getLastSnapshot()
 
         if (snapshot != null) {
-            val appLabel = if (snapshot.packageName == "com.agent.android") "[LOCALAGENT APP]" else "[EXTERNAL APP: ${snapshot.packageName}]"
+            val isExternal = !observationEngine.isExcludedExternalPackage(snapshot.packageName)
+            val appLabel = if (isExternal) "[PRESERVED EXTERNAL: ${snapshot.packageName}]" else "[INTERNAL: ${snapshot.packageName}]"
             tvObsPackageName.text = "Observed App: $appLabel"
             tvObsActivityName.text = "Current Activity: ${snapshot.activityName ?: "UNKNOWN"}"
             val timeStr = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(snapshot.timestampMs))
-            tvObsLastTime.text = "Last Observation: $timeStr (${if (showingExternalSnapshot) "EXTERNAL SNAPSHOT" else "CURRENT"})"
+            tvObsLastTime.text = "Snapshot Time: $timeStr (${if (isExternal) "PRESERVED EXTERNAL" else "INTERNAL"})"
             tvObsNodeCount.text = "Nodes Captured: ${snapshot.nodeCount}"
 
             val treeSb = StringBuilder()
@@ -786,17 +783,6 @@ class MainActivity : Activity() {
             tvObsNodeCount.text = "Nodes Captured: 0"
             tvObsTreeDisplay.text = "[No observation captured yet. Tap START OBSERVATION or CAPTURE SCREEN]"
             tvObsSelectedNodeDisplay.text = "Class: -\nText: -\nResource ID: -\nClickable: -\nEnabled: -\nBounds: -"
-        }
-
-        // Display preserved last external observation status
-        val extSnapshot = observationEngine.getLastExternalSnapshot()
-        if (extSnapshot != null) {
-            val isLocalAgent = extSnapshot.packageName == "com.agent.android"
-            if (!isLocalAgent) {
-                tvObsPackageName.text = "Observed App: [PRESERVED EXTERNAL: ${extSnapshot.packageName}]"
-                tvObsActivityName.text = "Current Activity: ${extSnapshot.activityName ?: "UNKNOWN"}"
-                tvObsNodeCount.text = "Nodes Captured: ${extSnapshot.nodeCount} (PRESERVED)"
-            }
         }
     }
 
