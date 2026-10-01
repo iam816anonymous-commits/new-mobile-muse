@@ -38,6 +38,16 @@ class EvidenceManager(private val context: Context) {
         cleanupOldEvidence()
     }
 
+    private fun getTestDirectory(testId: String): File {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val phaseSubdir = if (testId.startsWith("P3.1")) "phase3.1" else if (testId.startsWith("2.5")) "phase2.5" else "phase2"
+        val testDir = File(baseDir, "$phaseSubdir/$today/TEST-$testId")
+        if (!testDir.exists()) {
+            testDir.mkdirs()
+        }
+        return testDir
+    }
+
     fun captureViewScreenshot(
         activity: Activity?,
         testId: String,
@@ -49,12 +59,7 @@ class EvidenceManager(private val context: Context) {
             return
         }
 
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        val testDir = File(baseDir, "$today/TEST-$testId")
-        if (!testDir.exists()) {
-            testDir.mkdirs()
-        }
-
+        val testDir = getTestDirectory(testId)
         val imageFile = File(testDir, "$label.png")
 
         try {
@@ -119,12 +124,7 @@ class EvidenceManager(private val context: Context) {
     }
 
     fun saveTestResultJson(testCase: TestCase): String {
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        val testDir = File(baseDir, "$today/TEST-${testCase.id}")
-        if (!testDir.exists()) {
-            testDir.mkdirs()
-        }
-
+        val testDir = getTestDirectory(testCase.id)
         val resultFile = File(testDir, "result.json")
         try {
             val json = """

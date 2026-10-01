@@ -166,6 +166,33 @@ class FoundationTestRegistry {
         add(TestCase("2.5.DIAG.005", "diagnostics.readiness", "PHASE_2.5", "DIAGNOSTICS", "Foundation Readiness Evaluation", "Evaluates deterministic foundation readiness.", "readiness status", "Foundation readiness evaluated", TestType.AUTOMATED))
         add(TestCase("2.5.ADMIN.001", "permissions.status", "PHASE_2.5", "DIAGNOSTICS", "Device Admin Status Check", "Queries Device Admin receiver status via DevicePolicyManager.", "permissions status", "Device Admin status reported", TestType.PERMISSION))
         add(TestCase("2.5.ADMIN.002", "permissions.status", "PHASE_2.5", "DIAGNOSTICS", "Device Owner Privilege Status", "Queries Device Owner privilege classification.", "permissions status", "Device Owner classified as PRIVILEGED_ONLY", TestType.PERMISSION))
+
+        // PHASE 3.1: OBSERVATION FOUNDATION TESTS (25)
+        add(TestCase("P3.1-OBS-001", "accessibility.status", "PHASE_3.1", "OBSERVATION", "Accessibility Service State Detection", "Verifies runtime Accessibility service connection state detection.", null, "Service connection status accurately detected", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-002", "observation.capture", "PHASE_3.1", "OBSERVATION", "Capture Current Window", "Captures current active window hierarchy via Accessibility API.", null, "Window snapshot captured with valid timestamp", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-003", "observation.capture", "PHASE_3.1", "OBSERVATION", "Capture Root Node", "Obtains rootInActiveWindow node safely.", null, "Root node obtained or ROOT_NODE_UNAVAILABLE reported", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-004", "observation.traverse", "PHASE_3.1", "OBSERVATION", "Traverse Accessibility Tree", "Traverses full accessibility node hierarchy up to limits.", null, "Hierarchy traversed safely without crash", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-005", "observation.text", "PHASE_3.1", "OBSERVATION", "Extract Visible Text", "Extracts visible text strings from nodes.", null, "Node text extracted correctly", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-006", "observation.content_description", "PHASE_3.1", "OBSERVATION", "Extract Content Descriptions", "Extracts contentDescription attributes.", null, "Content descriptions extracted correctly", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-007", "observation.resource_id", "PHASE_3.1", "OBSERVATION", "Extract Resource IDs", "Extracts viewIdResourceName from nodes.", null, "Resource IDs extracted correctly", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-008", "observation.class_name", "PHASE_3.1", "OBSERVATION", "Extract Class Names", "Extracts Android widget class names.", null, "Class names extracted correctly", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-009", "observation.bounds", "PHASE_3.1", "OBSERVATION", "Extract Bounds", "Extracts screen pixel bounds (left, top, right, bottom).", null, "Bounds rectangle extracted correctly", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-010", "observation.clickable", "PHASE_3.1", "OBSERVATION", "Extract Clickable State", "Extracts isClickable boolean property.", null, "Clickable state extracted correctly", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-011", "observation.editable", "PHASE_3.1", "OBSERVATION", "Extract Editable State", "Extracts isEditable boolean property.", null, "Editable state extracted correctly", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-012", "observation.enabled", "PHASE_3.1", "OBSERVATION", "Extract Enabled State", "Extracts isEnabled boolean property.", null, "Enabled state extracted correctly", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-013", "observation.focused", "PHASE_3.1", "OBSERVATION", "Extract Focus State", "Extracts isFocused/isFocusable boolean properties.", null, "Focus states extracted correctly", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-014", "observation.selected_checked", "PHASE_3.1", "OBSERVATION", "Extract Selected/Checked State", "Extracts isSelected/isChecked/isCheckable properties.", null, "Selected/checked states extracted correctly", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-015", "observation.scrollable", "PHASE_3.1", "OBSERVATION", "Extract Scrollable State", "Extracts isScrollable boolean property.", null, "Scrollable state extracted correctly", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-016", "observation.hierarchy", "PHASE_3.1", "OBSERVATION", "Preserve Parent-Child Hierarchy", "Verifies parentId and children references are correctly preserved.", null, "Hierarchy parent/child pointers match", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-017", "observation.json", "PHASE_3.1", "OBSERVATION", "Serialize Observation to JSON", "Serializes ObservationSnapshot to JSON string.", null, "JSON serialized and deserialized cleanly", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-018", "observation.missing_root", "PHASE_3.1", "OBSERVATION", "Handle Missing Root Node", "Handles null rootInActiveWindow safely.", null, "ROOT_NODE_UNAVAILABLE reported without exception", TestType.NEGATIVE))
+        add(TestCase("P3.1-OBS-019", "observation.disabled", "PHASE_3.1", "OBSERVATION", "Handle Accessibility Disabled", "Handles accessibility service disabled state safely.", null, "ACCESSIBILITY_DISABLED reported", TestType.NEGATIVE))
+        add(TestCase("P3.1-OBS-020", "observation.empty_tree", "PHASE_3.1", "OBSERVATION", "Handle Empty Accessibility Tree", "Handles tree with zero child nodes safely.", null, "Single root node snapshot produced", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-021", "observation.null_properties", "PHASE_3.1", "OBSERVATION", "Handle Malformed/Null Node Properties", "Handles null text, description, or resource ID properties.", null, "Null properties handled safely", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-022", "observation.traversal_limits", "PHASE_3.1", "OBSERVATION", "Prevent Excessive Traversal", "Enforces MAX_NODE_LIMIT (500) and MAX_DEPTH_LIMIT (30).", null, "Traversal stops cleanly at node limit", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-023", "observation.package_name", "PHASE_3.1", "OBSERVATION", "Capture Package Name", "Captures target application package name.", null, "Package name captured", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-024", "observation.metadata", "PHASE_3.1", "OBSERVATION", "Capture Activity/Window Metadata", "Captures activity class name or window metadata.", null, "Activity metadata captured", TestType.AUTOMATED))
+        add(TestCase("P3.1-OBS-025", "observation.readonly_safety", "PHASE_3.1", "OBSERVATION", "Observation Read-Only Safety", "Verifies ObservationEngine performs zero UI actions or gestures.", null, "Zero actions dispatched during observation", TestType.SAFETY))
     }
 
     private fun add(testCase: TestCase) {
@@ -178,7 +205,7 @@ class FoundationTestRegistry {
 
     fun getTestCasesByCategory(category: String): List<TestCase> = testCases.filter { it.category == category }
 
-    fun getTestCasesByPhase(phase: String): List<TestCase> = testCases.filter { it.phase == phase }
+    fun getTestCasesByPhase(phase: String): List<TestCase> = testCases.filter { it.phase.equals(phase, ignoreCase = true) }
 
     fun clearAllResults() {
         for (tc in testCases) {
@@ -188,6 +215,19 @@ class FoundationTestRegistry {
             tc.timestamp = null
             tc.duration = null
             tc.evidenceReferences = emptyList()
+        }
+    }
+
+    fun clearResultsByPhase(phase: String) {
+        for (tc in testCases) {
+            if (tc.phase.equals(phase, ignoreCase = true)) {
+                tc.status = TestStatus.PENDING
+                tc.observedResult = null
+                tc.error = null
+                tc.timestamp = null
+                tc.duration = null
+                tc.evidenceReferences = emptyList()
+            }
         }
     }
 
@@ -209,14 +249,17 @@ class FoundationTestRegistry {
         return true
     }
 
-    fun getSummary(): RegistrySummary {
-        val total = testCases.size
-        val passed = testCases.count { it.status == TestStatus.PASSED }
-        val failed = testCases.count { it.status == TestStatus.FAILED }
-        val blocked = testCases.count { it.status == TestStatus.BLOCKED }
-        val skipped = testCases.count { it.status == TestStatus.SKIPPED }
-        val pending = testCases.count { it.status == TestStatus.PENDING }
-        val running = testCases.count { it.status == TestStatus.RUNNING }
+    fun getSummary(): RegistrySummary = getSummaryByPhase(null)
+
+    fun getSummaryByPhase(phase: String?): RegistrySummary {
+        val filtered = if (phase.isNullOrBlank()) testCases else testCases.filter { it.phase.equals(phase, ignoreCase = true) }
+        val total = filtered.size
+        val passed = filtered.count { it.status == TestStatus.PASSED }
+        val failed = filtered.count { it.status == TestStatus.FAILED }
+        val blocked = filtered.count { it.status == TestStatus.BLOCKED }
+        val skipped = filtered.count { it.status == TestStatus.SKIPPED }
+        val pending = filtered.count { it.status == TestStatus.PENDING }
+        val running = filtered.count { it.status == TestStatus.RUNNING }
         return RegistrySummary(total, passed, failed, blocked, skipped, pending, running)
     }
 }

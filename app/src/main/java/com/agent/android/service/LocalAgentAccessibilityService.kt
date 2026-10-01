@@ -36,8 +36,21 @@ class LocalAgentAccessibilityService : AccessibilityService() {
 
     var executionController: ExecutionController? = null
 
+    @Volatile
+    var lastEventTimeMs: Long? = null
+        private set
+
+    @Volatile
+    var lastEventPackageName: String? = null
+        private set
+
+    @Volatile
+    var lastEventType: String? = null
+        private set
+
     override fun onServiceConnected() {
         super.onServiceConnected()
+        instance = this
         try {
             Log.i(TAG, "LocalAgentAccessibilityService connected")
         } catch (ignored: Throwable) {}
@@ -45,7 +58,12 @@ class LocalAgentAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // OBSERVATION ONLY.
-        // Do not execute any actions or trigger autonomous loops from here.
+        // Record lightweight event diagnostic metadata without triggering any action or autonomous loops!
+        if (event != null) {
+            lastEventTimeMs = System.currentTimeMillis()
+            lastEventPackageName = event.packageName?.toString()
+            lastEventType = AccessibilityEvent.eventTypeToString(event.eventType)
+        }
     }
 
     fun handleKeyEventInternal(keyCode: Int, action: Int, eventTimeMs: Long): Boolean {
@@ -97,6 +115,9 @@ class LocalAgentAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        if (instance == this) {
+            instance = null
+        }
         try {
             Log.i(TAG, "LocalAgentAccessibilityService destroyed")
         } catch (ignored: Throwable) {}
@@ -105,5 +126,9 @@ class LocalAgentAccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG = "LocalAgentAccService"
         const val PANIC_THRESHOLD_MS = 500L
+
+        @Volatile
+        var instance: LocalAgentAccessibilityService? = null
+            private set
     }
 }
