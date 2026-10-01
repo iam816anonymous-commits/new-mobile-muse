@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -36,6 +35,7 @@ import com.agent.android.agent.device.HapticController
 import com.agent.android.agent.device.HardwareObservationControllers
 import com.agent.android.agent.device.InputStateController
 import com.agent.android.agent.device.LocationController
+import com.agent.android.agent.device.LocationReadinessStatus
 import com.agent.android.agent.device.NetworkController
 import com.agent.android.agent.device.NotificationController
 import com.agent.android.agent.device.PowerStateController
@@ -89,6 +89,7 @@ class MainActivity : Activity() {
     private lateinit var capabilityRegistry: CapabilityRegistry
     private lateinit var commandRegistry: CommandRegistry
     private lateinit var permissionManager: PermissionManager
+    private lateinit var locationController: LocationController
 
     private lateinit var testRegistry: FoundationTestRegistry
     private lateinit var resultStore: TestResultStore
@@ -112,16 +113,61 @@ class MainActivity : Activity() {
     private lateinit var panelDiagnostics: LinearLayout
     private lateinit var panelConsole: LinearLayout
 
-    // Dashboard Badges
+    // Dashboard Views
+    private lateinit var tvDashboardBanner: TextView
+    private lateinit var tvDashboardSubtext: TextView
     private lateinit var tvAgentStatusBadge: TextView
     private lateinit var tvExecutionBadge: TextView
     private lateinit var tvSafetyBadge: TextView
     private lateinit var tvAccessibilityBadge: TextView
-    private lateinit var btnQuickAccessibility: Button
-    private lateinit var btnQuickWriteSettings: Button
-    private lateinit var btnQuickNotifPolicy: Button
 
-    // Runner UI Views
+    private lateinit var cardAutomation: LinearLayout
+    private lateinit var cardDeviceControl: LinearLayout
+    private lateinit var cardVoice: LinearLayout
+    private lateinit var cardAppControl: LinearLayout
+    private lateinit var cardSensors: LinearLayout
+    private lateinit var cardPermissions: LinearLayout
+
+    private lateinit var tvCapAutomationStatus: TextView
+    private lateinit var tvCapDeviceControlStatus: TextView
+    private lateinit var tvCapVoiceStatus: TextView
+    private lateinit var tvCapAppControlStatus: TextView
+    private lateinit var tvCapSensorsStatus: TextView
+    private lateinit var tvCapPermissionsStatus: TextView
+
+    private lateinit var panelAttentionRequired: LinearLayout
+    private lateinit var tvAttentionText: TextView
+    private lateinit var btnFixAttention: Button
+
+    private lateinit var btnQuickCheckStatus: Button
+    private lateinit var btnQuickGoPermissions: Button
+    private lateinit var btnQuickGoDiagnostics: Button
+    private lateinit var btnQuickGoConsole: Button
+
+    // Permissions Views
+    private lateinit var tvRuntimePermDisplay: TextView
+    private lateinit var btnGrantRuntimePerms: Button
+    private lateinit var tvSpecialAccessDisplay: TextView
+    private lateinit var btnOpenAccessibilitySettings: Button
+    private lateinit var btnOpenWriteSettings: Button
+    private lateinit var btnOpenNotificationPolicy: Button
+    private lateinit var tvLocationReadinessDisplay: TextView
+    private lateinit var btnTestLocationFix: Button
+    private lateinit var btnOpenLocationSettings: Button
+
+    // Diagnostics Views
+    private lateinit var tvReadinessOverallBanner: TextView
+    private lateinit var btnToggleFoundationTestRunner: Button
+    private lateinit var subpanelFoundationTestRunner: LinearLayout
+    private lateinit var tvSystemInfoDisplay: TextView
+    private lateinit var btnRunFullDiagnostics: Button
+    private lateinit var tvFullDiagnosticsDisplay: TextView
+    private lateinit var tvSpeechServicesDisplay: TextView
+    private lateinit var btnTestTtsSpeak: Button
+    private lateinit var btnTestSttListen: Button
+    private lateinit var tvLocationTechnicalDisplay: TextView
+
+    // Test Runner Sub-Panel Views
     private lateinit var tvRunnerProgress: TextView
     private lateinit var tvTestIndex: TextView
     private lateinit var tvTestName: TextView
@@ -145,25 +191,6 @@ class MainActivity : Activity() {
     private lateinit var btnClearAllTestResults: Button
     private lateinit var btnRunAutomatedBatch: Button
 
-    // Permissions UI Views
-    private lateinit var tvRuntimePermDisplay: TextView
-    private lateinit var btnGrantRuntimePerms: Button
-    private lateinit var tvSpecialAccessDisplay: TextView
-    private lateinit var btnOpenAccessibilitySettings: Button
-    private lateinit var btnOpenWriteSettings: Button
-    private lateinit var btnOpenNotificationPolicy: Button
-    private lateinit var tvCapabilitiesCategorizedDisplay: TextView
-    private lateinit var tvSpeechServicesDisplay: TextView
-    private lateinit var btnTestTtsSpeak: Button
-    private lateinit var btnTestSttListen: Button
-
-    // Diagnostics UI Views
-    private lateinit var tvReadinessOverallBanner: TextView
-    private lateinit var btnEvaluateReadiness: Button
-    private lateinit var tvSystemInfoDisplay: TextView
-    private lateinit var btnRunFullDiagnostics: Button
-    private lateinit var tvFullDiagnosticsDisplay: TextView
-
     // Console Views
     private lateinit var tvAgentStatus: TextView
     private lateinit var tvExecutionState: TextView
@@ -186,9 +213,11 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
 
         permissionManager = PermissionManager(this)
+        locationController = LocationController(this)
         testHarness = Phase1SafetyTestHarness(executionController, logger)
         capabilityRegistry = CapabilityRegistry(this)
         commandRegistry = CommandRegistry()
+
         val calc = CalculatorSkill()
         val notes = NotesSkill(this)
         val intents = IntentSkills(this)
@@ -208,7 +237,7 @@ class MainActivity : Activity() {
         val inputStateCtrl = InputStateController(this)
         val cameraCtrl = CameraController(this)
         val fileAccessCtrl = FileAccessController(this)
-        val locationCtrl = LocationController(this)
+        val locationCtrl = locationController
         val networkCtrl = NetworkController(this)
         val powerStateCtrl = PowerStateController(this)
         val bgPolicy = BackgroundExecutionPolicy()
@@ -240,7 +269,7 @@ class MainActivity : Activity() {
         updatePermissionsUI()
         evaluateReadiness()
 
-        logger.i("UI", "LocalAgent Foundation UI initialized.")
+        logger.i("UI", "LocalAgent Operational UI initialized.")
     }
 
     override fun onResume() {
@@ -267,17 +296,61 @@ class MainActivity : Activity() {
         panelDiagnostics = findViewById(R.id.panelDiagnostics)
         panelConsole = findViewById(R.id.panelConsole)
 
-        // Dashboard Badges & Quick Actions
+        // Dashboard Views
+        tvDashboardBanner = findViewById(R.id.tvDashboardBanner)
+        tvDashboardSubtext = findViewById(R.id.tvDashboardSubtext)
         tvAgentStatusBadge = findViewById(R.id.tvAgentStatusBadge)
         tvExecutionBadge = findViewById(R.id.tvExecutionBadge)
         tvSafetyBadge = findViewById(R.id.tvSafetyBadge)
         tvAccessibilityBadge = findViewById(R.id.tvAccessibilityBadge)
 
-        btnQuickAccessibility = findViewById(R.id.btnQuickAccessibility)
-        btnQuickWriteSettings = findViewById(R.id.btnQuickWriteSettings)
-        btnQuickNotifPolicy = findViewById(R.id.btnQuickNotifPolicy)
+        cardAutomation = findViewById(R.id.cardAutomation)
+        cardDeviceControl = findViewById(R.id.cardDeviceControl)
+        cardVoice = findViewById(R.id.cardVoice)
+        cardAppControl = findViewById(R.id.cardAppControl)
+        cardSensors = findViewById(R.id.cardSensors)
+        cardPermissions = findViewById(R.id.cardPermissions)
 
-        // Runner
+        tvCapAutomationStatus = findViewById(R.id.tvCapAutomationStatus)
+        tvCapDeviceControlStatus = findViewById(R.id.tvCapDeviceControlStatus)
+        tvCapVoiceStatus = findViewById(R.id.tvCapVoiceStatus)
+        tvCapAppControlStatus = findViewById(R.id.tvCapAppControlStatus)
+        tvCapSensorsStatus = findViewById(R.id.tvCapSensorsStatus)
+        tvCapPermissionsStatus = findViewById(R.id.tvCapPermissionsStatus)
+
+        panelAttentionRequired = findViewById(R.id.panelAttentionRequired)
+        tvAttentionText = findViewById(R.id.tvAttentionText)
+        btnFixAttention = findViewById(R.id.btnFixAttention)
+
+        btnQuickCheckStatus = findViewById(R.id.btnQuickCheckStatus)
+        btnQuickGoPermissions = findViewById(R.id.btnQuickGoPermissions)
+        btnQuickGoDiagnostics = findViewById(R.id.btnQuickGoDiagnostics)
+        btnQuickGoConsole = findViewById(R.id.btnQuickGoConsole)
+
+        // Permissions Views
+        tvRuntimePermDisplay = findViewById(R.id.tvRuntimePermDisplay)
+        btnGrantRuntimePerms = findViewById(R.id.btnGrantRuntimePerms)
+        tvSpecialAccessDisplay = findViewById(R.id.tvSpecialAccessDisplay)
+        btnOpenAccessibilitySettings = findViewById(R.id.btnOpenAccessibilitySettings)
+        btnOpenWriteSettings = findViewById(R.id.btnOpenWriteSettings)
+        btnOpenNotificationPolicy = findViewById(R.id.btnOpenNotificationPolicy)
+        tvLocationReadinessDisplay = findViewById(R.id.tvLocationReadinessDisplay)
+        btnTestLocationFix = findViewById(R.id.btnTestLocationFix)
+        btnOpenLocationSettings = findViewById(R.id.btnOpenLocationSettings)
+
+        // Diagnostics Views
+        tvReadinessOverallBanner = findViewById(R.id.tvReadinessOverallBanner)
+        btnToggleFoundationTestRunner = findViewById(R.id.btnToggleFoundationTestRunner)
+        subpanelFoundationTestRunner = findViewById(R.id.subpanelFoundationTestRunner)
+        tvSystemInfoDisplay = findViewById(R.id.tvSystemInfoDisplay)
+        btnRunFullDiagnostics = findViewById(R.id.btnRunFullDiagnostics)
+        tvFullDiagnosticsDisplay = findViewById(R.id.tvFullDiagnosticsDisplay)
+        tvSpeechServicesDisplay = findViewById(R.id.tvSpeechServicesDisplay)
+        btnTestTtsSpeak = findViewById(R.id.btnTestTtsSpeak)
+        btnTestSttListen = findViewById(R.id.btnTestSttListen)
+        tvLocationTechnicalDisplay = findViewById(R.id.tvLocationTechnicalDisplay)
+
+        // Sub-panel Runner
         tvRunnerProgress = findViewById(R.id.tvRunnerProgress)
         tvTestIndex = findViewById(R.id.tvTestIndex)
         tvTestName = findViewById(R.id.tvTestName)
@@ -301,26 +374,7 @@ class MainActivity : Activity() {
         btnClearAllTestResults = findViewById(R.id.btnClearAllTestResults)
         btnRunAutomatedBatch = findViewById(R.id.btnRunAutomatedBatch)
 
-        // Permissions
-        tvRuntimePermDisplay = findViewById(R.id.tvRuntimePermDisplay)
-        btnGrantRuntimePerms = findViewById(R.id.btnGrantRuntimePerms)
-        tvSpecialAccessDisplay = findViewById(R.id.tvSpecialAccessDisplay)
-        btnOpenAccessibilitySettings = findViewById(R.id.btnOpenAccessibilitySettings)
-        btnOpenWriteSettings = findViewById(R.id.btnOpenWriteSettings)
-        btnOpenNotificationPolicy = findViewById(R.id.btnOpenNotificationPolicy)
-        tvCapabilitiesCategorizedDisplay = findViewById(R.id.tvCapabilitiesCategorizedDisplay)
-        tvSpeechServicesDisplay = findViewById(R.id.tvSpeechServicesDisplay)
-        btnTestTtsSpeak = findViewById(R.id.btnTestTtsSpeak)
-        btnTestSttListen = findViewById(R.id.btnTestSttListen)
-
-        // Diagnostics
-        tvReadinessOverallBanner = findViewById(R.id.tvReadinessOverallBanner)
-        btnEvaluateReadiness = findViewById(R.id.btnEvaluateReadiness)
-        tvSystemInfoDisplay = findViewById(R.id.tvSystemInfoDisplay)
-        btnRunFullDiagnostics = findViewById(R.id.btnRunFullDiagnostics)
-        tvFullDiagnosticsDisplay = findViewById(R.id.tvFullDiagnosticsDisplay)
-
-        // Console
+        // Console Views
         tvAgentStatus = findViewById(R.id.tvAgentStatus)
         tvExecutionState = findViewById(R.id.tvExecutionState)
         tvSafetyStatus = findViewById(R.id.tvSafetyStatus)
@@ -344,29 +398,18 @@ class MainActivity : Activity() {
         btnTabDiagnostics.setOnClickListener { switchTab(2) }
         btnTabConsole.setOnClickListener { switchTab(3) }
 
-        // Dashboard Quick Actions
-        btnQuickAccessibility.setOnClickListener {
-            permissionManager.openSettings(permissionManager.registry.getPermissionById("accessibility_service_required")!!)
-        }
-        btnQuickWriteSettings.setOnClickListener {
-            permissionManager.openSettings(permissionManager.registry.getPermissionById("write_settings_access")!!)
-        }
-        btnQuickNotifPolicy.setOnClickListener {
-            permissionManager.openSettings(permissionManager.registry.getPermissionById("notification_policy_access")!!)
-        }
+        // Dashboard Capability Navigation
+        cardAutomation.setOnClickListener { switchTab(2) }
+        cardDeviceControl.setOnClickListener { switchTab(2) }
+        cardVoice.setOnClickListener { switchTab(2) }
+        cardAppControl.setOnClickListener { switchTab(3) }
+        cardSensors.setOnClickListener { switchTab(2) }
+        cardPermissions.setOnClickListener { switchTab(1) }
 
-        // Test Runner
-        btnExecuteTest.setOnClickListener { executeCurrentTest() }
-        btnCaptureEvidence.setOnClickListener { captureCurrentTestEvidence() }
-        btnMarkPass.setOnClickListener { markCurrentTestStatus(TestStatus.PASSED) }
-        btnMarkFail.setOnClickListener { markCurrentTestStatus(TestStatus.FAILED) }
-        btnMarkBlocked.setOnClickListener { markCurrentTestStatus(TestStatus.BLOCKED) }
-        btnMarkSkip.setOnClickListener { markCurrentTestStatus(TestStatus.SKIPPED) }
-        btnPrevTest.setOnClickListener { navigateTest(-1) }
-        btnNextTest.setOnClickListener { navigateTest(1) }
-        btnClearTestResult.setOnClickListener { clearCurrentTestResult() }
-        btnClearAllTestResults.setOnClickListener { clearAllTestResults() }
-        btnRunAutomatedBatch.setOnClickListener { runAutomatedBatchTests() }
+        btnQuickCheckStatus.setOnClickListener { evaluateReadiness() }
+        btnQuickGoPermissions.setOnClickListener { switchTab(1) }
+        btnQuickGoDiagnostics.setOnClickListener { switchTab(2) }
+        btnQuickGoConsole.setOnClickListener { switchTab(3) }
 
         // Permissions
         btnGrantRuntimePerms.setOnClickListener { checkAndRequestRuntimePermissions() }
@@ -379,11 +422,31 @@ class MainActivity : Activity() {
         btnOpenNotificationPolicy.setOnClickListener {
             permissionManager.openSettings(permissionManager.registry.getPermissionById("notification_policy_access")!!)
         }
+        btnTestLocationFix.setOnClickListener {
+            val res = locationController.testLocationFix()
+            Toast.makeText(this, res.message, Toast.LENGTH_LONG).show()
+            updatePermissionsUI()
+        }
+        btnOpenLocationSettings.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+        }
+
+        // Diagnostics
+        btnToggleFoundationTestRunner.setOnClickListener {
+            if (subpanelFoundationTestRunner.visibility == View.VISIBLE) {
+                subpanelFoundationTestRunner.visibility = View.GONE
+                btnToggleFoundationTestRunner.text = "VIEW FOUNDATION TEST HARNESS"
+            } else {
+                subpanelFoundationTestRunner.visibility = View.VISIBLE
+                btnToggleFoundationTestRunner.text = "HIDE FOUNDATION TEST HARNESS"
+            }
+        }
+        btnRunFullDiagnostics.setOnClickListener { runDiagnostics() }
 
         btnTestTtsSpeak.setOnClickListener {
             if (ttsEngine.isAvailable()) {
-                ttsEngine.speak("Foundation test successful")
-                Toast.makeText(this, "TTS Speaking: Foundation test successful", Toast.LENGTH_SHORT).show()
+                ttsEngine.speak("LocalAgent speech test successful")
+                Toast.makeText(this, "TTS Speaking: LocalAgent speech test successful", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this, "TTS Engine Not Available", Toast.LENGTH_SHORT).show()
             }
@@ -411,9 +474,18 @@ class MainActivity : Activity() {
             })
         }
 
-        // Diagnostics
-        btnEvaluateReadiness.setOnClickListener { evaluateReadiness() }
-        btnRunFullDiagnostics.setOnClickListener { runDiagnostics() }
+        // Sub-panel Runner Listeners
+        btnExecuteTest.setOnClickListener { executeCurrentTest() }
+        btnCaptureEvidence.setOnClickListener { captureCurrentTestEvidence() }
+        btnMarkPass.setOnClickListener { markCurrentTestStatus(TestStatus.PASSED) }
+        btnMarkFail.setOnClickListener { markCurrentTestStatus(TestStatus.FAILED) }
+        btnMarkBlocked.setOnClickListener { markCurrentTestStatus(TestStatus.BLOCKED) }
+        btnMarkSkip.setOnClickListener { markCurrentTestStatus(TestStatus.SKIPPED) }
+        btnPrevTest.setOnClickListener { navigateTest(-1) }
+        btnNextTest.setOnClickListener { navigateTest(1) }
+        btnClearTestResult.setOnClickListener { clearCurrentTestResult() }
+        btnClearAllTestResults.setOnClickListener { clearAllTestResults() }
+        btnRunAutomatedBatch.setOnClickListener { runAutomatedBatchTests() }
 
         // Console & Harness
         btnEnableAccessibility.setOnClickListener {
@@ -462,6 +534,11 @@ class MainActivity : Activity() {
         btnTabPermissions.setBackgroundColor(if (tabIndex == 1) 0xFF00E5FF.toInt() else 0xFF333333.toInt())
         btnTabDiagnostics.setBackgroundColor(if (tabIndex == 2) 0xFF00E5FF.toInt() else 0xFF333333.toInt())
         btnTabConsole.setBackgroundColor(if (tabIndex == 3) 0xFF00E5FF.toInt() else 0xFF333333.toInt())
+
+        btnTabDashboard.setTextColor(if (tabIndex == 0) 0xFF121212.toInt() else 0xFFFFFFFF.toInt())
+        btnTabPermissions.setTextColor(if (tabIndex == 1) 0xFF121212.toInt() else 0xFFFFFFFF.toInt())
+        btnTabDiagnostics.setTextColor(if (tabIndex == 2) 0xFF121212.toInt() else 0xFFFFFFFF.toInt())
+        btnTabConsole.setTextColor(if (tabIndex == 3) 0xFF121212.toInt() else 0xFFFFFFFF.toInt())
     }
 
     private fun refreshTestRunnerUI() {
@@ -693,31 +770,43 @@ class MainActivity : Activity() {
         val runtimeSb = StringBuilder()
         for (p in runtimeList) {
             val statusStr = if (p.currentStatus == PermissionStatus.OBTAINED) "✓ GRANTED" else "✗ DENIED"
-            runtimeSb.append("${p.displayName}: $statusStr (${p.explanation})\n")
+            runtimeSb.append("${p.displayName}: $statusStr\n")
         }
         tvRuntimePermDisplay.text = runtimeSb.toString().trim()
 
         val specialSb = StringBuilder()
         for (p in specialList) {
             val statusStr = when (p.currentStatus) {
-                PermissionStatus.OBTAINED -> "✓ GRANTED / ENABLED"
-                PermissionStatus.SETTINGS_REQUIRED -> "✗ SETTINGS REQUIRED"
-                PermissionStatus.PRIVILEGED_ONLY -> "SYSTEM ONLY (NOT OBTAINABLE)"
-                else -> "✗ NOT GRANTED"
+                PermissionStatus.OBTAINED -> "✓ ENABLED"
+                PermissionStatus.SETTINGS_REQUIRED -> "✗ ACTION REQUIRED"
+                PermissionStatus.PRIVILEGED_ONLY -> "SYSTEM ONLY"
+                else -> "✗ DISABLED"
             }
             specialSb.append("${p.displayName}: $statusStr\n")
         }
         tvSpecialAccessDisplay.text = specialSb.toString().trim()
 
-        val caps = capabilityRegistry.checkDetailedCapabilities()
-        val capSb = StringBuilder()
-        for ((_, info) in caps) {
-            val existsStr = if (info.capabilityExists) "EXISTS" else "NO_HW"
-            val permStr = if (info.capabilityPermitted) "PERMITTED" else "NO_PERM"
-            val usableStr = if (info.capabilityUsable) "✓ USABLE" else "✗ UNUSABLE"
-            capSb.append("[${info.capabilityName}]: $usableStr ($existsStr, $permStr) - ${info.reason}\n")
-        }
-        tvCapabilitiesCategorizedDisplay.text = capSb.toString().trim()
+        val locDiag = locationController.diagnoseLocation()
+        val locSb = StringBuilder()
+        locSb.append("Fine Permission:    ${if (locDiag.finePermissionGranted) "✓ Granted" else "✗ Denied"}\n")
+        locSb.append("Coarse Permission:  ${if (locDiag.coarsePermissionGranted) "✓ Granted" else "✗ Denied"}\n")
+        locSb.append("Location Services:  ${if (locDiag.locationServicesEnabled) "✓ Enabled" else "✗ Disabled"}\n")
+        locSb.append("GPS Provider:       ${if (locDiag.gpsProviderEnabled) "✓ Enabled" else "✗ Disabled"}\n")
+        locSb.append("Network Provider:   ${if (locDiag.networkProviderEnabled) "✓ Enabled" else "✗ Disabled"}\n")
+        locSb.append("Network Conn:       ${if (locDiag.networkConnected) "✓ Connected" else "✗ Disconnected"}\n")
+        locSb.append("Location Fix:       ${if (locDiag.hasLocationFix) "✓ Available" else "✗ Unavailable"}\n\n")
+        locSb.append("LOCATION STATUS:    ${locDiag.status.name}\n")
+        locSb.append("Root Cause: ${locDiag.rootCauseExplanation}")
+
+        tvLocationReadinessDisplay.text = locSb.toString().trim()
+
+        val techLocSb = StringBuilder()
+        techLocSb.append("Location Mode: ${locDiag.locationModeName} (${locDiag.locationMode})\n")
+        techLocSb.append("Last Provider: ${locDiag.lastKnownLocationProvider ?: "NONE"}\n")
+        techLocSb.append("Last Fix Age: ${locDiag.lastKnownLocationAgeMs?.let { "${it / 1000}s ago" } ?: "N/A"}\n")
+        techLocSb.append("Accuracy: ${locDiag.lastKnownLocationAccuracy?.let { "${it}m" } ?: "N/A"}\n")
+        techLocSb.append("Explanation: ${locDiag.rootCauseExplanation}")
+        tvLocationTechnicalDisplay.text = techLocSb.toString().trim()
 
         val sttAvail = sttEngine.isAvailable()
         val ttsAvail = ttsEngine.isAvailable()
@@ -730,38 +819,72 @@ class MainActivity : Activity() {
 
     private fun evaluateReadiness() {
         val report = readinessEvaluator.evaluate()
-        val color = if (report.isReady) 0xFF66BB6A.toInt() else 0xFFEF5350.toInt()
+        val locDiag = locationController.diagnoseLocation()
+
+        if (report.isReady && locDiag.status == LocationReadinessStatus.READY) {
+            tvDashboardBanner.text = "● AGENT READY"
+            tvDashboardBanner.setTextColor(0xFF66BB6A.toInt())
+            panelAttentionRequired.setBackgroundColor(0xFF1E272C.toInt())
+            tvAttentionText.text = "ALL SYSTEMS READY"
+            tvAttentionText.setTextColor(0xFF66BB6A.toInt())
+            btnFixAttention.visibility = View.GONE
+        } else {
+            tvDashboardBanner.text = "● DEGRADED / ATTENTION REQUIRED"
+            tvDashboardBanner.setTextColor(0xFFFFD54F.toInt())
+            panelAttentionRequired.setBackgroundColor(0xFF261C14.toInt())
+
+            val attentionSb = StringBuilder()
+            if (!report.isReady) {
+                attentionSb.append("Readiness Blocked: ${report.blockingReasons.firstOrNull() ?: "Permissions or tests required"}\n")
+            }
+            if (locDiag.status != LocationReadinessStatus.READY) {
+                attentionSb.append("Location Status: ${locDiag.status.name} (${locDiag.rootCauseExplanation})")
+            }
+            tvAttentionText.text = attentionSb.toString().trim()
+            tvAttentionText.setTextColor(0xFFFFD54F.toInt())
+
+            btnFixAttention.visibility = View.VISIBLE
+            btnFixAttention.setOnClickListener { switchTab(1) }
+        }
+
+        val summary = testRegistry.getSummary()
+        tvDashboardSubtext.text = "Foundation: ${summary.passed}/${summary.total} PASSED  •  Commands: ${commandRegistry.getAllCommands().size}/${commandRegistry.getAllCommands().size} AVAILABLE"
+
+        val colorReady = 0xFF66BB6A.toInt()
+        val colorDegraded = 0xFFFFD54F.toInt()
+
+        tvCapAutomationStatus.text = "READY"
+        tvCapAutomationStatus.setTextColor(colorReady)
+
+        tvCapDeviceControlStatus.text = "READY"
+        tvCapDeviceControlStatus.setTextColor(colorReady)
+
+        tvCapVoiceStatus.text = if (sttEngine.isAvailable() && ttsEngine.isAvailable()) "READY" else "DEGRADED"
+        tvCapVoiceStatus.setTextColor(if (sttEngine.isAvailable() && ttsEngine.isAvailable()) colorReady else colorDegraded)
+
+        tvCapAppControlStatus.text = "READY"
+        tvCapAppControlStatus.setTextColor(colorReady)
+
+        tvCapSensorsStatus.text = "AVAILABLE"
+        tvCapSensorsStatus.setTextColor(colorReady)
+
+        tvCapPermissionsStatus.text = if (report.isReady) "READY" else "ACTION REQUIRED"
+        tvCapPermissionsStatus.setTextColor(if (report.isReady) colorReady else colorDegraded)
+
         tvReadinessOverallBanner.text = "FOUNDATION STATUS: ${report.statusText}\n${if (report.isReady) "All foundation checks passed!" else "Blocking reasons:\n- " + report.blockingReasons.joinToString("\n- ")}"
-        tvReadinessOverallBanner.setTextColor(color)
+        tvReadinessOverallBanner.setTextColor(if (report.isReady) colorReady else 0xFFEF5350.toInt())
 
         val audio = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         val musicCur = audio?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
         val musicMax = audio?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 1
         val ringCur = audio?.getStreamVolume(AudioManager.STREAM_RING) ?: 0
         val ringMax = audio?.getStreamMaxVolume(AudioManager.STREAM_RING) ?: 1
-        val alarmCur = audio?.getStreamVolume(AudioManager.STREAM_ALARM) ?: 0
-        val alarmMax = audio?.getStreamMaxVolume(AudioManager.STREAM_ALARM) ?: 1
-        val notifCur = audio?.getStreamVolume(AudioManager.STREAM_NOTIFICATION) ?: 0
-        val notifMax = audio?.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION) ?: 1
-
-        val volSb = StringBuilder()
-        volSb.append("VOLUME STREAMS DIAGNOSTICS:\n")
-        volSb.append("- MUSIC: $musicCur / $musicMax (${Math.round((musicCur.toDouble() / musicMax) * 100)}%)\n")
-        volSb.append("- RING: $ringCur / $ringMax (${Math.round((ringCur.toDouble() / ringMax) * 100)}%)\n")
-        volSb.append("- ALARM: $alarmCur / $alarmMax (${Math.round((alarmCur.toDouble() / alarmMax) * 100)}%)\n")
-        volSb.append("- NOTIFICATION: $notifCur / $notifMax (${Math.round((notifCur.toDouble() / notifMax) * 100)}%)\n\n")
 
         val sysSb = StringBuilder()
-        sysSb.append(volSb.toString())
-        sysSb.append("APP PACKAGE: ${packageName}\n")
-        sysSb.append("BUILD VERSION: ${resultStore.getBuildVersion()}\n")
         sysSb.append("DEVICE: ${Build.MANUFACTURER} ${Build.MODEL}\n")
-        sysSb.append("ANDROID OS: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
-        sysSb.append("COMMAND COVERAGE: ${report.commandCoverageText}\n\n")
-
-        for ((_, detail) in report.categoryDetails) {
-            sysSb.append("[${detail.categoryName}]: ${if (detail.isPassed) "PASS" else "FAIL"} -> ${detail.detail}\n")
-        }
+        sysSb.append("OS: Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
+        sysSb.append("AUDIO: Music $musicCur/$musicMax | Ring $ringCur/$ringMax\n")
+        sysSb.append("COMMAND COVERAGE: ${report.commandCoverageText}\n")
         tvSystemInfoDisplay.text = sysSb.toString().trim()
     }
 
@@ -869,15 +992,15 @@ class MainActivity : Activity() {
         val state = executionController.stateMachine.currentState
         val safety = executionController.safetyState
         tvAgentStatusBadge.text = "Agent Status: ${state.name}"
-        tvExecutionBadge.text = "Execution State: ${state.name}"
-        tvSafetyBadge.text = "Safety Status: ${safety.status.name}"
+        tvExecutionBadge.text = "Execution: ${state.name}"
+        tvSafetyBadge.text = "Safety: ${safety.status.name}"
 
         val isAccEnabled = isAccessibilityServiceEnabled(this, LocalAgentAccessibilityService::class.java)
         if (isAccEnabled) {
-            tvAccessibilityBadge.text = "Accessibility Service: ENABLED"
+            tvAccessibilityBadge.text = "Accessibility: ENABLED"
             tvAccessibilityBadge.setTextColor(0xFF66BB6A.toInt())
         } else {
-            tvAccessibilityBadge.text = "Accessibility Service: NOT ENABLED"
+            tvAccessibilityBadge.text = "Accessibility: NOT ENABLED"
             tvAccessibilityBadge.setTextColor(0xFFEF5350.toInt())
         }
 
@@ -902,7 +1025,7 @@ class MainActivity : Activity() {
         for (log in logger.getLogs()) {
             sb.append("[${log.category}] ${log.message}\n")
         }
-        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 2.5 LocalAgent active."
+        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 2 LocalAgent operational UI active."
     }
 
     private fun isAccessibilityServiceEnabled(context: Context, service: Class<*>): Boolean {

@@ -12,6 +12,7 @@ import com.agent.android.agent.device.FileAccessController
 import com.agent.android.agent.device.InputStateController
 import com.agent.android.agent.device.InteractionVisualizer
 import com.agent.android.agent.device.LocationController
+import com.agent.android.agent.device.LocationReadinessStatus
 import com.agent.android.agent.device.NetworkController
 import com.agent.android.agent.device.NotificationController
 import com.agent.android.agent.device.PowerStateController
@@ -198,6 +199,19 @@ class Phase25FoundationUnitTest {
         val ctrl = LocationController(null)
         val res = ctrl.getLocationProviders()
         assertEquals(SkillStatus.UNAVAILABLE, res.status)
+
+        val fixRes = ctrl.testLocationFix()
+        assertEquals(SkillStatus.UNAVAILABLE, fixRes.status)
+    }
+
+    @Test
+    fun testLocationControllerDiagnosticsReport() {
+        val ctrl = LocationController(null)
+        val diag = ctrl.diagnoseLocation()
+        assertEquals(LocationReadinessStatus.UNAVAILABLE, diag.status)
+        assertEquals("Context unavailable", diag.rootCauseExplanation)
+        assertEquals(false, diag.finePermissionGranted)
+        assertEquals(false, diag.coarsePermissionGranted)
     }
 
     @Test

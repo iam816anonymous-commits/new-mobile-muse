@@ -228,14 +228,12 @@ class SystemControlControllers(private val context: Context?) {
         if (context == null) return SkillResult("LOCATION_STATUS", SkillStatus.UNAVAILABLE, "Context unavailable", System.currentTimeMillis() - start, "NO_CONTEXT")
 
         return try {
-            val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-            val gpsOk = lm?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true
-            val netOk = lm?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
+            val diag = LocationController(context).diagnoseLocation()
+            val gpsText = if (diag.gpsProviderEnabled) "ENABLED" else "DISABLED"
+            val netText = if (diag.networkProviderEnabled) "ENABLED" else "DISABLED"
 
-            val gpsText = if (gpsOk) "ENABLED" else "DISABLED"
-            val netText = if (netOk) "ENABLED" else "DISABLED"
-
-            SkillResult("LOCATION_STATUS", SkillStatus.SUCCESS, "GPS_PROVIDER: $gpsText | NETWORK_PROVIDER: $netText", System.currentTimeMillis() - start)
+            val msg = "GPS_PROVIDER: $gpsText | NETWORK_PROVIDER: $netText | Mode: ${diag.locationModeName} | Status: ${diag.status}"
+            SkillResult("LOCATION_STATUS", SkillStatus.SUCCESS, msg, System.currentTimeMillis() - start)
         } catch (e: Exception) {
             SkillResult("LOCATION_STATUS", SkillStatus.FAILED, "Error querying location status: ${e.message}", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
         }
@@ -250,6 +248,7 @@ class SystemControlControllers(private val context: Context?) {
             "bluetooth", "bluetooth settings" -> Settings.ACTION_BLUETOOTH_SETTINGS
             "battery", "battery settings" -> Settings.ACTION_BATTERY_SAVER_SETTINGS
             "accessibility", "accessibility settings" -> Settings.ACTION_ACCESSIBILITY_SETTINGS
+            "location", "location settings" -> Settings.ACTION_LOCATION_SOURCE_SETTINGS
             else -> Settings.ACTION_SETTINGS
         }
 
