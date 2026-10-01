@@ -17,12 +17,31 @@ class ObservationSnapshotStore {
         private set
 
     @Volatile
+    var activeTestRunId: String? = null
+        private set
+
+    @Volatile
+    var activeTestRunSnapshot: ObservationSnapshot? = null
+        private set
+
+    @Volatile
     var observationMode: ObservationMode = ObservationMode.READY
         private set
 
     private val activeSessionId = AtomicLong(1L)
 
     fun getSessionId(): Long = activeSessionId.get()
+
+    @Synchronized
+    fun startTestRun(runId: String) {
+        activeTestRunId = runId
+        activeTestRunSnapshot = null
+    }
+
+    @Synchronized
+    fun endTestRun() {
+        activeTestRunId = null
+    }
 
     @Synchronized
     fun startObservationMode(): Long {
@@ -57,6 +76,10 @@ class ObservationSnapshotStore {
         currentLiveSnapshot = snapshot
         val pkg = snapshot.packageName
 
+        if (activeTestRunId != null && snapshot.testRunId == activeTestRunId) {
+            activeTestRunSnapshot = snapshot
+        }
+
         if (snapshot.state == ObservationState.SUCCESS && !isExcludedExternalPackage(pkg)) {
             lastValidExternalSnapshot = snapshot
             displayedSnapshot = snapshot
@@ -80,6 +103,7 @@ class ObservationSnapshotStore {
         currentLiveSnapshot = null
         lastValidExternalSnapshot = null
         displayedSnapshot = null
+        activeTestRunSnapshot = null
     }
 
     fun isExcludedExternalPackage(pkgName: String?): Boolean {

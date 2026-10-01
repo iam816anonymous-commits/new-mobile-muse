@@ -22,13 +22,17 @@ enum class GuidedTestApp(val label: String, val testId: String, val staticPackag
 enum class GuidedTestState {
     IDLE,
     PREPARING,
-    LAUNCHING,
+    LAUNCHING_TARGET,
     WAITING_FOR_FOREGROUND,
     TARGET_DETECTED,
     CAPTURING,
     VALIDATING,
     PRESERVING,
-    COMPLETED
+    RETURNING_TO_AGENT,
+    PASSED,
+    FAILED,
+    TIMED_OUT,
+    CANCELLED
 }
 
 data class GuidedTestValidationCheck(
@@ -38,6 +42,7 @@ data class GuidedTestValidationCheck(
 
 data class GuidedTestResult(
     val testId: String,
+    val runId: String,
     val targetApp: GuidedTestApp,
     val state: GuidedTestState,
     val status: TestStatus,
@@ -74,7 +79,6 @@ class GuidedExternalObservationRunner(private val context: Context) {
         if (app.staticPackage != null) {
             val intent = pm.getLaunchIntentForPackage(app.staticPackage)
             if (intent != null) return app.staticPackage
-            // Check if package exists even if no default launch intent
             return try {
                 pm.getPackageInfo(app.staticPackage, 0)
                 app.staticPackage
@@ -87,7 +91,6 @@ class GuidedExternalObservationRunner(private val context: Context) {
             if (valRes.status.name.contains("RESOLVED") && valRes.resolvedPackage != null) {
                 return valRes.resolvedPackage
             }
-            // Fallback scan for calc packages
             val installed = pm.getInstalledApplications(PackageManager.GET_META_DATA)
             for (info in installed) {
                 if (info.packageName.contains("calculator", ignoreCase = true) || info.packageName.contains("calc", ignoreCase = true)) {
@@ -108,15 +111,22 @@ class GuidedExternalObservationRunner(private val context: Context) {
     ) {
         cancel()
 
+        val startTime = System.currentTimeMillis()
+        val runId = "${targetApp.testId}-$startTime"
+
         currentState = GuidedTestState.PREPARING
+        observationEngine.snapshotStore.startTestRun(runId)
+
         val resolvedPkg = resolveTargetPackage(targetApp)
 
         if (resolvedPkg == null) {
-            currentState = GuidedTestState.COMPLETED
+            currentState = GuidedTestState.FAILED
+            observationEngine.snapshotStore.endTestRun()
             val failRes = GuidedTestResult(
                 testId = targetApp.testId,
+                runId = runId,
                 targetApp = targetApp,
-                state = GuidedTestState.COMPLETED,
+                state = GuidedTestState.FAILED,
                 status = TestStatus.FAILED,
                 expectedPackage = targetApp.staticPackage ?: "Calculator",
                 actualPackage = null,
@@ -138,11 +148,13 @@ class GuidedExternalObservationRunner(private val context: Context) {
         val pm = context.packageManager
         val launchIntent = pm.getLaunchIntentForPackage(resolvedPkg)
         if (launchIntent == null) {
-            currentState = GuidedTestState.COMPLETED
+            currentState = GuidedTestState.FAILED
+            observationEngine.snapshotStore.endTestRun()
             val failRes = GuidedTestResult(
                 testId = targetApp.testId,
+                runId = runId,
                 targetApp = targetApp,
-                state = GuidedTestState.COMPLETED,
+                state = GuidedTestState.FAILED,
                 status = TestStatus.FAILED,
                 expectedPackage = resolvedPkg,
                 actualPackage = null,
@@ -163,14 +175,15 @@ class GuidedExternalObservationRunner(private val context: Context) {
 
         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-        // State 1 -> State 2: LAUNCHING
-        currentState = GuidedTestState.LAUNCHING
+        // State: LAUNCHING_TARGET
+        currentState = GuidedTestState.LAUNCHING_TARGET
         observationEngine.startObservationMode()
 
         var prepRes = GuidedTestResult(
             testId = targetApp.testId,
+            runId = runId,
             targetApp = targetApp,
-            state = GuidedTestState.LAUNCHING,
+            state = GuidedTestState.LAUNCHING_TARGET,
             status = TestStatus.RUNNING,
             expectedPackage = resolvedPkg,
             actualPackage = null,
@@ -188,9 +201,10 @@ class GuidedExternalObservationRunner(private val context: Context) {
         try {
             context.startActivity(launchIntent)
         } catch (e: Exception) {
-            currentState = GuidedTestState.COMPLETED
+            currentState = GuidedTestState.FAILED
+            observationEngine.snapshotStore.endTestRun()
             val failRes = prepRes.copy(
-                state = GuidedTestState.COMPLETED,
+                state = GuidedTestState.FAILED,
                 status = TestStatus.FAILED,
                 failureReason = "Failed to launch application: ${e.message}"
             )
@@ -199,9 +213,8 @@ class GuidedExternalObservationRunner(private val context: Context) {
             return
         }
 
-        // State 3: WAITING_FOR_FOREGROUND
+        // State: WAITING_FOR_FOREGROUND
         currentState = GuidedTestState.WAITING_FOR_FOREGROUND
-        val startTime = System.currentTimeMillis()
 
         pollRunnable = object : Runnable {
             override fun run() {
@@ -209,9 +222,15 @@ class GuidedExternalObservationRunner(private val context: Context) {
                 val snapshot = observationEngine.captureCurrentScreen()
                 val currentPkg = snapshot.packageName
 
-                if (currentPkg == resolvedPkg && snapshot.state == ObservationState.SUCCESS) {
-                    // State 4: TARGET_DETECTED -> State 5: CAPTURING -> State 6: VALIDATING
+                // Reject stale snapshots from before run start or runId mismatch
+                val isRunOwnedSnapshot = snapshot.timestampMs >= startTime
+
+                if (currentPkg == resolvedPkg && snapshot.state == ObservationState.SUCCESS && isRunOwnedSnapshot) {
+                    // State: TARGET_DETECTED -> CAPTURING -> VALIDATING
                     currentState = GuidedTestState.TARGET_DETECTED
+                    currentState = GuidedTestState.CAPTURING
+                    currentState = GuidedTestState.VALIDATING
+
                     val checks = mutableListOf<GuidedTestValidationCheck>()
 
                     val checkService = GuidedTestValidationCheck("Accessibility Service Connected", observationEngine.isServiceConnected())
@@ -238,17 +257,23 @@ class GuidedExternalObservationRunner(private val context: Context) {
                     )
                     checks.add(checkClass)
 
+                    val checkRunId = GuidedTestValidationCheck("Snapshot Timestamp Matches Run Start", isRunOwnedSnapshot)
+                    checks.add(checkRunId)
+
                     val allPassed = checks.all { it.passed }
 
-                    // State 7: PRESERVING
+                    // State: PRESERVING -> PASSED / FAILED
                     currentState = GuidedTestState.PRESERVING
-                    val evPath = saveEvidenceJson(targetApp, resolvedPkg, snapshot, checks, allPassed)
+                    val evPath = saveEvidenceJson(runId, targetApp, resolvedPkg, snapshot, checks, allPassed)
 
-                    currentState = GuidedTestState.COMPLETED
+                    currentState = if (allPassed) GuidedTestState.PASSED else GuidedTestState.FAILED
+                    observationEngine.snapshotStore.endTestRun()
+
                     val finalRes = GuidedTestResult(
                         testId = targetApp.testId,
+                        runId = runId,
                         targetApp = targetApp,
-                        state = GuidedTestState.COMPLETED,
+                        state = currentState,
                         status = if (allPassed) TestStatus.PASSED else TestStatus.FAILED,
                         expectedPackage = resolvedPkg,
                         actualPackage = currentPkg,
@@ -266,11 +291,13 @@ class GuidedExternalObservationRunner(private val context: Context) {
                 }
 
                 if (elapsed >= WAIT_TIMEOUT_MS) {
-                    currentState = GuidedTestState.COMPLETED
+                    currentState = GuidedTestState.TIMED_OUT
+                    observationEngine.snapshotStore.endTestRun()
                     val failRes = GuidedTestResult(
                         testId = targetApp.testId,
+                        runId = runId,
                         targetApp = targetApp,
-                        state = GuidedTestState.COMPLETED,
+                        state = GuidedTestState.TIMED_OUT,
                         status = TestStatus.FAILED,
                         expectedPackage = resolvedPkg,
                         actualPackage = currentPkg,
@@ -289,7 +316,6 @@ class GuidedExternalObservationRunner(private val context: Context) {
                     return
                 }
 
-                // Update waiting status
                 val waitRes = prepRes.copy(
                     state = GuidedTestState.WAITING_FOR_FOREGROUND,
                     status = TestStatus.RUNNING,
@@ -307,6 +333,7 @@ class GuidedExternalObservationRunner(private val context: Context) {
     }
 
     private fun saveEvidenceJson(
+        runId: String,
         app: GuidedTestApp,
         targetPkg: String,
         snapshot: ObservationSnapshot,
@@ -320,6 +347,7 @@ class GuidedExternalObservationRunner(private val context: Context) {
             val file = File(dir, "guided_external_${app.name.lowercase()}.json")
             val json = JSONObject()
             json.put("testId", app.testId)
+            json.put("runId", runId)
             json.put("targetLabel", app.label)
             json.put("targetPackage", targetPkg)
             json.put("activity", snapshot.activityName ?: "UNKNOWN")
@@ -347,8 +375,8 @@ class GuidedExternalObservationRunner(private val context: Context) {
     fun cancel() {
         pollRunnable?.let { handler.removeCallbacks(it) }
         pollRunnable = null
-        if (currentState != GuidedTestState.COMPLETED) {
-            currentState = GuidedTestState.IDLE
+        if (currentState != GuidedTestState.PASSED && currentState != GuidedTestState.FAILED && currentState != GuidedTestState.TIMED_OUT) {
+            currentState = GuidedTestState.CANCELLED
         }
     }
 }

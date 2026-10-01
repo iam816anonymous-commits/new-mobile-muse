@@ -175,7 +175,8 @@ data class ObservationSnapshot(
     val error: String? = null,
     val classification: WindowClassification = WindowClassification.classify(packageName, activityName),
     val source: ObservationSource = ObservationSource.LIVE_ACTIVE_WINDOW,
-    val scope: ObservationScope = ObservationScope.CURRENT_WINDOW
+    val scope: ObservationScope = ObservationScope.CURRENT_WINDOW,
+    val testRunId: String? = null
 ) {
     fun toJsonString(): String {
         val obj = JSONObject()
@@ -189,6 +190,7 @@ data class ObservationSnapshot(
         obj.put("classification", classification.name)
         obj.put("source", source.name)
         obj.put("scope", scope.name)
+        obj.put("testRunId", testRunId ?: JSONObject.NULL)
         obj.put("error", error ?: JSONObject.NULL)
         obj.put("rootNode", rootNode?.toJsonObject() ?: JSONObject.NULL)
         return obj.toString(2)
@@ -231,6 +233,8 @@ data class ObservationSnapshot(
             val pkg = json.optString("packageName", "UNKNOWN")
             val act = if (json.isNull("activityName")) null else json.optString("activityName")
 
+            val testRunId = if (json.isNull("testRunId")) null else json.optString("testRunId")
+
             return ObservationSnapshot(
                 timestampMs = json.optLong("timestampMs", 0L),
                 packageName = pkg,
@@ -244,7 +248,8 @@ data class ObservationSnapshot(
                 error = if (json.isNull("error")) null else json.optString("error"),
                 classification = WindowClassification.classify(pkg, act),
                 source = source,
-                scope = scope
+                scope = scope,
+                testRunId = testRunId
             )
         }
     }

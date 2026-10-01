@@ -797,7 +797,7 @@ class MainActivity : Activity() {
         )
 
         val pPrep = if (res.state.ordinal >= GuidedTestState.PREPARING.ordinal) "●" else "○"
-        val pLaunch = if (res.state.ordinal >= GuidedTestState.LAUNCHING.ordinal) "●" else "○"
+        val pLaunch = if (res.state.ordinal >= GuidedTestState.LAUNCHING_TARGET.ordinal) "●" else "○"
         val pWait = if (res.state.ordinal >= GuidedTestState.WAITING_FOR_FOREGROUND.ordinal) "●" else "○"
         val pTarget = if (res.state.ordinal >= GuidedTestState.TARGET_DETECTED.ordinal) "●" else "○"
         val pCap = if (res.state.ordinal >= GuidedTestState.CAPTURING.ordinal) "●" else "○"

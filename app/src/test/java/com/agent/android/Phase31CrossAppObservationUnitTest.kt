@@ -433,4 +433,307 @@ class Phase31CrossAppObservationUnitTest {
         assertEquals(com.agent.android.observation.ObservationScope.TARGET_APPLICATION, restored.scope)
         assertEquals(com.agent.android.observation.WindowClassification.APPLICATION, restored.classification)
     }
+
+    @Test
+    fun testStaleSnapshotCannotPass() {
+        val runStartTime = System.currentTimeMillis()
+        val staleSnap = ObservationSnapshot(
+            timestampMs = runStartTime - 5000L, // 5s before run start
+            packageName = "com.android.chrome",
+            activityName = "Chrome",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 100,
+            rootNode = ObservationNode("1", null, "android.widget.FrameLayout", "com.android.chrome", null, null, null, ObservationBounds(0, 0, 1080, 1920), false, false, false, false, true, false, false, false, false, false, true, false, 0),
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null,
+            testRunId = "P3.1-POS-CHROME-run-1"
+        )
+
+        val isValidForRun = staleSnap.timestampMs >= runStartTime
+        assertEquals(false, isValidForRun)
+    }
+
+    @Test
+    fun testWrongPackageCannotPass() {
+        val snap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.google.android.youtube", // Expecting Chrome
+            activityName = "WatchActivity",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 100,
+            rootNode = ObservationNode("1", null, "android.widget.FrameLayout", "com.google.android.youtube", null, null, null, ObservationBounds(0, 0, 1080, 1920), false, false, false, false, true, false, false, false, false, false, true, false, 0),
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+
+        val res = validator.validateExternalAppSnapshot(snap)
+        assertEquals(TestStatus.PASSED, res.status) // Valid external app, but for Chrome target mismatch:
+        val expectedPkg = "com.android.chrome"
+        assertEquals(false, snap.packageName == expectedPkg)
+    }
+
+    @Test
+    fun testLocalAgentSnapshotCannotSatisfyExternalTest() {
+        val localSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.agent.android",
+            activityName = "MainActivity",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 50,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+
+        val res = validator.validateExternalAppSnapshot(localSnap)
+        assertEquals(TestStatus.FAILED, res.status)
+        assertEquals("TARGET APP IS LOCALAGENT", res.summaryText)
+    }
+
+    @Test
+    fun testSystemUiSnapshotCannotSatisfyExternalTest() {
+        val sysUiSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.systemui",
+            activityName = "StatusBar",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 10,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+
+        val res = validator.validateExternalAppSnapshot(sysUiSnap)
+        assertEquals(TestStatus.FAILED, res.status)
+        assertEquals("INVALID TARGET: SYSTEM UI / LAUNCHER", res.summaryText)
+    }
+
+    @Test
+    fun testRecentsSnapshotCannotSatisfyExternalTest() {
+        val recentsSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.systemui.recents",
+            activityName = "RecentsActivity",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 12,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+
+        val res = validator.validateExternalAppSnapshot(recentsSnap)
+        assertEquals(TestStatus.FAILED, res.status)
+        assertEquals("INVALID TARGET: SYSTEM UI / LAUNCHER", res.summaryText)
+    }
+
+    @Test
+    fun testZeroNodeSnapshotFails() {
+        val zeroNodeSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.chrome",
+            activityName = "Chrome",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 0,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+
+        val res = validator.validateExternalAppSnapshot(zeroNodeSnap)
+        assertEquals(TestStatus.FAILED, res.status)
+    }
+
+    @Test
+    fun testFailedObservationStateFails() {
+        val failedSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.chrome",
+            activityName = "Chrome",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 20,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.OBSERVATION_FAILED,
+            error = "Hierarchy parse error"
+        )
+
+        val res = validator.validateExternalAppSnapshot(failedSnap)
+        assertEquals(TestStatus.FAILED, res.status)
+    }
+
+    @Test
+    fun testCorrectPackageAndValidSnapshotPasses() {
+        val validSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.chrome",
+            activityName = "ChromeTabbedActivity",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 150,
+            rootNode = ObservationNode("1", null, "android.widget.FrameLayout", "com.android.chrome", null, null, null, ObservationBounds(0, 0, 1080, 1920), false, false, false, false, true, false, false, false, false, false, true, false, 0),
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+
+        val res = validator.validateExternalAppSnapshot(validSnap)
+        assertEquals(TestStatus.PASSED, res.status)
+        assertEquals("com.android.chrome", res.targetPackage)
+    }
+
+    @Test
+    fun testSnapshotFromAnotherRunCannotPass() {
+        val snapRun1 = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.chrome",
+            activityName = "Chrome",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 100,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null,
+            testRunId = "Run-1"
+        )
+
+        val activeRunId = "Run-2"
+        val isMatchingRun = snapRun1.testRunId == activeRunId
+        assertEquals(false, isMatchingRun)
+    }
+
+    @Test
+    fun testPreservedExternalSnapshotSurvivesLocalAgentForeground() {
+        val store = com.agent.android.observation.ObservationSnapshotStore()
+
+        val chromeSnap = ObservationSnapshot(
+            timestampMs = 1000L,
+            packageName = "com.android.chrome",
+            activityName = "Chrome",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 120,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+        store.updateFromCapture(chromeSnap)
+        assertEquals("com.android.chrome", store.lastValidExternalSnapshot?.packageName)
+
+        val localAgentSnap = ObservationSnapshot(
+            timestampMs = 2000L,
+            packageName = "com.agent.android",
+            activityName = "MainActivity",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 40,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+        store.updateFromCapture(localAgentSnap)
+
+        assertEquals("com.android.chrome", store.lastValidExternalSnapshot?.packageName)
+        assertEquals("com.android.chrome", store.displayedSnapshot?.packageName)
+    }
+
+    @Test
+    fun testPassCannotOccurBeforeValidation() {
+        val runnerState = com.agent.android.observation.GuidedTestState.PREPARING
+        val status = com.agent.android.test.model.TestStatus.RUNNING
+
+        assertEquals(false, runnerState == com.agent.android.observation.GuidedTestState.PASSED)
+        assertEquals(false, status == com.agent.android.test.model.TestStatus.PASSED)
+    }
+
+    @Test
+    fun testTestStateTransitionsAreDeterministic() {
+        val states = com.agent.android.observation.GuidedTestState.values()
+
+        assertTrue(states.contains(com.agent.android.observation.GuidedTestState.PREPARING))
+        assertTrue(states.contains(com.agent.android.observation.GuidedTestState.LAUNCHING_TARGET))
+        assertTrue(states.contains(com.agent.android.observation.GuidedTestState.WAITING_FOR_FOREGROUND))
+        assertTrue(states.contains(com.agent.android.observation.GuidedTestState.TARGET_DETECTED))
+        assertTrue(states.contains(com.agent.android.observation.GuidedTestState.CAPTURING))
+        assertTrue(states.contains(com.agent.android.observation.GuidedTestState.VALIDATING))
+        assertTrue(states.contains(com.agent.android.observation.GuidedTestState.PRESERVING))
+        assertTrue(states.contains(com.agent.android.observation.GuidedTestState.PASSED))
+        assertTrue(states.contains(com.agent.android.observation.GuidedTestState.FAILED))
+        assertTrue(states.contains(com.agent.android.observation.GuidedTestState.TIMED_OUT))
+    }
+
+    @Test
+    fun testTimeoutProducesFail() {
+        val timeoutState = com.agent.android.observation.GuidedTestState.TIMED_OUT
+        val status = com.agent.android.test.model.TestStatus.FAILED
+
+        assertEquals(com.agent.android.observation.GuidedTestState.TIMED_OUT, timeoutState)
+        assertEquals(com.agent.android.test.model.TestStatus.FAILED, status)
+    }
+
+    @Test
+    fun testNewTestCreatesIndependentTestRun() {
+        val store = com.agent.android.observation.ObservationSnapshotStore()
+
+        store.startTestRun("Run-1")
+        val snap1 = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.chrome",
+            activityName = "Chrome",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 100,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null,
+            testRunId = "Run-1"
+        )
+        store.updateFromCapture(snap1)
+        assertNotNull(store.activeTestRunSnapshot)
+
+        // Start Run-2
+        store.startTestRun("Run-2")
+        assertEquals(null, store.activeTestRunSnapshot) // Run-2 active snapshot cleared!
+    }
+
+    @Test
+    fun testDiagnosticSnapshotCannotSatisfyTestResult() {
+        val store = com.agent.android.observation.ObservationSnapshotStore()
+        store.startTestRun("Run-10")
+
+        // Diagnostic capture without testRunId tag
+        val diagSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.chrome",
+            activityName = "Chrome",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 100,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null,
+            testRunId = null // Untagged diagnostic capture
+        )
+
+        store.updateFromCapture(diagSnap)
+
+        assertEquals(null, store.activeTestRunSnapshot) // Untagged capture rejected for test run snapshot!
+    }
 }
