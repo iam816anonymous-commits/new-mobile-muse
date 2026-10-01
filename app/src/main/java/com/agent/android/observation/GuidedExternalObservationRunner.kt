@@ -232,6 +232,12 @@ class GuidedExternalObservationRunner(private val context: Context) {
                     val checkExt = GuidedTestValidationCheck("Package Is External & Non-SystemUI", !observationEngine.isExcludedExternalPackage(currentPkg))
                     checks.add(checkExt)
 
+                    val checkClass = GuidedTestValidationCheck(
+                        "Window Classification Valid (${snapshot.classification.name})",
+                        snapshot.classification == WindowClassification.APPLICATION || snapshot.classification == WindowClassification.SETTINGS
+                    )
+                    checks.add(checkClass)
+
                     val allPassed = checks.all { it.passed }
 
                     // State 7: PRESERVING

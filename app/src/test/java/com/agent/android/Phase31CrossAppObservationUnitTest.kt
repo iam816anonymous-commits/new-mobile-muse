@@ -361,4 +361,50 @@ class Phase31CrossAppObservationUnitTest {
             assertEquals(com.agent.android.observation.ObservationMode.STOPPED, engine.observationMode)
         }
     }
+
+    @Test
+    fun testWindowClassificationLogic() {
+        assertEquals(com.agent.android.observation.WindowClassification.APPLICATION, com.agent.android.observation.WindowClassification.classify("com.android.chrome"))
+        assertEquals(com.agent.android.observation.WindowClassification.LOCAL_AGENT, com.agent.android.observation.WindowClassification.classify("com.agent.android"))
+        assertEquals(com.agent.android.observation.WindowClassification.SYSTEM_UI, com.agent.android.observation.WindowClassification.classify("com.android.systemui"))
+        assertEquals(com.agent.android.observation.WindowClassification.RECENTS, com.agent.android.observation.WindowClassification.classify("com.android.systemui", "com.android.systemui.recents.RecentsActivity"))
+        assertEquals(com.agent.android.observation.WindowClassification.LAUNCHER, com.agent.android.observation.WindowClassification.classify("com.google.android.apps.nexuslauncher"))
+        assertEquals(com.agent.android.observation.WindowClassification.SETTINGS, com.agent.android.observation.WindowClassification.classify("com.android.settings"))
+        assertEquals(com.agent.android.observation.WindowClassification.UNKNOWN, com.agent.android.observation.WindowClassification.classify(null))
+    }
+
+    @Test
+    fun testObservedWindowJsonSerialization() {
+        val win = com.agent.android.observation.ObservedWindow(
+            windowId = 42,
+            packageName = "com.android.settings",
+            activityName = "SettingsActivity",
+            windowType = 1,
+            layer = 10,
+            bounds = ObservationBounds(0, 0, 1080, 1920),
+            isActive = true,
+            isFocused = true,
+            isAccessibilityFocused = false,
+            classification = com.agent.android.observation.WindowClassification.SETTINGS
+        )
+
+        val json = win.toJsonObject()
+        val restored = com.agent.android.observation.ObservedWindow.fromJsonObject(json)
+
+        assertEquals(42, restored.windowId)
+        assertEquals("com.android.settings", restored.packageName)
+        assertEquals("SettingsActivity", restored.activityName)
+        assertEquals(com.agent.android.observation.WindowClassification.SETTINGS, restored.classification)
+        assertTrue(restored.isActive)
+        assertTrue(restored.isFocused)
+    }
+
+    @Test
+    fun testAccessibleWindowProviderNullServiceFallback() {
+        val provider = com.agent.android.observation.AccessibleWindowProvider()
+        val windows = provider.getAccessibleWindows()
+
+        // Null service returns empty window list without crashing
+        assertNotNull(windows)
+    }
 }

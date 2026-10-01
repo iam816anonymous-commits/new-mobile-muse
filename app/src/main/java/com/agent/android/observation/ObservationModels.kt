@@ -153,7 +153,8 @@ data class ObservationSnapshot(
     val rootNode: ObservationNode?,
     val allNodesList: List<ObservationNode>,
     val state: ObservationState,
-    val error: String? = null
+    val error: String? = null,
+    val classification: WindowClassification = WindowClassification.classify(packageName, activityName)
 ) {
     fun toJsonString(): String {
         val obj = JSONObject()
@@ -164,6 +165,7 @@ data class ObservationSnapshot(
         obj.put("rootBounds", rootBounds.toJsonObject())
         obj.put("nodeCount", nodeCount)
         obj.put("state", state.name)
+        obj.put("classification", classification.name)
         obj.put("error", error ?: JSONObject.NULL)
         obj.put("rootNode", rootNode?.toJsonObject() ?: JSONObject.NULL)
         return obj.toString(2)

@@ -125,7 +125,7 @@ class Phase31ObservationUnitTest {
         assertTrue("Phase 2 test suite must contain tests", p2Tests.isNotEmpty())
 
         val p31CoreTests = testRegistry.getTestCasesByPhase("PHASE_3.1").filter { it.id.startsWith("P3.1-OBS-") }
-        assertEquals("Phase 3.1 core suite must contain 39 observation tests", 39, p31CoreTests.size)
+        assertEquals("Phase 3.1 core suite must contain 46 observation tests", 46, p31CoreTests.size)
 
         val p31XappTests = testRegistry.getTestCasesByPhase("PHASE_3.1").filter { it.id.startsWith("P3.1-XAPP-") }
         assertEquals("Phase 3.1 XAPP suite must contain 8 cross-app validation tests", 8, p31XappTests.size)

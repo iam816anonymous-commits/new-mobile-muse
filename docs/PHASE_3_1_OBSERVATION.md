@@ -14,11 +14,14 @@ LocalAgent supports background cross-application observation:
 
 ## 3. Core Architectural Rules & Safety
 1. **STRICTLY READ-ONLY**: The Observation Engine (`AccessibilityObservationEngine`) performs zero UI actions, gestures, taps, clicks, text input, or app launches.
-2. **DEBOUNCED CAPTURE**: Capture events are debounced with a 1000ms minimum interval (`DEBOUNCE_INTERVAL_MS = 1000L`) to prevent event storms, race conditions, memory leaks, or ANRs.
-3. **CANONICAL SNAPSHOT STORE (`ObservationSnapshotStore`)**: Centralized single source of truth managing `currentLiveSnapshot`, `lastValidExternalSnapshot`, `displayedSnapshot`, `observationMode`, and session token invalidation (`sessionId`).
-4. **STOP DOES NOT CAPTURE**: Tapping `STOP OBSERVATION` or returning to LocalAgent stops future capture and invalidates background sessions without invoking `rootInActiveWindow` or overwriting `lastValidExternalSnapshot`.
-5. **ZERO RECURSIVE LEAKS**: All `AccessibilityNodeInfo` instances are recycled (`nodeInfo.recycle()`) during traversal.
-6. **TRAVERSAL BOUNDS**: Maximum node count is strictly capped at `500` nodes and depth is capped at `30` levels to protect target Tecno Camon i (4GB RAM) hardware.
+2. **UNIVERSAL OBSERVATION ARCHITECTURE**: The observation engine captures whatever accessibility information Android API 27 exposes without hardcoding package drop rules at the raw capture level.
+3. **WINDOW CLASSIFICATION (`WindowClassification`)**: Every observed snapshot classifies its target window (`APPLICATION`, `LOCAL_AGENT`, `SYSTEM_UI`, `LAUNCHER`, `RECENTS`, `SETTINGS`, `NOTIFICATION_SURFACE`, `QUICK_SETTINGS`, `SYSTEM_DIALOG`, `OVERLAY`, `UNKNOWN`).
+4. **INTERACTIVE WINDOW DISCOVERY (`AccessibleWindowProvider`)**: Uses `AccessibilityService.windows` (enabled via `flagRetrieveInteractiveWindows` API 21+) for multi-window discovery with active root fallback on API 27.
+5. **TARGET POLICY SEPARATION**: Raw observation records exposed windows universally. Target policy resolution (`ExternalAppTestValidator` / `GuidedExternalObservationRunner`) evaluates whether an observed window matches the expected target task.
+6. **CANONICAL SNAPSHOT STORE (`ObservationSnapshotStore`)**: Centralized single source of truth managing `currentLiveSnapshot`, `lastValidExternalSnapshot`, `displayedSnapshot`, `observationMode`, and session token invalidation (`sessionId`).
+7. **STOP DOES NOT CAPTURE**: Tapping `STOP OBSERVATION` or returning to LocalAgent stops future capture and invalidates background sessions without invoking `rootInActiveWindow` or overwriting `lastValidExternalSnapshot`.
+8. **ZERO RECURSIVE LEAKS**: All `AccessibilityNodeInfo` instances are recycled (`nodeInfo.recycle()`) during traversal.
+9. **TRAVERSAL BOUNDS**: Maximum node count is strictly capped at `500` nodes and depth is capped at `30` levels to protect target Tecno Camon i (4GB RAM) hardware.
 
 ## 4. Architecture Component Diagram
 ```

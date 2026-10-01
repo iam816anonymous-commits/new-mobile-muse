@@ -4,16 +4,18 @@
 Phase 3.1 Observation Foundation and Cross-App Hardening for LocalAgent is **IMPLEMENTED, TESTED, INTEGRATED, AND VERIFIED**. LocalAgent can observe both its own UI hierarchy and the UI hierarchy of external foreground Android applications (e.g., Settings, Calculator, Clock, Browser) via native `AccessibilityService` APIs and produce structured, immutable `ObservationSnapshot` models without performing any UI actions.
 
 ## 2. Readiness Status
-**PHASE_3.1 READY (AUTOMATED VERIFIED + MANUAL DEVICE VALIDATION SUPPORTED)**
+**PHASE_3.1 READY FOR FREEZE (AUTOMATED VERIFIED + MANUAL DEVICE VALIDATION SUPPORTED)**
 
 ## 3. Key Hardening Features Implemented
-1. **Cross-Application Observation Mode**: Controlled state transition (`STOPPED`, `READY`, `OBSERVING`) with `startObservationMode()` and `stopObservationMode()`.
-2. **Debounced Capture**: Minimum 1000ms capture interval (`DEBOUNCE_INTERVAL_MS = 1000L`) on accessibility events to prevent event storms, race conditions, memory leaks, and ANRs.
-3. **External Snapshot Storage**: Atomic tracking of `lastExternalSnapshot` for non-LocalAgent packages, allowing users to leave LocalAgent, open an external app, and view its captured snapshot upon return.
-4. **Two Distinct UI Validation Cards (Card A & Card B)**:
+1. **Universal Accessibility Observation**: Raw capture exposes whatever UI trees Android API 27 exposes without hardcoding package drop rules at the observation level.
+2. **Window Classification (`WindowClassification`)**: Classifies every snapshot window (`APPLICATION`, `LOCAL_AGENT`, `SYSTEM_UI`, `LAUNCHER`, `RECENTS`, `SETTINGS`, `NOTIFICATION_SURFACE`, `QUICK_SETTINGS`, `SYSTEM_DIALOG`, `OVERLAY`, `UNKNOWN`).
+3. **Interactive Window Discovery (`AccessibleWindowProvider`)**: Enabled `flagRetrieveInteractiveWindows` in `accessibility_service_config.xml` for multi-window discovery using `AccessibilityService.windows` with active root fallback on API 27.
+4. **Target Policy Separation**: Raw observation records exposed windows universally, while target policy resolution (`ExternalAppTestValidator` / `GuidedExternalObservationRunner`) evaluates whether an observed window matches the expected target task.
+5. **Canonical Snapshot Store (`ObservationSnapshotStore`)**: Centralized single source of truth managing `currentLiveSnapshot`, `lastValidExternalSnapshot`, `displayedSnapshot`, `observationMode`, and session token invalidation (`sessionId`).
+6. **Snapshot Overwrite Protection**: Tapping `STOP OBSERVATION` or returning to LocalAgent stops future capture and invalidates background sessions without invoking `rootInActiveWindow` or overwriting `lastValidExternalSnapshot`.
+7. **Two Distinct UI Validation Cards (Card A & Card B)**:
    - **Card A (Observation Engine Validation - Current Screen)**: `btnRunEngineValidation` runs all 25 observation engine unit/integration criteria on the active LocalAgent UI screen and reports PASS/FAIL with package, activity, node count, duration, and tree bounds.
    - **Card B (Guided External Observation Test)**: `GuidedExternalObservationRunner` executes a state machine (`PREPARING` -> `LAUNCHING` -> `WAITING_FOR_FOREGROUND` -> `TARGET_DETECTED` -> `CAPTURING` -> `VALIDATING` -> `PRESERVING` -> `COMPLETED`) for Chrome (`P3.1-EXT-001`), YouTube (`P3.1-EXT-002`), Settings (`P3.1-EXT-003`), and Calculator (`P3.1-EXT-004`).
-5. **Snapshot Overwrite Protection**: `AccessibilityObservationEngine.isExcludedExternalPackage()` excludes LocalAgent (`com.agent.android`), System UI (`com.android.systemui`), launchers, and recents from overwriting `lastExternalSnapshot`. When the user returns to LocalAgent or taps STOP OBSERVATION, the external snapshot remains preserved and displayed as `PRESERVED`.
 5. **Isolated Cross-App Test Suite (`P3.1-XAPP-001` through `P3.1-XAPP-008`)**:
    - `P3.1-XAPP-001`: Android Settings Observation
    - `P3.1-XAPP-002`: Settings Subscreen Change
