@@ -883,12 +883,12 @@
                         android:textSize="10sp" />
                 </LinearLayout>
 
-                <!-- CARD B: EXTERNAL APPLICATION OBSERVATION VALIDATION -->
+                <!-- CARD B: GUIDED EXTERNAL OBSERVATION TEST -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:text="CARD B — EXTERNAL APPLICATION OBSERVATION VALIDATION"
+                    android:text="CARD B — GUIDED EXTERNAL OBSERVATION TEST"
                     android:textColor="#CE93D8"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -901,40 +901,134 @@
                     android:padding="10dp"
                     android:orientation="vertical">
 
-                    <Button
-                        android:id="@+id/btnStartExternalValidation"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="START EXTERNAL VALIDATION" />
-
                     <TextView
-                        android:id="@+id/tvExternalValStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Validation Status: IDLE"
+                        android:text="Target Application:"
+                        android:textColor="#E1BEE7"
+                        android:textSize="11sp" />
+
+                    <Spinner
+                        android:id="@+id/spinnerCardBTargetApp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:background="#1A1A1A"
+                        android:padding="4dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btnStartGuidedTest"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="2dp"
+                            android:text="START GUIDED TEST" />
+
+                        <Button
+                            android:id="@+id/btnCardBRunAgain"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="2dp"
+                            android:text="RESET / RE-RUN" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvCardBStateStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Status: READY"
                         android:textColor="#FFD54F"
                         android:textSize="12sp"
                         android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/tvExternalValObservedPackage"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Target App: NONE"
-                        android:textColor="#E1BEE7"
-                        android:textSize="11sp" />
+                        android:layout_marginTop="6dp"
+                        android:text="TEST PROGRESS:"
+                        android:textColor="#FFD54F"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/tvExternalValDetails"
+                        android:id="@+id/tvCardBProgressSteps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="2dp"
                         android:background="#121212"
                         android:padding="6dp"
-                        android:text="Tap 'START EXTERNAL VALIDATION', open target app, and return to LocalAgent."
+                        android:text="○ Preparing  ○ Launching  ○ Waiting  ○ Target Detected\n○ Captured  ○ Validated  ○ Preserved  ○ Test Passed"
                         android:textColor="#B0BEC5"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="LIVE TEST STATE:"
+                        android:textColor="#FFD54F"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvCardBLiveState"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="Expected Package: -\nCurrent Package: -\nActivity: -\nNodes: 0"
+                        android:textColor="#80D8FF"
+                        android:typeface="monospace"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="VALIDATION CHECKLIST:"
+                        android:textColor="#FFD54F"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvCardBValidationChecklist"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="[Pending Test Execution]"
+                        android:textColor="#A5D6A7"
+                        android:typeface="monospace"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="FINAL RESULT:"
+                        android:textColor="#FFD54F"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvCardBFinalResult"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="GUIDED TEST NOT RUN YET"
+                        android:textColor="#E1BEE7"
                         android:typeface="monospace"
                         android:textSize="10sp" />
                 </LinearLayout>

@@ -39,14 +39,22 @@ The Diagnostics UI contains two distinct validation cards powered by `ExternalAp
 - **Execution**: Evaluates all 25 observation engine unit/integration criteria on the currently active screen.
 - **Reporting**: Displays PASS/FAIL status along with target package, activity, total node count, duration (ms), and tree bounds.
 
-### Card B: External Application Observation Validation
-- **Button**: `[ START EXTERNAL VALIDATION ]`
-- **Execution**: Activates Observation Mode and waits for the user to launch an external target application (e.g. Settings, Calculator, Clock).
-- **Validation**: Automatically validates the external snapshot upon returning to LocalAgent, verifying that target package != `com.agent.android` and package != `com.android.systemui`/launcher/recents.
-- **Reporting**: Displays PASS/FAIL status, target package name, target activity, root node count, and evidence reference path (`evidence/phase3.1/external-app/...`).
+### Card B: Guided External Observation Test (`GuidedExternalObservationRunner`)
+- **Target Application Selector**: `Chrome` (`P3.1-EXT-001`), `YouTube` (`P3.1-EXT-002`), `Settings` (`P3.1-EXT-003`), `Calculator` (`P3.1-EXT-004`).
+- **State Machine Workflow**:
+  1. `PREPARING`: Resolves package name and verifies launch intent.
+  2. `LAUNCHING`: Launches single selected target application via Intent.
+  3. `WAITING_FOR_FOREGROUND`: Polls foreground package every 500ms (15s timeout), ignoring LocalAgent, System UI, and Launcher.
+  4. `TARGET_DETECTED`: Confirms target foreground state.
+  5. `CAPTURING`: Captures external application UI tree hierarchy.
+  6. `VALIDATING`: Evaluates 7-point validation checklist.
+  7. `PRESERVING`: Stores snapshot in `lastExternalSnapshot` and saves evidence JSON to `evidence/phase3.1/guided_external_<target>.json`.
+  8. `COMPLETED`: Displays final PASSED/FAILED result card.
+- **Snapshot Overwrite Protection**: `AccessibilityObservationEngine.isExcludedExternalPackage()` ensures LocalAgent (`com.agent.android`), System UI (`com.android.systemui`), launchers, and recents never overwrite `lastExternalSnapshot` when returning to LocalAgent or pressing STOP.
 
 ## 6. Phase 3 Test Isolation
 - **Core Observation Tests**: `P3.1-OBS-001` through `P3.1-OBS-025`
 - **Cross-App Validation Tests**: `P3.1-XAPP-001` through `P3.1-XAPP-008`
-- **Evidence Storage**: `evidence/phase3.1/xapp/TEST-P3.1-XAPP-*/` and `evidence/phase3.1/external-app/`
+- **Guided External Observation Tests**: `P3.1-EXT-001` through `P3.1-EXT-004`
+- **Evidence Storage**: `evidence/phase3.1/guided_external_<target>.json`
 - All Phase 2 foundation tests and evidence remain strictly frozen and independent.

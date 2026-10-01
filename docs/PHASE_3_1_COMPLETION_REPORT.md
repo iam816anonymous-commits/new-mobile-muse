@@ -12,7 +12,8 @@ Phase 3.1 Observation Foundation and Cross-App Hardening for LocalAgent is **IMP
 3. **External Snapshot Storage**: Atomic tracking of `lastExternalSnapshot` for non-LocalAgent packages, allowing users to leave LocalAgent, open an external app, and view its captured snapshot upon return.
 4. **Two Distinct UI Validation Cards (Card A & Card B)**:
    - **Card A (Observation Engine Validation - Current Screen)**: `btnRunEngineValidation` runs all 25 observation engine unit/integration criteria on the active LocalAgent UI screen and reports PASS/FAIL with package, activity, node count, duration, and tree bounds.
-   - **Card B (External Application Observation Validation)**: `btnStartExternalValidation` enables Observation Mode, observes external app launches (Settings/Calc/Clock), and automatically validates target package != LocalAgent and != SystemUI/launcher/recents, outputting PASS/FAIL status and saving evidence to `evidence/phase3.1/external-app/`.
+   - **Card B (Guided External Observation Test)**: `GuidedExternalObservationRunner` executes a state machine (`PREPARING` -> `LAUNCHING` -> `WAITING_FOR_FOREGROUND` -> `TARGET_DETECTED` -> `CAPTURING` -> `VALIDATING` -> `PRESERVING` -> `COMPLETED`) for Chrome (`P3.1-EXT-001`), YouTube (`P3.1-EXT-002`), Settings (`P3.1-EXT-003`), and Calculator (`P3.1-EXT-004`).
+5. **Snapshot Overwrite Protection**: `AccessibilityObservationEngine.isExcludedExternalPackage()` excludes LocalAgent (`com.agent.android`), System UI (`com.android.systemui`), launchers, and recents from overwriting `lastExternalSnapshot`. When the user returns to LocalAgent or taps STOP OBSERVATION, the external snapshot remains preserved and displayed as `PRESERVED`.
 5. **Isolated Cross-App Test Suite (`P3.1-XAPP-001` through `P3.1-XAPP-008`)**:
    - `P3.1-XAPP-001`: Android Settings Observation
    - `P3.1-XAPP-002`: Settings Subscreen Change

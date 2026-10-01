@@ -1,8 +1,6 @@
 package com.agent.android.observation
 
-import android.accessibilityservice.AccessibilityService
 import android.graphics.Rect
-import android.os.SystemClock
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.agent.android.service.LocalAgentAccessibilityService
@@ -44,6 +42,7 @@ class AccessibilityObservationEngine {
 
     fun stopObservationMode() {
         observationMode = ObservationMode.STOPPED
+        // STOP observation keeps lastExternalSnapshot intact!
     }
 
     fun resetToReadyMode() {
@@ -58,6 +57,15 @@ class AccessibilityObservationEngine {
         return getServiceInstance() != null
     }
 
+    fun isExcludedExternalPackage(pkgName: String?): Boolean {
+        if (pkgName == null || pkgName == "UNKNOWN") return true
+        if (pkgName == "com.agent.android") return true
+        if (pkgName == "com.android.systemui") return true
+        if (pkgName.contains("launcher", ignoreCase = true)) return true
+        if (pkgName.contains("recents", ignoreCase = true)) return true
+        return false
+    }
+
     fun handleAccessibilityEvent(packageName: String?, eventType: Int) {
         if (observationMode != ObservationMode.OBSERVING) return
 
@@ -69,7 +77,7 @@ class AccessibilityObservationEngine {
         lastCaptureTimeMs = now
         val snapshot = captureCurrentScreen()
 
-        if (snapshot.state == ObservationState.SUCCESS && snapshot.packageName != "com.agent.android" && snapshot.packageName != "UNKNOWN") {
+        if (snapshot.state == ObservationState.SUCCESS && !isExcludedExternalPackage(snapshot.packageName)) {
             lastExternalSnapshot = snapshot
             Log.i(TAG, "Captured external app observation: ${snapshot.packageName} (${snapshot.nodeCount} nodes)")
         }
@@ -211,7 +219,7 @@ class AccessibilityObservationEngine {
         )
 
         lastObservationSnapshot = snapshot
-        if (pkgName != "com.agent.android" && pkgName != "UNKNOWN") {
+        if (!isExcludedExternalPackage(pkgName)) {
             lastExternalSnapshot = snapshot
         }
         lastErrorText = null

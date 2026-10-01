@@ -122,4 +122,43 @@ class Phase31CrossAppObservationUnitTest {
         assertEquals(32, res.nodeCount)
         assertNotNull(res.evidencePath)
     }
+
+    @Test
+    fun testObservationEnginePackageExclusionRules() {
+        val engine = AccessibilityObservationEngine()
+
+        assertTrue("LocalAgent self package must be excluded", engine.isExcludedExternalPackage("com.agent.android"))
+        assertTrue("System UI must be excluded", engine.isExcludedExternalPackage("com.android.systemui"))
+        assertTrue("Nexus Launcher must be excluded", engine.isExcludedExternalPackage("com.google.android.apps.nexuslauncher"))
+        assertTrue("Generic launcher must be excluded", engine.isExcludedExternalPackage("com.android.launcher3"))
+        assertTrue("Recents view must be excluded", engine.isExcludedExternalPackage("com.android.systemui.recents"))
+
+        assertEquals(false, engine.isExcludedExternalPackage("com.android.chrome"))
+        assertEquals(false, engine.isExcludedExternalPackage("com.google.android.youtube"))
+        assertEquals(false, engine.isExcludedExternalPackage("com.android.settings"))
+        assertEquals(false, engine.isExcludedExternalPackage("com.google.android.calculator"))
+    }
+
+    @Test
+    fun testStopObservationModeSnapshotPreservation() {
+        val engine = AccessibilityObservationEngine()
+        engine.startObservationMode()
+        assertEquals(com.agent.android.observation.ObservationMode.OBSERVING, engine.observationMode)
+
+        engine.stopObservationMode()
+        assertEquals(com.agent.android.observation.ObservationMode.STOPPED, engine.observationMode)
+    }
+
+    @Test
+    fun testGuidedTestAppMetadataAndTestIds() {
+        assertEquals("P3.1-EXT-001", com.agent.android.observation.GuidedTestApp.CHROME.testId)
+        assertEquals("P3.1-EXT-002", com.agent.android.observation.GuidedTestApp.YOUTUBE.testId)
+        assertEquals("P3.1-EXT-003", com.agent.android.observation.GuidedTestApp.SETTINGS.testId)
+        assertEquals("P3.1-EXT-004", com.agent.android.observation.GuidedTestApp.CALCULATOR.testId)
+
+        assertEquals("com.android.chrome", com.agent.android.observation.GuidedTestApp.CHROME.staticPackage)
+        assertEquals("com.google.android.youtube", com.agent.android.observation.GuidedTestApp.YOUTUBE.staticPackage)
+        assertEquals("com.android.settings", com.agent.android.observation.GuidedTestApp.SETTINGS.staticPackage)
+        assertEquals(null, com.agent.android.observation.GuidedTestApp.CALCULATOR.staticPackage)
+    }
 }

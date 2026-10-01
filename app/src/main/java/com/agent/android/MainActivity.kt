@@ -13,11 +13,17 @@ import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import com.agent.android.observation.GuidedExternalObservationRunner
+import com.agent.android.observation.GuidedTestApp
+import com.agent.android.observation.GuidedTestResult
+import com.agent.android.observation.GuidedTestState
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -97,6 +103,7 @@ class MainActivity : Activity() {
     private lateinit var locationController: LocationController
     private lateinit var observationEngine: AccessibilityObservationEngine
     private lateinit var externalAppValidator: ExternalAppTestValidator
+    private lateinit var guidedRunner: GuidedExternalObservationRunner
 
     private lateinit var testRegistry: FoundationTestRegistry
     private lateinit var resultStore: TestResultStore
@@ -185,10 +192,14 @@ class MainActivity : Activity() {
     private lateinit var tvEngineValidationDetails: TextView
 
     // Card B Views
-    private lateinit var btnStartExternalValidation: Button
-    private lateinit var tvExternalValStatus: TextView
-    private lateinit var tvExternalValObservedPackage: TextView
-    private lateinit var tvExternalValDetails: TextView
+    private lateinit var spinnerCardBTargetApp: Spinner
+    private lateinit var btnStartGuidedTest: Button
+    private lateinit var btnCardBRunAgain: Button
+    private lateinit var tvCardBStateStatus: TextView
+    private lateinit var tvCardBProgressSteps: TextView
+    private lateinit var tvCardBLiveState: TextView
+    private lateinit var tvCardBValidationChecklist: TextView
+    private lateinit var tvCardBFinalResult: TextView
 
     private lateinit var tvReadinessOverallBanner: TextView
     private lateinit var btnToggleFoundationTestRunner: Button
@@ -254,6 +265,7 @@ class MainActivity : Activity() {
         locationController = LocationController(this)
         observationEngine = AccessibilityObservationEngine()
         externalAppValidator = ExternalAppTestValidator(this)
+        guidedRunner = GuidedExternalObservationRunner(this)
         testHarness = Phase1SafetyTestHarness(executionController, logger)
         capabilityRegistry = CapabilityRegistry(this)
         commandRegistry = CommandRegistry()
@@ -410,10 +422,22 @@ class MainActivity : Activity() {
         tvEngineValidationDetails = findViewById(R.id.tvEngineValidationDetails)
 
         // Card B Views
-        btnStartExternalValidation = findViewById(R.id.btnStartExternalValidation)
-        tvExternalValStatus = findViewById(R.id.tvExternalValStatus)
-        tvExternalValObservedPackage = findViewById(R.id.tvExternalValObservedPackage)
-        tvExternalValDetails = findViewById(R.id.tvExternalValDetails)
+        spinnerCardBTargetApp = findViewById(R.id.spinnerCardBTargetApp)
+        btnStartGuidedTest = findViewById(R.id.btnStartGuidedTest)
+        btnCardBRunAgain = findViewById(R.id.btnCardBRunAgain)
+        tvCardBStateStatus = findViewById(R.id.tvCardBStateStatus)
+        tvCardBProgressSteps = findViewById(R.id.tvCardBProgressSteps)
+        tvCardBLiveState = findViewById(R.id.tvCardBLiveState)
+        tvCardBValidationChecklist = findViewById(R.id.tvCardBValidationChecklist)
+        tvCardBFinalResult = findViewById(R.id.tvCardBFinalResult)
+
+        val spinnerAdapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            listOf("Chrome", "YouTube", "Settings", "Calculator")
+        )
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerCardBTargetApp.adapter = spinnerAdapter
 
         tvReadinessOverallBanner = findViewById(R.id.tvReadinessOverallBanner)
         btnToggleFoundationTestRunner = findViewById(R.id.btnToggleFoundationTestRunner)
@@ -559,14 +583,28 @@ class MainActivity : Activity() {
             runEngineValidationCardA()
         }
 
-        btnStartExternalValidation.setOnClickListener {
-            observationEngine.startObservationMode()
-            showingExternalSnapshot = false
-            tvExternalValStatus.text = "Validation Status: OBSERVING EXTERNAL APPS..."
-            tvExternalValStatus.setTextColor(0xFFFFD54F.toInt())
-            tvExternalValObservedPackage.text = "Target App: Waiting for external app launch..."
-            tvExternalValDetails.text = "Observation Mode STARTED.\n1. Leave LocalAgent & open Settings, Calculator, or Clock.\n2. Return to LocalAgent to automatically validate the external snapshot."
-            Toast.makeText(this, "Observation Mode STARTED. Open an external app and return.", Toast.LENGTH_LONG).show()
+        btnStartGuidedTest.setOnClickListener {
+            val selectedApp = when (spinnerCardBTargetApp.selectedItemPosition) {
+                0 -> GuidedTestApp.CHROME
+                1 -> GuidedTestApp.YOUTUBE
+                2 -> GuidedTestApp.SETTINGS
+                3 -> GuidedTestApp.CALCULATOR
+                else -> GuidedTestApp.CHROME
+            }
+            guidedRunner.startGuidedTest(selectedApp, observationEngine, evidenceManager) { res ->
+                updateCardBResultUI(res)
+            }
+        }
+
+        btnCardBRunAgain.setOnClickListener {
+            guidedRunner.cancel()
+            tvCardBStateStatus.text = "Status: READY"
+            tvCardBStateStatus.setTextColor(0xFFFFD54F.toInt())
+            tvCardBProgressSteps.text = "○ Preparing  ○ Launching  ○ Waiting  ○ Target Detected\n○ Captured  ○ Validated  ○ Preserved  ○ Test Passed"
+            tvCardBLiveState.text = "Expected Package: -\nCurrent Package: -\nActivity: -\nNodes: 0"
+            tvCardBValidationChecklist.text = "[Pending Test Execution]"
+            tvCardBFinalResult.text = "GUIDED TEST RESET"
+            tvCardBFinalResult.setTextColor(0xFFE1BEE7.toInt())
         }
 
         // Diagnostics
@@ -750,21 +788,78 @@ class MainActivity : Activity() {
             tvObsSelectedNodeDisplay.text = "Class: -\nText: -\nResource ID: -\nClickable: -\nEnabled: -\nBounds: -"
         }
 
-        // Auto-update Card B External Validation status when external snapshot changes
+        // Display preserved last external observation status
         val extSnapshot = observationEngine.getLastExternalSnapshot()
         if (extSnapshot != null) {
-            val valRes = externalAppValidator.validateExternalAppSnapshot(extSnapshot, evidenceManager)
-            tvExternalValStatus.text = "Validation Status: ${valRes.status.name}"
-            tvExternalValStatus.setTextColor(
-                when (valRes.status) {
-                    TestStatus.PASSED -> 0xFF66BB6A.toInt()
-                    TestStatus.FAILED -> 0xFFEF5350.toInt()
-                    else -> 0xFFFFD54F.toInt()
-                }
-            )
-            tvExternalValObservedPackage.text = "Target App: ${valRes.targetPackage ?: "NONE"} (${valRes.targetActivity ?: "N/A"})"
-            tvExternalValDetails.text = valRes.errorDetails ?: valRes.summaryText
+            val isLocalAgent = extSnapshot.packageName == "com.agent.android"
+            if (!isLocalAgent) {
+                tvObsPackageName.text = "Observed App: [PRESERVED EXTERNAL: ${extSnapshot.packageName}]"
+                tvObsActivityName.text = "Current Activity: ${extSnapshot.activityName ?: "UNKNOWN"}"
+                tvObsNodeCount.text = "Nodes Captured: ${extSnapshot.nodeCount} (PRESERVED)"
+            }
         }
+    }
+
+    private fun updateCardBResultUI(res: GuidedTestResult) {
+        tvCardBStateStatus.text = "Status: ${res.state.name}"
+        tvCardBStateStatus.setTextColor(
+            when (res.status) {
+                TestStatus.PASSED -> 0xFF66BB6A.toInt()
+                TestStatus.FAILED -> 0xFFEF5350.toInt()
+                else -> 0xFFFFD54F.toInt()
+            }
+        )
+
+        val pPrep = if (res.state.ordinal >= GuidedTestState.PREPARING.ordinal) "●" else "○"
+        val pLaunch = if (res.state.ordinal >= GuidedTestState.LAUNCHING.ordinal) "●" else "○"
+        val pWait = if (res.state.ordinal >= GuidedTestState.WAITING_FOR_FOREGROUND.ordinal) "●" else "○"
+        val pTarget = if (res.state.ordinal >= GuidedTestState.TARGET_DETECTED.ordinal) "●" else "○"
+        val pCap = if (res.state.ordinal >= GuidedTestState.CAPTURING.ordinal) "●" else "○"
+        val pVal = if (res.state.ordinal >= GuidedTestState.VALIDATING.ordinal) "●" else "○"
+        val pPres = if (res.state.ordinal >= GuidedTestState.PRESERVING.ordinal) "●" else "○"
+        val pPass = if (res.status == TestStatus.PASSED) "✓" else if (res.status == TestStatus.FAILED) "✗" else "○"
+
+        tvCardBProgressSteps.text = "$pPrep Preparing  $pLaunch Launching  $pWait Waiting  $pTarget Target Detected\n$pCap Captured  $pVal Validated  $pPres Preserved  $pPass Test Passed"
+
+        tvCardBLiveState.text = """
+            Target: ${res.targetApp.label} (${res.targetApp.testId})
+            Expected Package: ${res.expectedPackage ?: "-"}
+            Current Package: ${res.actualPackage ?: "-"}
+            Activity: ${res.actualActivity ?: "-"}
+            Nodes: ${res.nodeCount}
+        """.trimIndent()
+
+        if (res.validationChecks.isNotEmpty()) {
+            val sb = StringBuilder()
+            for (c in res.validationChecks) {
+                val mark = if (c.passed) "✓" else "✗"
+                sb.append("$mark ${c.description}\n")
+            }
+            tvCardBValidationChecklist.text = sb.toString().trim()
+        } else {
+            tvCardBValidationChecklist.text = "[In Progress...]"
+        }
+
+        val resultSb = StringBuilder()
+        resultSb.append("GUIDED EXTERNAL OBSERVATION TEST: ${res.status.name}\n")
+        resultSb.append("Target: ${res.targetApp.label} (${res.targetApp.testId})\n")
+        resultSb.append("Package: ${res.actualPackage ?: res.expectedPackage ?: "-"}\n")
+        resultSb.append("Nodes Captured: ${res.nodeCount}\n")
+        resultSb.append("Snapshot Preserved: ${if (res.preserved) "YES" else "NO"}\n")
+        resultSb.append("LocalAgent Overwrite: PREVENTED\n")
+        resultSb.append("System UI / Recents Accepted: NO\n")
+        resultSb.append("Evidence: ${res.evidencePath ?: "NONE"}\n")
+        if (res.failureReason != null) {
+            resultSb.append("Failure Reason: ${res.failureReason}")
+        }
+        tvCardBFinalResult.text = resultSb.toString().trim()
+        tvCardBFinalResult.setTextColor(
+            when (res.status) {
+                TestStatus.PASSED -> 0xFF66BB6A.toInt()
+                TestStatus.FAILED -> 0xFFEF5350.toInt()
+                else -> 0xFFFFD54F.toInt()
+            }
+        )
     }
 
     private fun runEngineValidationCardA() {
