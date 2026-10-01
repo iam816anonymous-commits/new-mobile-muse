@@ -687,6 +687,16 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/tvObsModeStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Observation Mode: READY"
+                        android:textColor="#FFD54F"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
                         android:id="@+id/tvObsPackageName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -722,6 +732,7 @@
                         android:textColor="#B0BEC5"
                         android:textSize="10sp" />
 
+                    <!-- OBSERVATION CONTROL BUTTONS -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -729,20 +740,57 @@
                         android:orientation="horizontal">
 
                         <Button
+                            android:id="@+id/btnObsStartMode"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="2dp"
+                            android:textSize="10sp"
+                            android:text="START OBSERVATION" />
+
+                        <Button
+                            android:id="@+id/btnObsStopMode"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="2dp"
+                            android:textSize="10sp"
+                            android:text="STOP OBSERVATION" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:orientation="horizontal">
+
+                        <Button
                             android:id="@+id/btnObsCaptureScreen"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:layout_marginEnd="4dp"
-                            android:text="CAPTURE CURRENT SCREEN" />
+                            android:layout_marginEnd="2dp"
+                            android:textSize="9sp"
+                            android:text="CAPTURE SCREEN" />
+
+                        <Button
+                            android:id="@+id/btnObsViewExternal"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="2dp"
+                            android:layout_marginEnd="2dp"
+                            android:textSize="9sp"
+                            android:text="VIEW EXTERNAL SNAPSHOT" />
 
                         <Button
                             android:id="@+id/btnObsClear"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:layout_marginStart="4dp"
-                            android:text="CLEAR OBSERVATION" />
+                            android:layout_marginStart="2dp"
+                            android:textSize="9sp"
+                            android:text="CLEAR" />
                     </LinearLayout>
 
                     <TextView

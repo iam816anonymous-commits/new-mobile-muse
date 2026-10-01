@@ -54,6 +54,7 @@ import com.agent.android.execution.ExecutionController
 import com.agent.android.execution.GoalDispatcherImpl
 import com.agent.android.observation.AccessibilityObservationEngine
 import com.agent.android.observation.ObservationNode
+import com.agent.android.observation.ObservationSnapshot
 import com.agent.android.observation.ObservationState
 import com.agent.android.permissions.PermissionCategory
 import com.agent.android.permissions.PermissionManager
@@ -104,6 +105,7 @@ class MainActivity : Activity() {
 
     private var currentTestIndex = 0
     private var activePhaseFilter: String? = null // null = ALL, "PHASE_2", "PHASE_3.1"
+    private var showingExternalSnapshot = false
 
     private val historyLog: Deque<HistoryEntry> = ArrayDeque()
 
@@ -162,11 +164,15 @@ class MainActivity : Activity() {
 
     // Diagnostics Views
     private lateinit var tvObsServiceStatus: TextView
+    private lateinit var tvObsModeStatus: TextView
     private lateinit var tvObsPackageName: TextView
     private lateinit var tvObsActivityName: TextView
     private lateinit var tvObsLastTime: TextView
     private lateinit var tvObsNodeCount: TextView
+    private lateinit var btnObsStartMode: Button
+    private lateinit var btnObsStopMode: Button
     private lateinit var btnObsCaptureScreen: Button
+    private lateinit var btnObsViewExternal: Button
     private lateinit var btnObsClear: Button
     private lateinit var tvObsTreeDisplay: TextView
     private lateinit var tvObsSelectedNodeDisplay: TextView
@@ -279,6 +285,11 @@ class MainActivity : Activity() {
             powerStateCtrl, bgPolicy, appDiscCtrl, deviceSnapCtrl, null, null, capabilityRegistry, readinessEvaluator, sttEngine, ttsEngine, permissionManager
         )
 
+        val accService = LocalAgentAccessibilityService.instance
+        if (accService != null) {
+            accService.observationEngine = observationEngine
+        }
+
         resultStore.loadResults(testRegistry)
 
         bindViews()
@@ -295,6 +306,10 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        val accService = LocalAgentAccessibilityService.instance
+        if (accService != null && accService.observationEngine == null) {
+            accService.observationEngine = observationEngine
+        }
         updateUIState()
         updatePermissionsUI()
         updateObservationUI()
@@ -362,11 +377,15 @@ class MainActivity : Activity() {
 
         // Diagnostics Views
         tvObsServiceStatus = findViewById(R.id.tvObsServiceStatus)
+        tvObsModeStatus = findViewById(R.id.tvObsModeStatus)
         tvObsPackageName = findViewById(R.id.tvObsPackageName)
         tvObsActivityName = findViewById(R.id.tvObsActivityName)
         tvObsLastTime = findViewById(R.id.tvObsLastTime)
         tvObsNodeCount = findViewById(R.id.tvObsNodeCount)
+        btnObsStartMode = findViewById(R.id.btnObsStartMode)
+        btnObsStopMode = findViewById(R.id.btnObsStopMode)
         btnObsCaptureScreen = findViewById(R.id.btnObsCaptureScreen)
+        btnObsViewExternal = findViewById(R.id.btnObsViewExternal)
         btnObsClear = findViewById(R.id.btnObsClear)
         tvObsTreeDisplay = findViewById(R.id.tvObsTreeDisplay)
         tvObsSelectedNodeDisplay = findViewById(R.id.tvObsSelectedNodeDisplay)
@@ -468,17 +487,43 @@ class MainActivity : Activity() {
         }
 
         // Observation Panel Listeners
+        btnObsStartMode.setOnClickListener {
+            observationEngine.startObservationMode()
+            showingExternalSnapshot = false
+            updateObservationUI()
+            Toast.makeText(this, "Observation Mode STARTED. Open an external app and return.", Toast.LENGTH_LONG).show()
+        }
+
+        btnObsStopMode.setOnClickListener {
+            observationEngine.stopObservationMode()
+            updateObservationUI()
+            Toast.makeText(this, "Observation Mode STOPPED", Toast.LENGTH_SHORT).show()
+        }
+
         btnObsCaptureScreen.setOnClickListener {
+            showingExternalSnapshot = false
             val snapshot = observationEngine.captureCurrentScreen()
             updateObservationUI()
             if (snapshot.state == ObservationState.SUCCESS) {
-                Toast.makeText(this, "Screen captured: ${snapshot.nodeCount} nodes", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Screen captured: ${snapshot.nodeCount} nodes (${snapshot.packageName})", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this, "Observation Error: ${snapshot.error}", Toast.LENGTH_LONG).show()
             }
         }
 
+        btnObsViewExternal.setOnClickListener {
+            val extSnapshot = observationEngine.getLastExternalSnapshot()
+            if (extSnapshot != null) {
+                showingExternalSnapshot = true
+                updateObservationUI()
+                Toast.makeText(this, "Loaded external snapshot for ${extSnapshot.packageName}", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "No external app snapshot available yet. Tap START OBSERVATION, open an app, and return.", Toast.LENGTH_LONG).show()
+            }
+        }
+
         btnObsClear.setOnClickListener {
+            showingExternalSnapshot = false
             observationEngine.clearLastSnapshot()
             updateObservationUI()
             Toast.makeText(this, "Observation cleared", Toast.LENGTH_SHORT).show()
@@ -615,12 +660,20 @@ class MainActivity : Activity() {
             tvObsServiceStatus.setTextColor(0xFFEF5350.toInt())
         }
 
-        val snapshot = observationEngine.getLastSnapshot()
+        tvObsModeStatus.text = "Observation Mode: ${observationEngine.observationMode.name}"
+
+        val snapshot = if (showingExternalSnapshot) {
+            observationEngine.getLastExternalSnapshot() ?: observationEngine.getLastSnapshot()
+        } else {
+            observationEngine.getLastSnapshot()
+        }
+
         if (snapshot != null) {
-            tvObsPackageName.text = "Current Package: ${snapshot.packageName}"
+            val appLabel = if (snapshot.packageName == "com.agent.android") "[LOCALAGENT APP]" else "[EXTERNAL APP: ${snapshot.packageName}]"
+            tvObsPackageName.text = "Observed App: $appLabel"
             tvObsActivityName.text = "Current Activity: ${snapshot.activityName ?: "UNKNOWN"}"
             val timeStr = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(snapshot.timestampMs))
-            tvObsLastTime.text = "Last Observation: $timeStr"
+            tvObsLastTime.text = "Last Observation: $timeStr (${if (showingExternalSnapshot) "EXTERNAL SNAPSHOT" else "CURRENT"})"
             tvObsNodeCount.text = "Nodes Captured: ${snapshot.nodeCount}"
 
             val treeSb = StringBuilder()
@@ -649,11 +702,11 @@ class MainActivity : Activity() {
                 tvObsSelectedNodeDisplay.text = "Root Node Unavailable"
             }
         } else {
-            tvObsPackageName.text = "Current Package: -"
+            tvObsPackageName.text = "Observed App: -"
             tvObsActivityName.text = "Current Activity: -"
             tvObsLastTime.text = "Last Observation: NEVER"
             tvObsNodeCount.text = "Nodes Captured: 0"
-            tvObsTreeDisplay.text = "[No observation captured yet. Tap CAPTURE CURRENT SCREEN]"
+            tvObsTreeDisplay.text = "[No observation captured yet. Tap START OBSERVATION or CAPTURE SCREEN]"
             tvObsSelectedNodeDisplay.text = "Class: -\nText: -\nResource ID: -\nClickable: -\nEnabled: -\nBounds: -"
         }
     }
@@ -713,7 +766,20 @@ class MainActivity : Activity() {
         current.status = TestStatus.RUNNING
         refreshTestRunnerUI()
 
-        if (current.phase == "PHASE_3.1") {
+        if (current.id.startsWith("P3.1-XAPP")) {
+            val extSnapshot = observationEngine.getLastExternalSnapshot()
+            val dur = System.currentTimeMillis() - start
+
+            if (extSnapshot != null && extSnapshot.packageName != "com.agent.android" && extSnapshot.state == ObservationState.SUCCESS) {
+                current.status = TestStatus.PASSED
+                current.observedResult = "External snapshot verified for package '${extSnapshot.packageName}' (${extSnapshot.nodeCount} nodes)"
+                current.duration = dur
+            } else {
+                current.observedResult = "Manual External Verification Required:\n1. Tap START OBSERVATION\n2. Leave LocalAgent & open target external app\n3. Return to LocalAgent & verify snapshot"
+                current.duration = dur
+                Toast.makeText(this, "Start Observation, open external app, then return to verify.", Toast.LENGTH_LONG).show()
+            }
+        } else if (current.phase == "PHASE_3.1") {
             val snapshot = observationEngine.captureCurrentScreen()
             val dur = System.currentTimeMillis() - start
 

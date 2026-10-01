@@ -40,7 +40,7 @@ class EvidenceManager(private val context: Context) {
 
     private fun getTestDirectory(testId: String): File {
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        val phaseSubdir = if (testId.startsWith("P3.1")) "phase3.1" else if (testId.startsWith("2.5")) "phase2.5" else "phase2"
+        val phaseSubdir = if (testId.startsWith("P3.1-XAPP")) "phase3.1/xapp" else if (testId.startsWith("P3.1")) "phase3.1" else if (testId.startsWith("2.5")) "phase2.5" else "phase2"
         val testDir = File(baseDir, "$phaseSubdir/$today/TEST-$testId")
         if (!testDir.exists()) {
             testDir.mkdirs()

@@ -8,16 +8,47 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.agent.android.service.LocalAgentAccessibilityService
 import java.util.concurrent.atomic.AtomicInteger
 
+enum class ObservationMode {
+    STOPPED,
+    READY,
+    OBSERVING
+}
+
 class AccessibilityObservationEngine {
 
     companion object {
         private const val TAG = "AccessibilityObsEngine"
         const val MAX_NODE_LIMIT = 500
         const val MAX_DEPTH_LIMIT = 30
+        const val DEBOUNCE_INTERVAL_MS = 1000L
     }
 
+    var observationMode: ObservationMode = ObservationMode.READY
+        private set
+
+    @Volatile
     private var lastObservationSnapshot: ObservationSnapshot? = null
+
+    @Volatile
+    private var lastExternalSnapshot: ObservationSnapshot? = null
+
+    @Volatile
     private var lastErrorText: String? = null
+
+    @Volatile
+    private var lastCaptureTimeMs: Long = 0L
+
+    fun startObservationMode() {
+        observationMode = ObservationMode.OBSERVING
+    }
+
+    fun stopObservationMode() {
+        observationMode = ObservationMode.STOPPED
+    }
+
+    fun resetToReadyMode() {
+        observationMode = ObservationMode.READY
+    }
 
     fun getServiceInstance(): LocalAgentAccessibilityService? {
         return LocalAgentAccessibilityService.instance
@@ -25,6 +56,23 @@ class AccessibilityObservationEngine {
 
     fun isServiceConnected(): Boolean {
         return getServiceInstance() != null
+    }
+
+    fun handleAccessibilityEvent(packageName: String?, eventType: Int) {
+        if (observationMode != ObservationMode.OBSERVING) return
+
+        val now = System.currentTimeMillis()
+        if (now - lastCaptureTimeMs < DEBOUNCE_INTERVAL_MS) {
+            return
+        }
+
+        lastCaptureTimeMs = now
+        val snapshot = captureCurrentScreen()
+
+        if (snapshot.state == ObservationState.SUCCESS && snapshot.packageName != "com.agent.android" && snapshot.packageName != "UNKNOWN") {
+            lastExternalSnapshot = snapshot
+            Log.i(TAG, "Captured external app observation: ${snapshot.packageName} (${snapshot.nodeCount} nodes)")
+        }
     }
 
     fun getObservationMetadata(): ObservationMetadata {
@@ -163,6 +211,9 @@ class AccessibilityObservationEngine {
         )
 
         lastObservationSnapshot = snapshot
+        if (pkgName != "com.agent.android" && pkgName != "UNKNOWN") {
+            lastExternalSnapshot = snapshot
+        }
         lastErrorText = null
         return snapshot
     }
@@ -251,8 +302,11 @@ class AccessibilityObservationEngine {
     }
 
     fun getLastSnapshot(): ObservationSnapshot? = lastObservationSnapshot
+    fun getLastExternalSnapshot(): ObservationSnapshot? = lastExternalSnapshot
+
     fun clearLastSnapshot() {
         lastObservationSnapshot = null
+        lastExternalSnapshot = null
         lastErrorText = null
     }
 }

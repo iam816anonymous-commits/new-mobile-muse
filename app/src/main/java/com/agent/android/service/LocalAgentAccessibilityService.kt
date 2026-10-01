@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import com.agent.android.execution.ExecutionController
+import com.agent.android.observation.AccessibilityObservationEngine
 import com.agent.android.safety.CancellationReason
 
 /**
@@ -35,6 +36,7 @@ class LocalAgentAccessibilityService : AccessibilityService() {
     private var lastVolumeUpTimeMs: Long = 0L
 
     var executionController: ExecutionController? = null
+    var observationEngine: AccessibilityObservationEngine? = null
 
     @Volatile
     var lastEventTimeMs: Long? = null
@@ -58,11 +60,18 @@ class LocalAgentAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // OBSERVATION ONLY.
-        // Record lightweight event diagnostic metadata without triggering any action or autonomous loops!
+        // Record lightweight event diagnostic metadata and pass debounced event to ObservationEngine!
         if (event != null) {
+            val pkg = event.packageName?.toString()
             lastEventTimeMs = System.currentTimeMillis()
-            lastEventPackageName = event.packageName?.toString()
+            lastEventPackageName = pkg
             lastEventType = AccessibilityEvent.eventTypeToString(event.eventType)
+
+            try {
+                observationEngine?.handleAccessibilityEvent(pkg, event.eventType)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in handleAccessibilityEvent: ${e.message}")
+            }
         }
     }
 

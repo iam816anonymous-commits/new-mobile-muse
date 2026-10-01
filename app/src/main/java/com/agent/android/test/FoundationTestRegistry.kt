@@ -193,6 +193,16 @@ class FoundationTestRegistry {
         add(TestCase("P3.1-OBS-023", "observation.package_name", "PHASE_3.1", "OBSERVATION", "Capture Package Name", "Captures target application package name.", null, "Package name captured", TestType.AUTOMATED))
         add(TestCase("P3.1-OBS-024", "observation.metadata", "PHASE_3.1", "OBSERVATION", "Capture Activity/Window Metadata", "Captures activity class name or window metadata.", null, "Activity metadata captured", TestType.AUTOMATED))
         add(TestCase("P3.1-OBS-025", "observation.readonly_safety", "PHASE_3.1", "OBSERVATION", "Observation Read-Only Safety", "Verifies ObservationEngine performs zero UI actions or gestures.", null, "Zero actions dispatched during observation", TestType.SAFETY))
+
+        // PHASE 3.1: CROSS-APPLICATION VALIDATION TESTS (8)
+        add(TestCase("P3.1-XAPP-001", "observation.xapp.settings", "PHASE_3.1", "CROSS_APP", "Android Settings Observation", "Observe UI hierarchy of external Android Settings app.", null, "External Settings package captured with valid nodes", TestType.PHYSICAL, requiresPhysicalVerification = true))
+        add(TestCase("P3.1-XAPP-002", "observation.xapp.settings_sub", "PHASE_3.1", "CROSS_APP", "Settings Subscreen Change", "Verify snapshot updates when navigating into Settings subscreen.", null, "Settings subscreen hierarchy updated without stale snapshot", TestType.PHYSICAL, requiresPhysicalVerification = true))
+        add(TestCase("P3.1-XAPP-003", "observation.xapp.calculator", "PHASE_3.1", "CROSS_APP", "Calculator Observation", "Observe external Calculator app if installed.", null, "Calculator UI hierarchy captured or SKIPPED", TestType.PHYSICAL, requiresPhysicalVerification = true))
+        add(TestCase("P3.1-XAPP-004", "observation.xapp.clock", "PHASE_3.1", "CROSS_APP", "Clock Observation", "Observe external Clock app if installed.", null, "Clock UI hierarchy captured or SKIPPED", TestType.PHYSICAL, requiresPhysicalVerification = true))
+        add(TestCase("P3.1-XAPP-005", "observation.xapp.browser", "PHASE_3.1", "CROSS_APP", "Browser Observation", "Observe external Chrome/Browser app if installed.", null, "Browser UI hierarchy captured or SKIPPED", TestType.PHYSICAL, requiresPhysicalVerification = true))
+        add(TestCase("P3.1-XAPP-006", "observation.xapp.return", "PHASE_3.1", "CROSS_APP", "Return To LocalAgent", "Return to LocalAgent and verify foreground package updates.", null, "LocalAgent detected as foreground again without mislabeling external snapshot", TestType.PHYSICAL, requiresPhysicalVerification = true))
+        add(TestCase("P3.1-XAPP-007", "observation.xapp.rapid_switch", "PHASE_3.1", "CROSS_APP", "Rapid Application Switching", "Verify stability during rapid controlled app switching.", null, "No ANRs, crashes, or memory leaks during rapid switching", TestType.PHYSICAL, requiresPhysicalVerification = true))
+        add(TestCase("P3.1-XAPP-008", "observation.xapp.stable", "PHASE_3.1", "CROSS_APP", "Stable Observation", "Leave external app open for several seconds and verify snapshot stability.", null, "Snapshot remains valid and debounced without event storms", TestType.PHYSICAL, requiresPhysicalVerification = true))
     }
 
     private fun add(testCase: TestCase) {
