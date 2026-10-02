@@ -260,7 +260,7 @@ class FoundationTestRegistry {
         add(TestCase("P3.2-COMP-004", "plan.model", "PHASE_3.2", "COMPOSITE_EXECUTION", "Plan JSON Serialization Integrity", "Verifies ExecutionPlan JSON serialization and deserialization.", null, "ExecutionPlan serialized and deserialized cleanly", TestType.AUTOMATED))
         add(TestCase("P3.2-COMP-005", "plan.model", "PHASE_3.2", "COMPOSITE_EXECUTION", "CommandRegistry Atomic Independence", "Verifies atomic command definitions remain independent without combination command duplication.", null, "Atomic command definitions verified", TestType.AUTOMATED))
 
-        // PHASE 3.2 TARGET RESOLUTION TESTS (10)
+        // PHASE 3.2 TARGET RESOLUTION TESTS (11)
         add(TestCase("P3.2-TGT-001", "target.resolve", "PHASE_3.2", "TARGET_RESOLUTION", "Exact Resource ID Target Resolution", "Resolves target node using exact resource ID selector.", "target resolve send_button", "Target resolved with RESOURCE_ID_EXACT match", TestType.AUTOMATED))
         add(TestCase("P3.2-TGT-002", "target.resolve", "PHASE_3.2", "TARGET_RESOLUTION", "Exact Text Target Resolution", "Resolves target node using exact visible text.", "target resolve Send", "Target resolved with TEXT_EXACT match", TestType.AUTOMATED))
         add(TestCase("P3.2-TGT-003", "target.resolve", "PHASE_3.2", "TARGET_RESOLUTION", "Normalized Text Target Resolution", "Resolves target node using case and whitespace normalized text.", "target resolve  send  ", "Target resolved with TEXT_NORMALIZED match", TestType.AUTOMATED))
@@ -271,6 +271,7 @@ class FoundationTestRegistry {
         add(TestCase("P3.2-TGT-008", "target.resolve", "PHASE_3.2", "TARGET_RESOLUTION", "Actionability Classification", "Classifies actionable, editable, scrollable, and checkable target node properties.", "target resolve Search", "Target actionability classified accurately", TestType.AUTOMATED))
         add(TestCase("P3.2-TGT-009", "target.inspect", "PHASE_3.2", "TARGET_RESOLUTION", "Target Node Metadata Inspection", "Inspects metadata, bounds, and properties for resolved node ID.", "target inspect node-1", "Node metadata inspected successfully", TestType.AUTOMATED))
         add(TestCase("P3.2-TGT-010", "target.candidates", "PHASE_3.2", "TARGET_RESOLUTION", "Target Candidate Ranking Analysis", "Lists ranked candidate nodes with match scores and reasons.", "target candidates Search", "Ranked candidate analysis generated", TestType.AUTOMATED))
+        add(TestCase("P3.2-TGT-011", "target.find", "PHASE_3.2", "TARGET_RESOLUTION", "Target Candidate Search", "Finds candidate nodes matching target query.", "target find Search", "Target candidates found", TestType.AUTOMATED))
 
         // PHASE 3.1 NEGATIVE TEST SUITE (10)
         add(TestCase("P3.1-NEG-001", "observation.neg.wrong_package", "PHASE_3.1", "NEGATIVE", "Wrong Package Detected", "Rejects snapshot when detected package does not match target package.", null, "Target package mismatch rejected", TestType.NEGATIVE))
