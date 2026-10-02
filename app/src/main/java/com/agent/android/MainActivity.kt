@@ -308,7 +308,8 @@ class MainActivity : Activity() {
         goalDispatcher = GoalDispatcherImpl(
             executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers, appLauncher, sysCtrl, commandRegistry,
             clipboardCtrl, notifCtrl, usageStatsCtrl, displayCtrl, screenCapCtrl, inputStateCtrl, cameraCtrl, fileAccessCtrl, locationCtrl, networkCtrl,
-            powerStateCtrl, bgPolicy, appDiscCtrl, deviceSnapCtrl, null, null, capabilityRegistry, readinessEvaluator, sttEngine, ttsEngine, permissionManager
+            powerStateCtrl, bgPolicy, appDiscCtrl, deviceSnapCtrl, null, null, capabilityRegistry, readinessEvaluator, sttEngine, ttsEngine, permissionManager,
+            observationEngine
         )
 
         val accService = LocalAgentAccessibilityService.instance
@@ -1295,11 +1296,12 @@ class MainActivity : Activity() {
         sb.append("TORCH: ${if (report.cameraTorchAvailable) "AVAILABLE" else "UNAVAILABLE"}\n")
         sb.append("VIBRATOR: ${if (report.vibratorAvailable) "AVAILABLE" else "UNAVAILABLE"}\n")
         sb.append("MUSIC VOL MAX: ${report.musicVolumeMax} (CURRENT: ${report.musicVolumeCurrent})\n\n")
-        sb.append("SENSORS:\n")
+        sb.append("SENSORS (Total Discovered: ${report.totalSensorsDiscovered}, Usable: ${report.usableSensorsCount}):\n")
         for (s in report.sensors) {
-            sb.append("- ${s.name}: ${if (s.isAvailable) "AVAILABLE" else "NOT PRESENT"}\n")
+            val mark = if (s.isAvailable) "[✓]" else "[!]"
+            sb.append("$mark ${s.name} [Type: ${s.type}, Vendor: ${s.vendor}, MaxRange: ${s.maxRange}]\n")
         }
-        tvFullDiagnosticsDisplay.text = sb.toString()
+        tvFullDiagnosticsDisplay.text = sb.toString().trim()
     }
 
     private fun checkAndRequestRuntimePermissions() {

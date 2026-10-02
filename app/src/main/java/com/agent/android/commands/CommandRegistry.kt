@@ -101,6 +101,11 @@ class CommandRegistry {
 
         // 16. SENSORS
         register(CommandDefinition("sensor.list", "List Hardware Sensors", CommandCategory.OBSERVATION, "Enumerates hardware sensors on device via SensorManager", CommandStatus.IMPLEMENTED, "sensor list", listOf("sensor list"), handlerIdentifier = "HardwareObservationControllers"))
+        register(CommandDefinition("sensor.status", "Sensor Status", CommandCategory.OBSERVATION, "Queries overall hardware sensor discovery status", CommandStatus.IMPLEMENTED, "sensor status", listOf("sensor status"), handlerIdentifier = "HardwareObservationControllers"))
+        register(CommandDefinition("sensor.info", "Sensor Metadata Info", CommandCategory.OBSERVATION, "Queries metadata for a specific sensor type", CommandStatus.IMPLEMENTED, "sensor info <sensor_type>", listOf("sensor info accelerometer", "sensor info proximity"), listOf("sensorType"), handlerIdentifier = "HardwareObservationControllers"))
+        register(CommandDefinition("sensor.test", "Sensor Validation Test", CommandCategory.OBSERVATION, "Tests registration and event receipt for a sensor", CommandStatus.IMPLEMENTED, "sensor test <sensor_type>", listOf("sensor test accelerometer"), listOf("sensorType"), handlerIdentifier = "HardwareObservationControllers"))
+        register(CommandDefinition("sensor.sample", "Sensor Sample Reading", CommandCategory.OBSERVATION, "Samples values from specified sensor type", CommandStatus.IMPLEMENTED, "sensor sample <sensor_type>", listOf("sensor sample accelerometer"), listOf("sensorType"), handlerIdentifier = "HardwareObservationControllers"))
+        register(CommandDefinition("sensor.discovery", "Discover All Sensors", CommandCategory.OBSERVATION, "Dynamically discovers and enumerates all SensorManager.TYPE_ALL sensors", CommandStatus.IMPLEMENTED, "sensor discovery", listOf("sensor discovery"), handlerIdentifier = "HardwareObservationControllers"))
         register(CommandDefinition("sensor.accelerometer.sample", "Accelerometer Reading", CommandCategory.OBSERVATION, "Samples 3-axis accelerometer values", CommandStatus.IMPLEMENTED, "sensor accelerometer", listOf("sensor accelerometer"), requirement = CommandRequirement(requiredCapabilities = listOf("ACCELEROMETER")), handlerIdentifier = "HardwareObservationControllers"))
         register(CommandDefinition("sensor.gyroscope.sample", "Gyroscope Reading", CommandCategory.OBSERVATION, "Samples 3-axis gyroscope values", CommandStatus.IMPLEMENTED, "sensor gyroscope", listOf("sensor gyroscope"), requirement = CommandRequirement(requiredCapabilities = listOf("GYROSCOPE")), handlerIdentifier = "HardwareObservationControllers"))
         register(CommandDefinition("sensor.proximity.sample", "Proximity Reading", CommandCategory.OBSERVATION, "Samples proximity sensor distance (cm)", CommandStatus.IMPLEMENTED, "sensor proximity", listOf("sensor proximity"), requirement = CommandRequirement(requiredCapabilities = listOf("PROXIMITY"), physicalObservationRequired = true), handlerIdentifier = "HardwareObservationControllers"))
@@ -128,6 +133,12 @@ class CommandRegistry {
         register(CommandDefinition("accessibility.status", "Accessibility Status", CommandCategory.DIAGNOSTICS, "Queries accessibility service connection status", CommandStatus.IMPLEMENTED, "accessibility status", listOf("accessibility status"), handlerIdentifier = "LocalAgentAccessibilityService"))
         register(CommandDefinition("diagnostics.status", "Diagnostics Report", CommandCategory.DIAGNOSTICS, "Runs device diagnostics and sensor inspection", CommandStatus.IMPLEMENTED, "diagnostics status", listOf("diagnostics status", "device info"), handlerIdentifier = "SystemControlControllers"))
         register(CommandDefinition("diagnostics.readiness", "Readiness Evaluation", CommandCategory.DIAGNOSTICS, "Evaluates deterministic foundation readiness", CommandStatus.IMPLEMENTED, "readiness status", listOf("readiness status"), handlerIdentifier = "FoundationReadinessEvaluator"))
+
+        // 20. PHASE 3.2 TARGET RESOLUTION
+        register(CommandDefinition("target.resolve", "Target Resolve", CommandCategory.OBSERVATION, "Resolves target UI node from active ObservationSnapshot", CommandStatus.IMPLEMENTED, "target resolve <query>", listOf("target resolve Search", "target resolve Send"), listOf("query"), handlerIdentifier = "TargetResolver"))
+        register(CommandDefinition("target.find", "Target Find", CommandCategory.OBSERVATION, "Finds target candidate nodes matching query", CommandStatus.IMPLEMENTED, "target find <query>", listOf("target find Search"), listOf("query"), handlerIdentifier = "TargetResolver"))
+        register(CommandDefinition("target.inspect", "Target Inspect Node", CommandCategory.OBSERVATION, "Inspects node metadata and actionability properties", CommandStatus.IMPLEMENTED, "target inspect <node_id>", listOf("target inspect node-1"), listOf("nodeId"), handlerIdentifier = "TargetResolver"))
+        register(CommandDefinition("target.candidates", "Target Candidate List", CommandCategory.OBSERVATION, "Lists all ranked candidate nodes for query", CommandStatus.IMPLEMENTED, "target candidates <query>", listOf("target candidates Search"), listOf("query"), handlerIdentifier = "TargetResolver"))
     }
 
     fun register(command: CommandDefinition) {
@@ -237,6 +248,17 @@ class CommandRegistry {
             }
             "flashlight.target" -> {
                 if (parts.size >= 2) params["target"] = parts[1]
+            }
+            "sensor.test", "sensor.sample", "sensor.info" -> {
+                if (parts.size >= 2) params["sensorType"] = parts[1]
+            }
+            "target.resolve", "target.find", "target.candidates" -> {
+                if (trimmed.length > parts[0].length) {
+                    params["query"] = trimmed.substring(parts[0].length).trim()
+                }
+            }
+            "target.inspect" -> {
+                if (parts.size >= 3) params["nodeId"] = parts[2]
             }
             else -> {
                 if (definition.commandId.startsWith("volume.") && definition.commandId.endsWith(".set")) {
