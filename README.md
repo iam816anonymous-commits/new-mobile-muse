@@ -228,7 +228,7 @@ Managed centrally via `PermissionRegistry` and `PermissionManager`:
 
 ### Gradle Build Commands
 ```bash
-# 1. Run unit test suite (98 unit tests)
+# 1. Run unit test suite (164 unit tests)
 ./gradlew testDebugUnitTest
 
 # 2. Run Android Lint checks
@@ -244,7 +244,36 @@ Managed centrally via `PermissionRegistry` and `PermissionManager`:
 
 ---
 
-## 15. CI/CD Pipeline
+## 15. GitHub Release & In-Place APK Update Workflow
+
+To support rapid testing directly on physical hardware without USB debugging or ADB, new builds are published to GitHub and installed directly on the device as in-place updates over the existing `LocalAgent` installation.
+
+### Iterative Testing Loop
+
+```text
+CODE CHANGE ──► GITHUB REPO ──► GITHUB RELEASE/CI ──► DOWNLOAD APK ON PHONE ──► INSTALL OVER EXISTING ──► TEST
+```
+
+### Versioning Strategy
+
+`LocalAgent` uses monotonically increasing `versionCode` values and phase-aligned `versionName` tags in `app/build.gradle.kts`:
+- **`0.1` (versionCode 1):** Phase 2 Headless Core & Device Control Complete.
+- **`0.2` (versionCode 2):** Phase 3.1 Observation Foundation & Phase 3.2 Target Resolution.
+- **`0.3` (versionCode 3):** Phase 3.2 Action Execution Foundation.
+
+### In-Place Application Update Principles
+
+When updating `LocalAgent` by opening the downloaded APK directly on the phone:
+1. **Package Identity:** The `applicationId` remains strictly `com.agent.android`.
+2. **Signing Identity:** Builds retain matching keystore signatures.
+3. **In-Place Preservation:** Android Package Installer updates the app in-place without uninstalling:
+   - **Preserved Data:** SQLite databases, `SharedPreferences`, test history, observation settings, evidence files (`filesDir/evidence/`).
+   - **Preserved Accesses (Android 8.1+):** Runtime permissions (`CAMERA`, `RECORD_AUDIO`, `STORAGE`, `LOCATION`) and special access grants (`Accessibility Service`, `Notification Listener`, `Usage Access`, `Notification Policy`, `Write System Settings`) remain active across updates.
+4. **No Uninstall Required:** Do **NOT** uninstall `LocalAgent` before installing a new GitHub APK update. Uninstalling wipes all app data and revokes granted special access.
+
+---
+
+## 16. CI/CD Pipeline
 
 The project uses GitHub Actions (`.github/workflows/ci.yml`):
 1. **Triggers:** Push / PR to main/master branches.
