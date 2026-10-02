@@ -164,8 +164,8 @@ enum class ObservationState {
 }
 
 data class ObservationSnapshot(
-    val snapshotId: String = "snap-${timestampMs}",
     val timestampMs: Long,
+    val snapshotId: String = "snap-${timestampMs}",
     val packageName: String,
     val activityName: String?,
     val windowType: String?,
@@ -240,8 +240,8 @@ data class ObservationSnapshot(
             val snapId = json.optString("snapshotId", "snap-${json.optLong("timestampMs", 0L)}")
 
             return ObservationSnapshot(
-                snapshotId = snapId,
                 timestampMs = json.optLong("timestampMs", 0L),
+                snapshotId = snapId,
                 packageName = pkg,
                 activityName = act,
                 windowType = if (json.isNull("windowType")) null else json.optString("windowType"),
