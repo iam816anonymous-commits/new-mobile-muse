@@ -156,9 +156,12 @@ class FoundationTestRegistry {
         add(TestCase("2.5.BG.001", "background.policy", "PHASE_2.5", "DIAGNOSTICS", "Background Execution Policy Query", "Queries background execution policy.", "background policy", "Background execution policy reported", TestType.AUTOMATED))
         add(TestCase("2.5.SNAP.001", "device.snapshot", "PHASE_2.5", "DIAGNOSTICS", "Device Unified Snapshot Query", "Aggregates unified device state snapshot.", "device snapshot", "Device snapshot aggregated", TestType.AUTOMATED))
 
-        // SENSORS (9)
+        // SENSORS (12)
         add(TestCase("2.3.46_DISCOVERY", "sensor.discovery", "PHASE_2", "SENSORS", "SENSOR_DISCOVERY_ALL", "Dynamically discovers and enumerates all sensors exposed via SensorManager.TYPE_ALL.", "sensor discovery", "All exposed sensors discovered with metadata", TestType.AUTOMATED))
         add(TestCase("2.3.46_REGISTER", "sensor.test", "PHASE_2", "SENSORS", "SENSOR_REGISTER_ALL_SUPPORTED", "Tests single-sensor sequential registration and event receipt.", "sensor test accelerometer", "Sequential sensor registration and sample verified", TestType.AUTOMATED))
+        add(TestCase("2.3.46_STATUS", "sensor.status", "PHASE_2", "SENSORS", "Sensor Status Query", "Queries overall sensor discovery status.", "sensor status", "Discovered total sensors reported", TestType.AUTOMATED))
+        add(TestCase("2.3.46_INFO", "sensor.info", "PHASE_2", "SENSORS", "Sensor Info Query", "Queries metadata info for accelerometer sensor.", "sensor info accelerometer", "Sensor metadata reported", TestType.AUTOMATED))
+        add(TestCase("2.3.46_SAMPLE", "sensor.sample", "PHASE_2", "SENSORS", "Sensor Sample Query", "Samples values from accelerometer sensor.", "sensor sample accelerometer", "Sensor sample values reported", TestType.AUTOMATED))
         add(TestCase("2.3.46", "sensor.list", "PHASE_2", "SENSORS", "Sensor Enumeration", "Enumerates installed hardware sensors via SensorManager.", "sensor list", "Lists installed hardware sensors with metadata", TestType.AUTOMATED))
         add(TestCase("2.3.47", "sensor.accelerometer.sample", "PHASE_2", "SENSORS", "Accelerometer Sample", "Requests 3-axis accelerometer reading.", "sensor accelerometer", "Returns X, Y, Z acceleration data", TestType.SENSOR, requiredCapability = "ACCELEROMETER"))
         add(TestCase("2.3.48", "sensor.gyroscope.sample", "PHASE_2", "SENSORS", "Gyroscope Sample", "Requests 3-axis gyroscope reading.", "sensor gyroscope", "Returns rotation rate or UNAVAILABLE", TestType.SENSOR, requiredCapability = "GYROSCOPE"))

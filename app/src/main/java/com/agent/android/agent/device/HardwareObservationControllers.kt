@@ -342,6 +342,10 @@ class HardwareObservationControllers(private val context: Context?) {
 
     fun sampleSensor(sensorType: Int, sensorName: String, timeoutMs: Long = 1000L): SkillResult {
         val start = System.currentTimeMillis()
+        if (context == null) {
+            return SkillResult("SENSOR", SkillStatus.UNAVAILABLE, "Context unavailable", System.currentTimeMillis() - start, "NO_CONTEXT")
+        }
+
         val validated = validateSingleSensor(sensorType, timeoutMs)
 
         return when (validated.classification) {
@@ -363,21 +367,44 @@ class HardwareObservationControllers(private val context: Context?) {
     }
 
     fun runDeviceDiagnostics(): FullDeviceReport {
+        val sensorManager = context?.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        val coreSensorTypes = listOf(
+            Sensor.TYPE_ACCELEROMETER to "Accelerometer",
+            Sensor.TYPE_GYROSCOPE to "Gyroscope",
+            Sensor.TYPE_PROXIMITY to "Proximity",
+            Sensor.TYPE_LIGHT to "Ambient Light",
+            Sensor.TYPE_MAGNETIC_FIELD to "Magnetometer"
+        )
+
+        val sensorInfos = coreSensorTypes.map { (type, defaultName) ->
+            val s = sensorManager?.getDefaultSensor(type)
+            if (s != null) {
+                SensorDiagnosticInfo(
+                    type = type,
+                    name = s.name,
+                    vendor = s.vendor,
+                    version = s.version,
+                    power = s.power,
+                    resolution = s.resolution,
+                    maxRange = s.maximumRange,
+                    isAvailable = true
+                )
+            } else {
+                SensorDiagnosticInfo(
+                    type = type,
+                    name = defaultName,
+                    vendor = "N/A",
+                    version = 0,
+                    power = 0f,
+                    resolution = 0f,
+                    maxRange = 0f,
+                    isAvailable = false
+                )
+            }
+        }
+
         val discovered = discoverAllSensors()
         val usableCount = discovered.count { it.capabilityState == SensorCapabilityState.SENSOR_USABLE }
-
-        val sensorInfos = discovered.map { s ->
-            SensorDiagnosticInfo(
-                type = s.type,
-                name = s.name,
-                vendor = s.vendor,
-                version = s.version,
-                power = s.power,
-                resolution = s.resolution,
-                maxRange = s.maximumRange,
-                isAvailable = true
-            )
-        }
 
         val cameraManager = context?.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager
         val torchAvail = (cameraManager?.cameraIdList?.size ?: 0) > 0

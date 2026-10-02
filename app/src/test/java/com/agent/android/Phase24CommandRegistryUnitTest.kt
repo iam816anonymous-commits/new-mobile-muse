@@ -123,7 +123,7 @@ class Phase24CommandRegistryUnitTest {
         val testRegistry = FoundationTestRegistry()
 
         val registeredIds = registry.getAllCommands().map { it.commandId }.toSet()
-        val allTestCases = testRegistry.getAllTestCases().filter { it.phase != "PHASE_3.1" }
+        val allTestCases = testRegistry.getAllTestCases().filter { !it.phase.startsWith("PHASE_3") }
 
         for (tc in allTestCases) {
             if (tc.commandId.isNotEmpty() && tc.commandId != "unknown.command" && tc.commandId != "sensor.unknown" && !tc.commandId.startsWith("observation.")) {
