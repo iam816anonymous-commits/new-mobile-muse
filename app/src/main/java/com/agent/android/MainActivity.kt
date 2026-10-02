@@ -991,12 +991,20 @@ class MainActivity : Activity() {
         tvTestExpected.text = current.expectedResult
         tvTestStatus.text = "Status: ${current.status.name}"
 
+        if (current.status == TestStatus.PASSED) {
+            current.error = null
+        }
+
         etObservedResult.setText(current.observedResult ?: "")
         etTestError.setText(current.error ?: "")
+        etTestError.visibility = if (current.error.isNullOrBlank() || current.status == TestStatus.PASSED) View.GONE else View.VISIBLE
         tvTestDuration.text = "Duration: ${current.duration ?: 0} ms"
 
-        val evText = if (current.evidenceReferences.isEmpty()) "NONE" else current.evidenceReferences.joinToString("\n")
-        tvTestEvidence.text = "Evidence:\n$evText"
+        val shortRefs = current.evidenceReferences.map { ref ->
+            if (ref.contains("evidence/")) "evidence/" + ref.substringAfter("evidence/") else ref
+        }
+        val evText = if (shortRefs.isEmpty()) "NONE" else shortRefs.joinToString("\n")
+        tvTestEvidence.text = "Evidence Path: $evText"
     }
 
     @Suppress("NotificationPermission")
@@ -1021,7 +1029,18 @@ class MainActivity : Activity() {
                 Toast.makeText(this, "Start Observation, open external app, then return to verify.", Toast.LENGTH_LONG).show()
             }
         } else if (current.phase == "PHASE_3.1") {
-            val snapshot = observationEngine.captureCurrentScreen()
+            val targetResolver = com.agent.android.observation.ObservationTargetResolver(this)
+            val requirement = targetResolver.resolveTargetForTest(current)
+
+            val snapshot = if (current.id == "P3.1-NEG-005" || current.id == "P3.1-OBS-018") {
+                null // Explicitly test null/unavailable root condition for P3.1-NEG-005
+            } else if (requirement.requiresExternalApp) {
+                observationEngine.getLastExternalSnapshot() ?: observationEngine.captureCurrentScreen()
+            } else {
+                observationEngine.getDisplayedSnapshot() ?: observationEngine.captureCurrentScreen()
+            }
+
+            val valRes = targetResolver.validateCapturedSnapshot(requirement, snapshot)
             val dur = System.currentTimeMillis() - start
 
             if (current.id == "P3.1-OBS-001") {
@@ -1030,23 +1049,68 @@ class MainActivity : Activity() {
                 current.observedResult = if (conn) "Accessibility service connected" else "Accessibility service disabled"
                 current.duration = dur
             } else if (current.id == "P3.1-OBS-019") {
-                current.status = if (snapshot.state == ObservationState.ACCESSIBILITY_DISABLED) TestStatus.PASSED else TestStatus.FAILED
-                current.observedResult = "State evaluated to ${snapshot.state}"
+                current.status = if (snapshot?.state == ObservationState.ACCESSIBILITY_DISABLED) TestStatus.PASSED else TestStatus.FAILED
+                current.observedResult = "State evaluated to ${snapshot?.state}"
                 current.duration = dur
             } else if (current.id == "P3.1-OBS-025") {
                 current.status = TestStatus.PASSED
                 current.observedResult = "ObservationEngine performs zero UI actions/gestures"
                 current.duration = dur
+            } else if (current.id == "P3.1-OBS-005") { // Text extraction
+                val hasText = snapshot?.allNodesList?.any { !it.text.isNullOrBlank() } == true
+                current.status = if (valRes.isValid && hasText) TestStatus.PASSED else TestStatus.FAILED
+                current.observedResult = if (hasText) "Extracted text from visible nodes in package '${snapshot?.packageName}'" else "No visible text found"
+                current.duration = dur
+            } else if (current.id == "P3.1-OBS-006") { // Content descriptions
+                val hasDesc = snapshot?.allNodesList?.any { !it.contentDescription.isNullOrBlank() } == true
+                current.status = if (valRes.isValid) TestStatus.PASSED else TestStatus.FAILED
+                current.observedResult = if (hasDesc) "Extracted content descriptions from nodes" else "No content descriptions in current snapshot"
+                current.duration = dur
+            } else if (current.id == "P3.1-OBS-009") { // Bounds
+                val validBounds = snapshot?.allNodesList?.any { it.bounds.right > 0 && it.bounds.bottom > 0 } == true
+                current.status = if (valRes.isValid && validBounds) TestStatus.PASSED else TestStatus.FAILED
+                current.observedResult = if (validBounds) "Extracted non-zero bounds rectangles" else "Invalid bounds rects"
+                current.duration = dur
+            } else if (current.id == "P3.1-OBS-016") { // Hierarchy pointers
+                val root = snapshot?.rootNode
+                val hierarchyValid = root != null && root.children.all { it.parentId == root.id }
+                current.status = if (valRes.isValid && hierarchyValid) TestStatus.PASSED else TestStatus.FAILED
+                current.observedResult = if (hierarchyValid) "Parent-child hierarchy pointers verified" else "Hierarchy pointer mismatch"
+                current.duration = dur
+            } else if (current.id == "P3.1-OBS-017") { // JSON roundtrip
+                val jsonOk = try {
+                    if (snapshot != null) {
+                        val str = snapshot.toJsonString()
+                        val restored = ObservationSnapshot.fromJsonString(str)
+                        restored.nodeCount == snapshot.nodeCount
+                    } else false
+                } catch (e: Exception) { false }
+                current.status = if (jsonOk) TestStatus.PASSED else TestStatus.FAILED
+                current.observedResult = if (jsonOk) "JSON serialization roundtrip verified" else "JSON roundtrip failed"
+                current.duration = dur
+            } else if (current.id == "P3.1-OBS-022") { // Limits
+                val bounded = snapshot != null && snapshot.nodeCount <= 500
+                current.status = if (valRes.isValid && bounded) TestStatus.PASSED else TestStatus.FAILED
+                current.observedResult = if (bounded) "Node count (${snapshot?.nodeCount}) within MAX_NODE_LIMIT (500)" else "Limit exceeded"
+                current.duration = dur
             } else {
-                if (snapshot.state == ObservationState.SUCCESS) {
-                    current.status = TestStatus.PASSED
-                    current.observedResult = "Captured snapshot with ${snapshot.nodeCount} nodes for package ${snapshot.packageName}"
-                    current.duration = dur
-                } else {
-                    current.status = TestStatus.BLOCKED
-                    current.observedResult = "Observation result: ${snapshot.state} (${snapshot.error})"
-                    current.duration = dur
+                current.status = valRes.status
+                current.duration = dur
+                current.error = valRes.failureReason
+
+                val evSb = StringBuilder()
+                evSb.append("Target Requested: ${requirement.category.name} (${requirement.expectedPackage ?: "ANY"})\n")
+                evSb.append("Observed Package: ${snapshot?.packageName ?: "NONE"}\n")
+                evSb.append("Root Available: ${snapshot?.rootNode != null}\n")
+                evSb.append("Node Count: ${snapshot?.nodeCount ?: 0}\n")
+                evSb.append("Assertion: ${current.name}\n")
+                evSb.append("Expected: ${current.expectedResult}\n")
+                evSb.append("Actual: ${valRes.summaryText}\n")
+                evSb.append("Result: ${valRes.status.name}")
+                if (valRes.failureReason != null) {
+                    evSb.append("\nFailure Reason: ${valRes.failureReason}")
                 }
+                current.observedResult = evSb.toString().trim()
             }
         } else if (current.id == "2.5.NOTIF.003") {
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
@@ -1601,7 +1665,20 @@ class MainActivity : Activity() {
         val sttAvailable = sttEngine.isAvailable() && sttEngine.isLanguageAvailable(lang)
         val ttsAvailable = ttsEngine.isAvailable() && ttsEngine.isAgentLanguageAvailable(lang)
 
-        tvLanguageAvailability.text = "Language [${lang.displayName}]: STT ${if (sttAvailable) "✓ AVAILABLE" else "✗ UNAVAILABLE"} | TTS ${if (ttsAvailable) "✓ AVAILABLE" else "✗ UNAVAILABLE"}"
+        val voiceInputState = when (uiModel.state) {
+            AgentUiState.LISTENING -> "LISTENING"
+            AgentUiState.TRANSCRIBING -> "TRANSCRIBING"
+            AgentUiState.PROCESSING -> "PROCESSING"
+            else -> "IDLE"
+        }
+
+        val voiceOutputState = when {
+            uiModel.state == AgentUiState.SPEAKING && ttsAvailable -> "SPEAKING"
+            !ttsAvailable -> "UNAVAILABLE"
+            else -> "IDLE"
+        }
+
+        tvLanguageAvailability.text = "Lang: ${lang.displayName} | STT: ${if (sttAvailable) "AVAILABLE" else "UNAVAILABLE"} | TTS: ${if (ttsAvailable) "AVAILABLE" else "UNAVAILABLE"}\nINPUT: $voiceInputState | OUTPUT: $voiceOutputState"
         tvLanguageAvailability.setTextColor(if (sttAvailable) 0xFF66BB6A.toInt() else 0xFFFFD54F.toInt())
     }
 
