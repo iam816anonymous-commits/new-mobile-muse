@@ -157,12 +157,14 @@ enum class ObservationState {
     NO_ACCESSIBLE_WINDOWS,
     ROOT_NODE_UNAVAILABLE,
     WINDOW_NOT_EXPOSED,
+    SUPPORTED_SURFACE_BUT_NOT_EXPOSED,
     TARGET_NOT_FOUND,
     OBSERVATION_FAILED,
     CANCELLED
 }
 
 data class ObservationSnapshot(
+    val snapshotId: String = "snap-${timestampMs}",
     val timestampMs: Long,
     val packageName: String,
     val activityName: String?,
@@ -180,6 +182,7 @@ data class ObservationSnapshot(
 ) {
     fun toJsonString(): String {
         val obj = JSONObject()
+        obj.put("snapshotId", snapshotId)
         obj.put("timestampMs", timestampMs)
         obj.put("packageName", packageName)
         obj.put("activityName", activityName ?: JSONObject.NULL)
@@ -234,8 +237,10 @@ data class ObservationSnapshot(
             val act = if (json.isNull("activityName")) null else json.optString("activityName")
 
             val testRunId = if (json.isNull("testRunId")) null else json.optString("testRunId")
+            val snapId = json.optString("snapshotId", "snap-${json.optLong("timestampMs", 0L)}")
 
             return ObservationSnapshot(
+                snapshotId = snapId,
                 timestampMs = json.optLong("timestampMs", 0L),
                 packageName = pkg,
                 activityName = act,

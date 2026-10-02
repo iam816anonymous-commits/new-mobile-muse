@@ -57,8 +57,18 @@ The Diagnostics UI contains two distinct validation cards powered by `ExternalAp
   8. `COMPLETED`: Displays final PASSED/FAILED result card.
 - **Snapshot Overwrite Protection**: `AccessibilityObservationEngine.isExcludedExternalPackage()` ensures LocalAgent (`com.agent.android`), System UI (`com.android.systemui`), launchers, and recents never overwrite `lastExternalSnapshot` when returning to LocalAgent or pressing STOP.
 
-## 6. Phase 3 Test Isolation
+## 6. System Surface Tests & Non-Exposed Surface Handling
+Phase 3.1 includes dedicated system surface tests:
+- `P3.1-SYS-LOCAL-001`: LocalAgent Self-Observation.
+- `P3.1-SYS-LAUNCHER-001`: Home / Launcher Observation (returns PASS or `SUPPORTED_SURFACE_BUT_NOT_EXPOSED` if Android/OEM launcher exposes no accessibility tree).
+- `P3.1-SYS-RECENTS-001`: Recents Screen Observation (`RECENTS` classification).
+- `P3.1-SYS-SYSTEMUI-001`: System UI Surface Observation (`SYSTEM_UI` classification).
+
+If an Android surface is foreground but Android exposes no accessibility root node, the Observation Engine returns `SUPPORTED_SURFACE_BUT_NOT_EXPOSED` rather than treating it as an engine failure or fabricating fake nodes.
+
+## 7. Phase 3 Test Isolation
 - **Core Observation Tests**: `P3.1-OBS-001` through `P3.1-OBS-025`
+- **Window Classification & System Surface Tests**: `P3.1-OBS-033` through `P3.1-OBS-039`, `P3.1-SYS-LOCAL-001` through `P3.1-SYS-SYSTEMUI-001`
 - **Cross-App Validation Tests**: `P3.1-XAPP-001` through `P3.1-XAPP-008`
 - **Guided External Observation Tests**: `P3.1-EXT-001` through `P3.1-EXT-004`
 - **Evidence Storage**: `evidence/phase3.1/guided_external_<target>.json`

@@ -745,8 +745,8 @@ class MainActivity : Activity() {
         if (snapshot != null) {
             val isExternal = !observationEngine.isExcludedExternalPackage(snapshot.packageName)
             val appLabel = if (isExternal) "[PRESERVED EXTERNAL: ${snapshot.packageName}]" else "[INTERNAL: ${snapshot.packageName}]"
-            tvObsPackageName.text = "Observed App: $appLabel"
-            tvObsActivityName.text = "Current Activity: ${snapshot.activityName ?: "UNKNOWN"} [Class: ${snapshot.classification.name}]"
+            tvObsPackageName.text = "Observed App: $appLabel (Source: ${snapshot.classification.name})"
+            tvObsActivityName.text = "Activity: ${snapshot.activityName ?: "UNKNOWN"} | State: ${snapshot.state.name}"
             val timeStr = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(snapshot.timestampMs))
             tvObsLastTime.text = "Snapshot Time: $timeStr (${if (isExternal) "PRESERVED EXTERNAL" else "INTERNAL"})"
             tvObsNodeCount.text = "Nodes Captured: ${snapshot.nodeCount}"

@@ -736,4 +736,61 @@ class Phase31CrossAppObservationUnitTest {
 
         assertEquals(null, store.activeTestRunSnapshot) // Untagged capture rejected for test run snapshot!
     }
+
+    @Test
+    fun testSystemSurfaceWindowClassifications() {
+        val localAgent = com.agent.android.observation.WindowClassification.classify("com.agent.android", "com.agent.android.MainActivity")
+        val launcher = com.agent.android.observation.WindowClassification.classify("com.google.android.apps.nexuslauncher", "com.google.android.apps.nexuslauncher.NexusLauncherActivity")
+        val recents = com.agent.android.observation.WindowClassification.classify("com.android.systemui", "com.android.systemui.recents.RecentsActivity")
+        val systemUi = com.agent.android.observation.WindowClassification.classify("com.android.systemui", "com.android.systemui.statusbar.phone.PhoneStatusBar")
+        val settings = com.agent.android.observation.WindowClassification.classify("com.android.settings", "com.android.settings.Settings")
+        val app = com.agent.android.observation.WindowClassification.classify("com.android.chrome", "org.chromium.chrome.browser.ChromeTabbedActivity")
+
+        assertEquals(com.agent.android.observation.WindowClassification.LOCAL_AGENT, localAgent)
+        assertEquals(com.agent.android.observation.WindowClassification.LAUNCHER, launcher)
+        assertEquals(com.agent.android.observation.WindowClassification.RECENTS, recents)
+        assertEquals(com.agent.android.observation.WindowClassification.SYSTEM_UI, systemUi)
+        assertEquals(com.agent.android.observation.WindowClassification.SETTINGS, settings)
+        assertEquals(com.agent.android.observation.WindowClassification.APPLICATION, app)
+    }
+
+    @Test
+    fun testSystemUiSnapshotIsCapturedWithValidClassification() {
+        val sysUiSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.android.systemui",
+            activityName = "PhoneStatusBar",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 15,
+            rootNode = ObservationNode("1", null, "android.widget.FrameLayout", "com.android.systemui", null, null, null, ObservationBounds(0, 0, 1080, 1920), false, false, false, false, true, false, false, false, false, false, true, false, 0),
+            allNodesList = emptyList(),
+            state = ObservationState.SUCCESS,
+            error = null
+        )
+
+        assertEquals(com.agent.android.observation.WindowClassification.SYSTEM_UI, sysUiSnap.classification)
+        assertEquals(ObservationState.SUCCESS, sysUiSnap.state)
+        assertEquals(15, sysUiSnap.nodeCount)
+    }
+
+    @Test
+    fun testSupportedSurfaceNotExposedState() {
+        val launcherNotExposedSnap = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            packageName = "com.google.android.apps.nexuslauncher",
+            activityName = "NexusLauncherActivity",
+            windowType = null,
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 0,
+            rootNode = null,
+            allNodesList = emptyList(),
+            state = ObservationState.SUPPORTED_SURFACE_BUT_NOT_EXPOSED,
+            error = "Launcher visible but Android did not expose an accessible hierarchy."
+        )
+
+        assertEquals(com.agent.android.observation.WindowClassification.LAUNCHER, launcherNotExposedSnap.classification)
+        assertEquals(ObservationState.SUPPORTED_SURFACE_BUT_NOT_EXPOSED, launcherNotExposedSnap.state)
+        assertEquals(0, launcherNotExposedSnap.nodeCount)
+    }
 }

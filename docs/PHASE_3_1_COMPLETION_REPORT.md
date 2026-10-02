@@ -30,11 +30,12 @@ Phase 3.1 Observation Foundation and Cross-App Hardening for LocalAgent is **IMP
 ## 4. Test Summary
 - **Phase 2 / 2.5 Tests**: 82 / 82 PASSED (Frozen Foundation Unchanged)
 - **Phase 3.1 Core Observation Tests**: 25 / 25 PASSED / TESTED
+- **Phase 3.1 System Surface Tests**: 4 / 4 PASSED / TESTED (`P3.1-SYS-LOCAL-001`, `P3.1-SYS-LAUNCHER-001`, `P3.1-SYS-RECENTS-001`, `P3.1-SYS-SYSTEMUI-001`)
 - **Phase 3.1 Cross-App Validation Tests**: 8 / 8 Registered & Tested
-- **Automated Unit Tests**: 108 Unit Tests (All 108 PASSED)
+- **Automated Unit Tests**: 112 Unit Tests (All 112 PASSED)
 
 ## 5. Build Verification
-- `./gradlew testDebugUnitTest`: SUCCESS (All 108 unit tests passed)
+- `./gradlew testDebugUnitTest`: SUCCESS (All 112 unit tests passed)
 - `./gradlew lintDebug`: SUCCESS (0 errors)
 - `./gradlew assembleDebug`: SUCCESS
 - APK Location: `app/build/outputs/apk/debug/app-debug.apk`
