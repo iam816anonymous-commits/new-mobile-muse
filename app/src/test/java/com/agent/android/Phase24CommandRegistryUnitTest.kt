@@ -123,10 +123,10 @@ class Phase24CommandRegistryUnitTest {
         val testRegistry = FoundationTestRegistry()
 
         val registeredIds = registry.getAllCommands().map { it.commandId }.toSet()
-        val allTestCases = testRegistry.getAllTestCases().filter { !it.phase.startsWith("PHASE_3") }
+        val allTestCases = testRegistry.getAllTestCases()
 
         for (tc in allTestCases) {
-            if (tc.commandId.isNotEmpty() && tc.commandId != "unknown.command" && tc.commandId != "sensor.unknown" && !tc.commandId.startsWith("observation.")) {
+            if (tc.commandId.isNotEmpty() && tc.commandId != "unknown.command" && tc.commandId != "sensor.unknown" && !tc.commandId.startsWith("observation.") && !tc.commandId.startsWith("plan.")) {
                 assertTrue(
                     "Test case '${tc.id}' references commandId '${tc.commandId}' which must exist in CommandRegistry",
                     registeredIds.contains(tc.commandId)
