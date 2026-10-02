@@ -134,11 +134,16 @@ class CommandRegistry {
         register(CommandDefinition("diagnostics.status", "Diagnostics Report", CommandCategory.DIAGNOSTICS, "Runs device diagnostics and sensor inspection", CommandStatus.IMPLEMENTED, "diagnostics status", listOf("diagnostics status", "device info"), handlerIdentifier = "SystemControlControllers"))
         register(CommandDefinition("diagnostics.readiness", "Readiness Evaluation", CommandCategory.DIAGNOSTICS, "Evaluates deterministic foundation readiness", CommandStatus.IMPLEMENTED, "readiness status", listOf("readiness status"), handlerIdentifier = "FoundationReadinessEvaluator"))
 
-        // 20. PHASE 3.2 TARGET RESOLUTION
+        // 20. PHASE 3.2 TARGET RESOLUTION & ACTION EXECUTION
         register(CommandDefinition("target.resolve", "Target Resolve", CommandCategory.OBSERVATION, "Resolves target UI node from active ObservationSnapshot", CommandStatus.IMPLEMENTED, "target resolve <query>", listOf("target resolve Search", "target resolve Send"), listOf("query"), handlerIdentifier = "TargetResolver"))
         register(CommandDefinition("target.find", "Target Find", CommandCategory.OBSERVATION, "Finds target candidate nodes matching query", CommandStatus.IMPLEMENTED, "target find <query>", listOf("target find Search"), listOf("query"), handlerIdentifier = "TargetResolver"))
         register(CommandDefinition("target.inspect", "Target Inspect Node", CommandCategory.OBSERVATION, "Inspects node metadata and actionability properties", CommandStatus.IMPLEMENTED, "target inspect <node_id>", listOf("target inspect node-1"), listOf("nodeId"), handlerIdentifier = "TargetResolver"))
         register(CommandDefinition("target.candidates", "Target Candidate List", CommandCategory.OBSERVATION, "Lists all ranked candidate nodes for query", CommandStatus.IMPLEMENTED, "target candidates <query>", listOf("target candidates Search"), listOf("query"), handlerIdentifier = "TargetResolver"))
+        register(CommandDefinition("action.click", "Action Click", CommandCategory.OBSERVATION, "Executes CLICK action on resolved UI target node", CommandStatus.IMPLEMENTED, "action click <query>", listOf("action click Search", "action click Submit"), listOf("query"), CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("action.long_click", "Action Long Click", CommandCategory.OBSERVATION, "Executes LONG_CLICK action on resolved UI target node", CommandStatus.IMPLEMENTED, "action long_click <query>", listOf("action long_click Item"), listOf("query"), CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("action.input", "Action Text Input", CommandCategory.OBSERVATION, "Executes TEXT_INPUT action on resolved editable target node", CommandStatus.IMPLEMENTED, "action input <text>", listOf("action input Hello"), listOf("text"), CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("action.scroll", "Action Scroll", CommandCategory.OBSERVATION, "Executes SCROLL action on resolved scrollable target node", CommandStatus.IMPLEMENTED, "action scroll <direction>", listOf("action scroll forward", "action scroll backward"), listOf("direction"), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("action.back", "Action Global Back", CommandCategory.OBSERVATION, "Executes GLOBAL_BACK navigation action", CommandStatus.IMPLEMENTED, "action back", listOf("action back"), emptyList(), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
     }
 
     fun register(command: CommandDefinition) {
@@ -252,10 +257,18 @@ class CommandRegistry {
             "sensor.test", "sensor.sample", "sensor.info" -> {
                 if (parts.size >= 2) params["sensorType"] = parts[1]
             }
-            "target.resolve", "target.find", "target.candidates" -> {
+            "target.resolve", "target.find", "target.candidates", "action.click", "action.long_click" -> {
                 if (trimmed.length > parts[0].length) {
                     params["query"] = trimmed.substring(parts[0].length).trim()
                 }
+            }
+            "action.input" -> {
+                if (trimmed.length > "action input".length) {
+                    params["text"] = trimmed.substring("action input".length).trim()
+                }
+            }
+            "action.scroll" -> {
+                if (parts.size >= 3) params["direction"] = parts[2]
             }
             "target.inspect" -> {
                 if (parts.size >= 3) params["nodeId"] = parts[2]

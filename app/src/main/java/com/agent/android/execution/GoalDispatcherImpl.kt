@@ -613,6 +613,43 @@ class GoalDispatcherImpl(
                 val skillRes = SkillResult("TARGET_INSPECT", if (matchedNode != null) SkillStatus.SUCCESS else SkillStatus.FAILED, msg, 0L)
                 DispatchDetails(trimmed, "TARGET_INSPECT", cmdDef.handlerIdentifier, skillRes, msg)
             }
+            "action.click", "action.long_click", "action.input", "action.scroll", "action.back" -> {
+                val qStr = parsedArgs.getString("query") ?: parsedArgs.getString("text") ?: parsedArgs.getString("direction") ?: ""
+                val snapshot = observationEngine?.getDisplayedSnapshot() ?: observationEngine?.getLastSnapshot()
+                val actionType = when (cmdDef.commandId) {
+                    "action.click" -> com.agent.android.actions.UiActionType.CLICK
+                    "action.long_click" -> com.agent.android.actions.UiActionType.LONG_CLICK
+                    "action.input" -> com.agent.android.actions.UiActionType.TEXT_INPUT
+                    "action.scroll" -> if (qStr.equals("backward", true)) com.agent.android.actions.UiActionType.SCROLL_BACKWARD else com.agent.android.actions.UiActionType.SCROLL_FORWARD
+                    "action.back" -> com.agent.android.actions.UiActionType.GLOBAL_BACK
+                    else -> com.agent.android.actions.UiActionType.CLICK
+                }
+
+                val resolvedTarget = if (qStr.isNotEmpty() && actionType != com.agent.android.actions.UiActionType.GLOBAL_BACK) {
+                    targetResolver.resolve(snapshot, TargetQuery(text = qStr)).resolvedTarget
+                } else null
+
+                val req = com.agent.android.actions.UiActionRequest(
+                    actionType = actionType,
+                    targetQueryText = qStr,
+                    resolvedTarget = resolvedTarget,
+                    expectedPackage = snapshot?.packageName,
+                    textInput = if (actionType == com.agent.android.actions.UiActionType.TEXT_INPUT) qStr else null,
+                    sourceSnapshotId = snapshot?.snapshotId
+                )
+
+                val executor = com.agent.android.actions.UiActionExecutor(observationEngine = observationEngine)
+                val actionRes = executor.executeAction(req)
+
+                val skillStatus = when (actionRes.status) {
+                    com.agent.android.actions.ActionExecutionStatus.SUCCESS -> SkillStatus.SUCCESS
+                    com.agent.android.actions.ActionExecutionStatus.TARGET_NOT_FOUND -> SkillStatus.FAILED
+                    com.agent.android.actions.ActionExecutionStatus.WRONG_FOREGROUND_APP, com.agent.android.actions.ActionExecutionStatus.WRONG_PACKAGE -> SkillStatus.FAILED
+                    else -> SkillStatus.UNAVAILABLE
+                }
+                val skillRes = SkillResult("ACTION_EXECUTION", skillStatus, actionRes.explanation, actionRes.durationMs, actionRes.status.name)
+                DispatchDetails(trimmed, "ACTION_EXECUTION", cmdDef.handlerIdentifier, skillRes, actionRes.explanation)
+            }
             else -> {
                 val res = SkillResult(cmdDef.commandId, SkillStatus.SUCCESS, "Executed command '${cmdDef.commandId}'", 0L)
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
