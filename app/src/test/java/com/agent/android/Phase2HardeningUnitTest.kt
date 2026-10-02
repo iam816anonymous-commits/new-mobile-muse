@@ -83,6 +83,11 @@ class Phase2HardeningUnitTest {
         val res = obs.sampleSensor(android.hardware.Sensor.TYPE_ACCELEROMETER, "Accelerometer")
         assertEquals(SkillStatus.UNAVAILABLE, res.status)
         assertEquals("NO_CONTEXT", res.errorCode)
+
+        // Controller remains usable for subsequent calls
+        val resGyro = obs.sampleSensor(android.hardware.Sensor.TYPE_GYROSCOPE, "Gyroscope")
+        assertEquals(SkillStatus.UNAVAILABLE, resGyro.status)
+        assertEquals("NO_CONTEXT", resGyro.errorCode)
     }
 
     @Test
@@ -93,5 +98,18 @@ class Phase2HardeningUnitTest {
         assertNotNull(report.androidVersion)
         assertNotNull(report.deviceModel)
         assertEquals(5, report.sensors.size)
+
+        // Verify sensor diagnostic entries handle null context safely
+        val sensorNames = report.sensors.map { it.name }
+        assertTrue(sensorNames.contains("Accelerometer"))
+        assertTrue(sensorNames.contains("Gyroscope"))
+        assertTrue(sensorNames.contains("Proximity"))
+        assertTrue(sensorNames.contains("Ambient Light"))
+        assertTrue(sensorNames.contains("Magnetometer"))
+
+        for (s in report.sensors) {
+            assertFalse(s.isAvailable)
+            assertEquals("N/A", s.vendor)
+        }
     }
 }

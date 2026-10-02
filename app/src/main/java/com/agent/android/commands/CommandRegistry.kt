@@ -134,6 +134,8 @@ class CommandRegistry {
 
     fun getCommandById(commandId: String): CommandDefinition? = registry[commandId]
 
+    operator fun get(commandId: String): CommandDefinition? = registry[commandId]
+
     fun findCommandForInput(rawInput: String): CommandDefinition? {
         val trimmed = rawInput.trim().lowercase()
         if (trimmed.isEmpty()) return null

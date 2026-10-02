@@ -133,8 +133,8 @@ class HardwareObservationControllers(private val context: Context?) {
         } catch (e: Exception) {
             SkillResult("SENSOR", SkillStatus.FAILED, "Sensor error: ${e.message}", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
         } finally {
-            sensorManager.unregisterListener(listener)
-            sensorThread?.quitSafely()
+            try { sensorManager.unregisterListener(listener) } catch (_: Exception) {}
+            try { sensorThread?.quitSafely() } catch (_: Exception) {}
         }
     }
 

@@ -111,6 +111,14 @@ class Phase24CommandRegistryUnitTest {
                     "Test case '${tc.id}' references commandId '${tc.commandId}' which must exist in CommandRegistry",
                     registeredIds.contains(tc.commandId)
                 )
+                assertNotNull(
+                    "CommandRegistry.get('${tc.commandId}') must return a valid CommandDefinition",
+                    registry.get(tc.commandId)
+                )
+                assertNotNull(
+                    "CommandRegistry['${tc.commandId}'] must return a valid CommandDefinition",
+                    registry[tc.commandId]
+                )
             }
         }
     }
