@@ -107,6 +107,27 @@ class Phase24FoundationUnitTest {
     }
 
     @Test
+    fun testFlashlightControllerMultiTorchAndDiagnostics() {
+        val controller = com.agent.android.agent.device.FlashlightController(null)
+
+        val diag = controller.getTorchDiagnostic()
+        assertFalse(diag.capabilityExists)
+        assertFalse(diag.capabilityPermitted)
+        assertFalse(diag.capabilityUsable)
+        assertTrue(diag.summaryText.contains("EXISTS=false"))
+
+        val statusRes = controller.setFlashlightTarget("status")
+        assertEquals(com.agent.android.agent.skills.SkillStatus.SUCCESS, statusRes.status)
+
+        val invalidRes = controller.setFlashlightTarget("invalid_target")
+        assertEquals(com.agent.android.agent.skills.SkillStatus.FAILED, invalidRes.status)
+        assertEquals("INVALID_TARGET", invalidRes.errorCode)
+
+        val frontRes = controller.setFlashlightTarget("front")
+        assertEquals("NO_CONTEXT", frontRes.errorCode)
+    }
+
+    @Test
     fun testEnhancedCapabilityRegistry() {
         val registry = CapabilityRegistry(null)
         val detailed = registry.checkDetailedCapabilities()

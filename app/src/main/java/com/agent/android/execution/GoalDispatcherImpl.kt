@@ -319,7 +319,7 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "flashlight.status" -> {
-                val res = flashlightController?.setFlashlight(false) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                val res = flashlightController?.setFlashlightTarget("status") ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "flashlight.on" -> {
@@ -328,12 +328,49 @@ class GoalDispatcherImpl(
                     val res = SkillResult("FLASHLIGHT", SkillStatus.PERMISSION_REQUIRED, "CAMERA permission required for flashlight. Grant in Settings.", 0L, "CAMERA_PERMISSION_REQUIRED")
                     return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
                 }
-                val res = flashlightController?.setFlashlight(true) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
-                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, "Torch state = ON")
+                val res = flashlightController?.setFlashlightTarget("back", true) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "flashlight.front" -> {
+                val perm = permissionManager?.registry?.getPermissionById("perm_camera")
+                if (perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("FLASHLIGHT", SkillStatus.PERMISSION_REQUIRED, "CAMERA permission required for flashlight. Grant in Settings.", 0L, "CAMERA_PERMISSION_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
+                val res = flashlightController?.setFlashlightTarget("front", true) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "flashlight.back" -> {
+                val perm = permissionManager?.registry?.getPermissionById("perm_camera")
+                if (perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("FLASHLIGHT", SkillStatus.PERMISSION_REQUIRED, "CAMERA permission required for flashlight. Grant in Settings.", 0L, "CAMERA_PERMISSION_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
+                val res = flashlightController?.setFlashlightTarget("back", true) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "flashlight.both" -> {
+                val perm = permissionManager?.registry?.getPermissionById("perm_camera")
+                if (perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("FLASHLIGHT", SkillStatus.PERMISSION_REQUIRED, "CAMERA permission required for flashlight. Grant in Settings.", 0L, "CAMERA_PERMISSION_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
+                val res = flashlightController?.setFlashlightTarget("both", true) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "flashlight.off" -> {
-                val res = flashlightController?.setFlashlight(false) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
-                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, "Torch state = OFF")
+                val res = flashlightController?.setFlashlightTarget("off", false) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "flashlight.target" -> {
+                val target = parsedArgs.getString("target") ?: "status"
+                val perm = permissionManager?.registry?.getPermissionById("perm_camera")
+                if (target != "status" && target != "off" && perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("FLASHLIGHT", SkillStatus.PERMISSION_REQUIRED, "CAMERA permission required for flashlight. Grant in Settings.", 0L, "CAMERA_PERMISSION_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
+                val res = flashlightController?.setFlashlightTarget(target, target != "off") ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "haptics.status" -> {
                 val res = hapticController?.getVibratorStatus() ?: SkillResult("VIBRATION", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")

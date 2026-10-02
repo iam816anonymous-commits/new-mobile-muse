@@ -78,6 +78,26 @@ class Phase24CommandRegistryUnitTest {
     }
 
     @Test
+    fun testFlashlightCommandsAndTargetParsing() {
+        val registry = CommandRegistry()
+
+        val statusCmd = registry.findCommandForInput("flashlight status")
+        assertNotNull(statusCmd)
+        assertEquals("flashlight.status", statusCmd?.commandId)
+
+        val frontCmd = registry.findCommandForInput("flashlight front")
+        assertNotNull(frontCmd)
+
+        val bothCmd = registry.findCommandForInput("flashlight both")
+        assertNotNull(bothCmd)
+
+        val targetDef = registry.getCommandById("flashlight.target")
+        assertNotNull(targetDef)
+        val targetArgs = registry.parseArguments("flashlight front", targetDef!!)
+        assertEquals("front", targetArgs.getString("target"))
+    }
+
+    @Test
     fun testArgumentParsing() {
         val registry = CommandRegistry()
 

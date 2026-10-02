@@ -10,7 +10,7 @@
 
 | Capability | Hardware Check | Permission Check | Notes |
 |---|---|---|---|
-| Flashlight | `CameraManager.cameraIdList` | `Manifest.permission.CAMERA` | Toggles camera torch |
+| Flashlight | `CameraManager.cameraIdList` dynamic `FLASH_INFO_AVAILABLE` inspection | `Manifest.permission.CAMERA` | Supports `front`, `back`, `both`, `off`, `status` with dynamic `CameraManager` multi-torch mapping |
 | Vibration | `Vibrator.hasVibrator()` | None | Bounds 1-2000ms |
 | Volume Streams | `AudioManager` | None | MUSIC, RING, ALARM, NOTIFICATION, SYSTEM |
 | Wi-Fi | `FEATURE_WIFI` | None | Reads status; direct toggle restricted on Android 10+ |

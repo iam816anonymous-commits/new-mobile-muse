@@ -4,7 +4,7 @@
 
 | Capability | Detection API | Status on API 27 |
 | :--- | :--- | :--- |
-| **Camera Torch (Flashlight)** | `CameraManager.cameraIdList` | AVAILABLE |
+| **Camera Torch (Flashlight)** | `CameraManager.cameraIdList` dynamic `FLASH_INFO_AVAILABLE` & `LENS_FACING` inspection | AVAILABLE (Supports `front`, `back`, `both`, `off`, `status` multi-torch control) |
 | **Vibrator (Haptics)** | `Vibrator.hasVibrator()` | AVAILABLE |
 | **Stream Volume** | `AudioManager.getStreamVolume()` | AVAILABLE |
 | **Wi-Fi Query / Toggle** | `WifiManager.isWifiEnabled` | AVAILABLE (Direct toggle subject to OS restrictions) |
