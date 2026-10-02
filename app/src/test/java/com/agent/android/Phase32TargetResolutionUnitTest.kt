@@ -161,4 +161,55 @@ class Phase32TargetResolutionUnitTest {
         assertTrue(target!!.isActionable)
         assertTrue(target.isEditable)
     }
+
+    @Test
+    fun testDisabledTargetActionRejection() {
+        val disabledNode = ObservationNode("node-disabled", "root", "android.widget.Button", "com.android.chrome", "Submit", null, "submit_btn", ObservationBounds(10, 10, 200, 100), true, false, true, false, false, false, false, false, false, false, true, false, 0)
+        val snap = createSampleSnapshot(nodes = listOf(disabledNode))
+
+        val res = resolver.resolve(snap, TargetQuery(text = "Submit"))
+        assertEquals(TargetResolutionStatus.RESOLVED, res.status)
+        val target = res.resolvedTarget
+        assertNotNull(target)
+        assertEquals(false, target!!.node.isEnabled) // Disabled node MUST NOT allow execution!
+    }
+
+    @Test
+    fun testNonClickableTargetActionRejection() {
+        val staticTextNode = ObservationNode("node-text", "root", "android.widget.TextView", "com.android.chrome", "Title Text", null, "title_view", ObservationBounds(10, 10, 500, 100), false, false, false, false, true, false, false, false, false, false, true, false, 0)
+        val snap = createSampleSnapshot(nodes = listOf(staticTextNode))
+
+        val res = resolver.resolve(snap, TargetQuery(text = "Title Text"))
+        assertEquals(TargetResolutionStatus.RESOLVED, res.status)
+        val target = res.resolvedTarget
+        assertNotNull(target)
+        assertEquals(false, target!!.node.isClickable) // Non-clickable node MUST be rejected for click action!
+    }
+
+    @Test
+    fun testNonEditableTargetTextInputRejection() {
+        val btnNode = ObservationNode("node-btn", "root", "android.widget.Button", "com.android.chrome", "Click Me", null, "btn_1", ObservationBounds(10, 10, 200, 100), true, false, true, false, true, false, false, false, false, false, true, false, 0)
+        val snap = createSampleSnapshot(nodes = listOf(btnNode))
+
+        val res = resolver.resolve(snap, TargetQuery(text = "Click Me"))
+        assertEquals(TargetResolutionStatus.RESOLVED, res.status)
+        val target = res.resolvedTarget
+        assertNotNull(target)
+        assertEquals(false, target!!.isEditable) // Non-editable node MUST be rejected for text input action!
+    }
+
+    @Test
+    fun testInvalidBoundsActionRejection() {
+        val zeroBoundsNode = ObservationNode("node-zero", "root", "android.widget.Button", "com.android.chrome", "Hidden", null, "btn_hidden", ObservationBounds(0, 0, 0, 0), true, false, true, false, true, false, false, false, false, false, true, false, 0)
+        val snap = createSampleSnapshot(nodes = listOf(zeroBoundsNode))
+
+        val res = resolver.resolve(snap, TargetQuery(text = "Hidden"))
+        assertEquals(TargetResolutionStatus.RESOLVED, res.status)
+        val target = res.resolvedTarget
+        assertNotNull(target)
+        val width = target!!.bounds.right - target.bounds.left
+        val height = target.bounds.bottom - target.bounds.top
+        val boundsValid = width > 0 && height > 0
+        assertEquals(false, boundsValid) // Invalid 0x0 bounds MUST be rejected before action dispatch!
+    }
 }
