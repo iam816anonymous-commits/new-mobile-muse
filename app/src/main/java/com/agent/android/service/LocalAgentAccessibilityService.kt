@@ -38,6 +38,7 @@ class LocalAgentAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        instance = this
         try {
             Log.i(TAG, "LocalAgentAccessibilityService connected")
         } catch (ignored: Throwable) {}
@@ -97,6 +98,7 @@ class LocalAgentAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        if (instance == this) instance = null
         try {
             Log.i(TAG, "LocalAgentAccessibilityService destroyed")
         } catch (ignored: Throwable) {}
@@ -105,5 +107,10 @@ class LocalAgentAccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG = "LocalAgentAccService"
         const val PANIC_THRESHOLD_MS = 500L
+
+        @Volatile
+        @JvmStatic
+        var instance: LocalAgentAccessibilityService? = null
+            private set
     }
 }

@@ -48,4 +48,12 @@ class UsageStatsController(private val context: Context?) {
             SkillResult("USAGE_STATS", SkillStatus.FAILED, "Error querying current app: ${e.message}", System.currentTimeMillis() - start, "HARDWARE_UNAVAILABLE")
         }
     }
+
+    fun getCurrentForegroundAppPackage(): String? {
+        val res = getCurrentForegroundApp()
+        if (res.status == SkillStatus.SUCCESS && res.message.contains("Package: ")) {
+            return res.message.substringAfter("Package: ").trim()
+        }
+        return null
+    }
 }

@@ -953,6 +953,35 @@
                     android:typeface="monospace"
                     android:textSize="11sp" />
 
+                <!-- PHASE 3.2 — ACTION EXECUTION DIAGNOSTICS -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="PHASE 3.2 — ACTION EXECUTION"
+                    android:textColor="#00E5FF"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/btnRunPhase32Diagnostics"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="RUN ACTION EXECUTION DIAGNOSTICS" />
+
+                <TextView
+                    android:id="@+id/tvPhase32DiagnosticsDisplay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#1C2833"
+                    android:padding="8dp"
+                    android:textColor="#A3E4D7"
+                    android:typeface="monospace"
+                    android:textSize="11sp"
+                    android:text="Phase 3.2 diagnostics not run." />
+
                 <!-- SPEECH SERVICES -->
                 <TextView
                     android:layout_width="wrap_content"

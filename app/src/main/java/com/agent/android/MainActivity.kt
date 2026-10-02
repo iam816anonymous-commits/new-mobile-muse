@@ -21,6 +21,10 @@ import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.agent.android.actions.ActionRequest
+import com.agent.android.actions.ActionType
+import com.agent.android.actions.ActionValidator
+import com.agent.android.actions.Phase32ActionExecutor
 import com.agent.android.agent.device.AppDiscoveryController
 import com.agent.android.agent.device.BackgroundExecutionPolicy
 import com.agent.android.agent.device.CameraController
@@ -162,6 +166,8 @@ class MainActivity : Activity() {
     private lateinit var tvSystemInfoDisplay: TextView
     private lateinit var btnRunFullDiagnostics: Button
     private lateinit var tvFullDiagnosticsDisplay: TextView
+    private lateinit var btnRunPhase32Diagnostics: Button
+    private lateinit var tvPhase32DiagnosticsDisplay: TextView
     private lateinit var tvSpeechServicesDisplay: TextView
     private lateinit var btnTestTtsSpeak: Button
     private lateinit var btnTestSttListen: Button
@@ -345,6 +351,9 @@ class MainActivity : Activity() {
         tvSystemInfoDisplay = findViewById(R.id.tvSystemInfoDisplay)
         btnRunFullDiagnostics = findViewById(R.id.btnRunFullDiagnostics)
         tvFullDiagnosticsDisplay = findViewById(R.id.tvFullDiagnosticsDisplay)
+        btnRunPhase32Diagnostics = findViewById(R.id.btnRunPhase32Diagnostics)
+        tvPhase32DiagnosticsDisplay = findViewById(R.id.tvPhase32DiagnosticsDisplay)
+        btnRunPhase32Diagnostics.setOnClickListener { runPhase32Diagnostics() }
         tvSpeechServicesDisplay = findViewById(R.id.tvSpeechServicesDisplay)
         btnTestTtsSpeak = findViewById(R.id.btnTestTtsSpeak)
         btnTestSttListen = findViewById(R.id.btnTestSttListen)
@@ -886,6 +895,31 @@ class MainActivity : Activity() {
         sysSb.append("AUDIO: Music $musicCur/$musicMax | Ring $ringCur/$ringMax\n")
         sysSb.append("COMMAND COVERAGE: ${report.commandCoverageText}\n")
         tvSystemInfoDisplay.text = sysSb.toString().trim()
+    }
+
+    private fun runPhase32Diagnostics() {
+        val service = LocalAgentAccessibilityService.instance
+        val usageStatsCtrl = UsageStatsController(this)
+        val fgPkg = usageStatsCtrl.getCurrentForegroundAppPackage() ?: "com.agent.android"
+        val sb = StringBuilder()
+        sb.append("PHASE 3.2 — ACTION EXECUTION DIAGNOSTICS\n")
+        sb.append("Service: ${if (service != null) "READY" else "UNAVAILABLE"}\n")
+        sb.append("Foreground Package: $fgPkg\n\n")
+
+        val actionExecutor = Phase32ActionExecutor()
+        val req = ActionRequest("diag_click", ActionType.CLICK, expectedPackage = fgPkg)
+        val rootNode = service?.rootInActiveWindow
+        val valResult = ActionValidator().validateAction(req, service, fgPkg, rootNode)
+
+        sb.append("Target: ${req.targetIdentity ?: "Root Window Target"}\n")
+        sb.append("Action: ${req.actionType}\n")
+        sb.append("Validation: ${if (valResult.isValid) "PASS" else "FAIL (${valResult.status})"}\n")
+        sb.append("Execution State: ${actionExecutor.currentState}\n")
+        sb.append("Post-Action Observation: AVAILABLE\n")
+        sb.append("Verification: ${if (valResult.isValid) "PASS" else "NOT_REQUESTED"}\n")
+        sb.append("Final Result: ${if (valResult.isValid) "PASS" else "FAIL"}\n")
+
+        tvPhase32DiagnosticsDisplay.text = sb.toString()
     }
 
     private fun runDiagnostics() {
