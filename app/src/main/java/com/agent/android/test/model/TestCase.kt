@@ -20,5 +20,12 @@ data class TestCase(
     var error: String? = null,
     var timestamp: Long? = null,
     var duration: Long? = null,
-    var evidenceReferences: List<String> = emptyList()
+    var evidenceReferences: List<String> = emptyList(),
+
+    // Target App Observation fields for Phase 3.1
+    val targetAppName: String? = null,
+    val targetPackage: String? = null,
+    val expectedPackage: String? = null,
+    val launchIntentAction: String? = null,
+    val observationTimeoutMs: Long = 10000L
 )

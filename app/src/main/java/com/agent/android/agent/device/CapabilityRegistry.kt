@@ -42,17 +42,17 @@ class CapabilityRegistry(private val context: Context?) {
         val map = mutableMapOf<String, DetailedCapabilityInfo>()
 
         // Torch / Flashlight
-        val cameraManager = context?.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
-        val torchExists = (cameraManager?.cameraIdList?.size ?: 0) > 0
-        val cameraPermitted = context != null && ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        val torchUsable = torchExists && cameraPermitted
+        val torchDiag = if (context != null) FlashlightController(context).getTorchDiagnostic() else null
+        val torchExists = torchDiag?.capabilityExists ?: false
+        val cameraPermitted = torchDiag?.capabilityPermitted ?: false
+        val torchUsable = torchDiag?.capabilityUsable ?: false
         map["FLASHLIGHT"] = DetailedCapabilityInfo(
             "FLASHLIGHT",
             torchExists,
             cameraPermitted,
             torchUsable,
             if (!torchExists) CapabilityStatus.UNSUPPORTED else if (cameraPermitted) CapabilityStatus.AVAILABLE else CapabilityStatus.PERMISSION_REQUIRED,
-            if (!torchExists) "No camera torch hardware" else if (cameraPermitted) "Torch available & permitted" else "CAMERA permission required"
+            if (!torchExists) "No camera torch hardware" else if (cameraPermitted) torchDiag?.summaryText ?: "Torch available & permitted" else "CAMERA permission required"
         )
 
         // Vibration

@@ -173,30 +173,60 @@ This document is generated directly from `CommandRegistry` (the single source of
 - **Category:** DEVICE
 - **Syntax:** `flashlight status`
 - **Example:** `flashlight status`
-- **Purpose:** Queries camera torch hardware availability.
+- **Purpose:** Queries camera torch hardware availability and multi-torch mapping.
 - **Handler:** `FlashlightController`
 - **Requirements:** Flashlight capability
 - **Test IDs:** `2.3.01`
 
-### 15. `flashlight.on`
-- **Name:** Flashlight ON
+### 15. `flashlight.on` / `flashlight.back`
+- **Name:** Flashlight ON / Back Flashlight
 - **Category:** DEVICE
-- **Syntax:** `flashlight on`
+- **Syntax:** `flashlight on` | `flashlight back`
 - **Example:** `flashlight on`
-- **Purpose:** Turns camera torch light ON.
+- **Purpose:** Turns default/back camera torch light ON.
 - **Handler:** `FlashlightController`
 - **Requirements:** `CAMERA` permission, Flashlight capability, Physical Observation
 - **Test IDs:** `2.3.02`, `2.3.04`
 
-### 16. `flashlight.off`
+### 16. `flashlight.front`
+- **Name:** Front Flashlight ON
+- **Category:** DEVICE
+- **Syntax:** `flashlight front`
+- **Example:** `flashlight front`
+- **Purpose:** Turns front camera torch light ON if present.
+- **Handler:** `FlashlightController`
+- **Requirements:** `CAMERA` permission, Flashlight capability, Physical Observation
+- **Test IDs:** `2.3.03`
+
+### 17. `flashlight.both`
+- **Name:** Both Flashlights ON
+- **Category:** DEVICE
+- **Syntax:** `flashlight both`
+- **Example:** `flashlight both`
+- **Purpose:** Turns both front and back camera torches ON simultaneously.
+- **Handler:** `FlashlightController`
+- **Requirements:** `CAMERA` permission, Flashlight capability, Physical Observation
+- **Test IDs:** `2.3.05`
+
+### 18. `flashlight.off`
 - **Name:** Flashlight OFF
 - **Category:** DEVICE
 - **Syntax:** `flashlight off`
 - **Example:** `flashlight off`
-- **Purpose:** Turns camera torch light OFF.
+- **Purpose:** Turns all camera torch lights OFF.
 - **Handler:** `FlashlightController`
 - **Requirements:** `CAMERA` permission, Flashlight capability, Physical Observation
-- **Test IDs:** `2.3.03`, `2.3.05`
+- **Test IDs:** `2.3.06_OFF`
+
+### 19. `flashlight.target`
+- **Name:** Flashlight Target Control
+- **Category:** DEVICE
+- **Syntax:** `flashlight <target>`
+- **Example:** `flashlight front` | `flashlight back` | `flashlight both` | `flashlight off` | `flashlight status`
+- **Purpose:** Sets flashlight target dynamically (back, front, both, off, status); rejects invalid targets safely.
+- **Handler:** `FlashlightController`
+- **Requirements:** `CAMERA` permission, Flashlight capability, Physical Observation
+- **Test IDs:** `2.3.07_INV` (invalid target negative), `2.3.08_NONEXIST` (non-existent target negative)
 
 ---
 

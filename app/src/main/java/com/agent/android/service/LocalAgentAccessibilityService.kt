@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import com.agent.android.execution.ExecutionController
+import com.agent.android.observation.AccessibilityObservationEngine
 import com.agent.android.safety.CancellationReason
 
 /**
@@ -35,9 +36,23 @@ class LocalAgentAccessibilityService : AccessibilityService() {
     private var lastVolumeUpTimeMs: Long = 0L
 
     var executionController: ExecutionController? = null
+    var observationEngine: AccessibilityObservationEngine? = null
+
+    @Volatile
+    var lastEventTimeMs: Long? = null
+        private set
+
+    @Volatile
+    var lastEventPackageName: String? = null
+        private set
+
+    @Volatile
+    var lastEventType: String? = null
+        private set
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        instance = this
         try {
             Log.i(TAG, "LocalAgentAccessibilityService connected")
         } catch (ignored: Throwable) {}
@@ -45,7 +60,19 @@ class LocalAgentAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // OBSERVATION ONLY.
-        // Do not execute any actions or trigger autonomous loops from here.
+        // Record lightweight event diagnostic metadata and pass debounced event to ObservationEngine!
+        if (event != null) {
+            val pkg = event.packageName?.toString()
+            lastEventTimeMs = System.currentTimeMillis()
+            lastEventPackageName = pkg
+            lastEventType = AccessibilityEvent.eventTypeToString(event.eventType)
+
+            try {
+                observationEngine?.handleAccessibilityEvent(pkg, event.eventType)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in handleAccessibilityEvent: ${e.message}")
+            }
+        }
     }
 
     fun handleKeyEventInternal(keyCode: Int, action: Int, eventTimeMs: Long): Boolean {
@@ -97,6 +124,9 @@ class LocalAgentAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        if (instance == this) {
+            instance = null
+        }
         try {
             Log.i(TAG, "LocalAgentAccessibilityService destroyed")
         } catch (ignored: Throwable) {}
@@ -105,5 +135,9 @@ class LocalAgentAccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG = "LocalAgentAccService"
         const val PANIC_THRESHOLD_MS = 500L
+
+        @Volatile
+        var instance: LocalAgentAccessibilityService? = null
+            private set
     }
 }

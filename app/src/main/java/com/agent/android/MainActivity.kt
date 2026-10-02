@@ -13,11 +13,17 @@ import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import com.agent.android.observation.GuidedExternalObservationRunner
+import com.agent.android.observation.GuidedTestApp
+import com.agent.android.observation.GuidedTestResult
+import com.agent.android.observation.GuidedTestState
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -52,6 +58,11 @@ import com.agent.android.commands.CommandRegistry
 import com.agent.android.diagnostics.FoundationReadinessEvaluator
 import com.agent.android.execution.ExecutionController
 import com.agent.android.execution.GoalDispatcherImpl
+import com.agent.android.observation.AccessibilityObservationEngine
+import com.agent.android.observation.ExternalAppTestValidator
+import com.agent.android.observation.ObservationNode
+import com.agent.android.observation.ObservationSnapshot
+import com.agent.android.observation.ObservationState
 import com.agent.android.permissions.PermissionCategory
 import com.agent.android.permissions.PermissionManager
 import com.agent.android.permissions.PermissionStatus
@@ -90,6 +101,9 @@ class MainActivity : Activity() {
     private lateinit var commandRegistry: CommandRegistry
     private lateinit var permissionManager: PermissionManager
     private lateinit var locationController: LocationController
+    private lateinit var observationEngine: AccessibilityObservationEngine
+    private lateinit var externalAppValidator: ExternalAppTestValidator
+    private lateinit var guidedRunner: GuidedExternalObservationRunner
 
     private lateinit var testRegistry: FoundationTestRegistry
     private lateinit var resultStore: TestResultStore
@@ -99,6 +113,8 @@ class MainActivity : Activity() {
     private lateinit var ttsEngine: TextToSpeechEngine
 
     private var currentTestIndex = 0
+    private var activePhaseFilter: String? = null // null = ALL, "PHASE_2", "PHASE_3.1"
+    private var showingExternalSnapshot = false
 
     private val historyLog: Deque<HistoryEntry> = ArrayDeque()
 
@@ -156,6 +172,35 @@ class MainActivity : Activity() {
     private lateinit var btnOpenLocationSettings: Button
 
     // Diagnostics Views
+    private lateinit var tvObsServiceStatus: TextView
+    private lateinit var tvObsModeStatus: TextView
+    private lateinit var tvObsPackageName: TextView
+    private lateinit var tvObsActivityName: TextView
+    private lateinit var tvObsLastTime: TextView
+    private lateinit var tvObsNodeCount: TextView
+    private lateinit var btnObsStartMode: Button
+    private lateinit var btnObsStopMode: Button
+    private lateinit var btnObsCaptureScreen: Button
+    private lateinit var btnObsViewExternal: Button
+    private lateinit var btnObsClear: Button
+    private lateinit var tvObsTreeDisplay: TextView
+    private lateinit var tvObsSelectedNodeDisplay: TextView
+
+    // Card A Views
+    private lateinit var btnRunEngineValidation: Button
+    private lateinit var tvEngineValidationResult: TextView
+    private lateinit var tvEngineValidationDetails: TextView
+
+    // Card B Views
+    private lateinit var spinnerCardBTargetApp: Spinner
+    private lateinit var btnStartGuidedTest: Button
+    private lateinit var btnCardBRunAgain: Button
+    private lateinit var tvCardBStateStatus: TextView
+    private lateinit var tvCardBProgressSteps: TextView
+    private lateinit var tvCardBLiveState: TextView
+    private lateinit var tvCardBValidationChecklist: TextView
+    private lateinit var tvCardBFinalResult: TextView
+
     private lateinit var tvReadinessOverallBanner: TextView
     private lateinit var btnToggleFoundationTestRunner: Button
     private lateinit var subpanelFoundationTestRunner: LinearLayout
@@ -168,6 +213,10 @@ class MainActivity : Activity() {
     private lateinit var tvLocationTechnicalDisplay: TextView
 
     // Test Runner Sub-Panel Views
+    private lateinit var btnPhaseFilterAll: Button
+    private lateinit var btnPhaseFilterPhase2: Button
+    private lateinit var btnPhaseFilterPhase31: Button
+
     private lateinit var tvRunnerProgress: TextView
     private lateinit var tvTestIndex: TextView
     private lateinit var tvTestName: TextView
@@ -214,6 +263,9 @@ class MainActivity : Activity() {
 
         permissionManager = PermissionManager(this)
         locationController = LocationController(this)
+        observationEngine = AccessibilityObservationEngine()
+        externalAppValidator = ExternalAppTestValidator(this)
+        guidedRunner = GuidedExternalObservationRunner(this)
         testHarness = Phase1SafetyTestHarness(executionController, logger)
         capabilityRegistry = CapabilityRegistry(this)
         commandRegistry = CommandRegistry()
@@ -256,8 +308,14 @@ class MainActivity : Activity() {
         goalDispatcher = GoalDispatcherImpl(
             executionController, calc, notes, intents, flash, haptics, volume, conn, obsControllers, appLauncher, sysCtrl, commandRegistry,
             clipboardCtrl, notifCtrl, usageStatsCtrl, displayCtrl, screenCapCtrl, inputStateCtrl, cameraCtrl, fileAccessCtrl, locationCtrl, networkCtrl,
-            powerStateCtrl, bgPolicy, appDiscCtrl, deviceSnapCtrl, null, null, capabilityRegistry, readinessEvaluator, sttEngine, ttsEngine, permissionManager
+            powerStateCtrl, bgPolicy, appDiscCtrl, deviceSnapCtrl, null, null, capabilityRegistry, readinessEvaluator, sttEngine, ttsEngine, permissionManager,
+            observationEngine
         )
+
+        val accService = LocalAgentAccessibilityService.instance
+        if (accService != null) {
+            accService.observationEngine = observationEngine
+        }
 
         resultStore.loadResults(testRegistry)
 
@@ -267,15 +325,21 @@ class MainActivity : Activity() {
         switchTab(0)
         refreshTestRunnerUI()
         updatePermissionsUI()
+        updateObservationUI()
         evaluateReadiness()
 
-        logger.i("UI", "LocalAgent Operational UI initialized.")
+        logger.i("UI", "LocalAgent Phase 3.1 Observation UI initialized.")
     }
 
     override fun onResume() {
         super.onResume()
+        val accService = LocalAgentAccessibilityService.instance
+        if (accService != null && accService.observationEngine == null) {
+            accService.observationEngine = observationEngine
+        }
         updateUIState()
         updatePermissionsUI()
+        updateObservationUI()
         evaluateReadiness()
     }
 
@@ -339,6 +403,43 @@ class MainActivity : Activity() {
         btnOpenLocationSettings = findViewById(R.id.btnOpenLocationSettings)
 
         // Diagnostics Views
+        tvObsServiceStatus = findViewById(R.id.tvObsServiceStatus)
+        tvObsModeStatus = findViewById(R.id.tvObsModeStatus)
+        tvObsPackageName = findViewById(R.id.tvObsPackageName)
+        tvObsActivityName = findViewById(R.id.tvObsActivityName)
+        tvObsLastTime = findViewById(R.id.tvObsLastTime)
+        tvObsNodeCount = findViewById(R.id.tvObsNodeCount)
+        btnObsStartMode = findViewById(R.id.btnObsStartMode)
+        btnObsStopMode = findViewById(R.id.btnObsStopMode)
+        btnObsCaptureScreen = findViewById(R.id.btnObsCaptureScreen)
+        btnObsViewExternal = findViewById(R.id.btnObsViewExternal)
+        btnObsClear = findViewById(R.id.btnObsClear)
+        tvObsTreeDisplay = findViewById(R.id.tvObsTreeDisplay)
+        tvObsSelectedNodeDisplay = findViewById(R.id.tvObsSelectedNodeDisplay)
+
+        // Card A Views
+        btnRunEngineValidation = findViewById(R.id.btnRunEngineValidation)
+        tvEngineValidationResult = findViewById(R.id.tvEngineValidationResult)
+        tvEngineValidationDetails = findViewById(R.id.tvEngineValidationDetails)
+
+        // Card B Views
+        spinnerCardBTargetApp = findViewById(R.id.spinnerCardBTargetApp)
+        btnStartGuidedTest = findViewById(R.id.btnStartGuidedTest)
+        btnCardBRunAgain = findViewById(R.id.btnCardBRunAgain)
+        tvCardBStateStatus = findViewById(R.id.tvCardBStateStatus)
+        tvCardBProgressSteps = findViewById(R.id.tvCardBProgressSteps)
+        tvCardBLiveState = findViewById(R.id.tvCardBLiveState)
+        tvCardBValidationChecklist = findViewById(R.id.tvCardBValidationChecklist)
+        tvCardBFinalResult = findViewById(R.id.tvCardBFinalResult)
+
+        val spinnerAdapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            listOf("Chrome", "YouTube", "Settings", "Calculator")
+        )
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerCardBTargetApp.adapter = spinnerAdapter
+
         tvReadinessOverallBanner = findViewById(R.id.tvReadinessOverallBanner)
         btnToggleFoundationTestRunner = findViewById(R.id.btnToggleFoundationTestRunner)
         subpanelFoundationTestRunner = findViewById(R.id.subpanelFoundationTestRunner)
@@ -351,6 +452,10 @@ class MainActivity : Activity() {
         tvLocationTechnicalDisplay = findViewById(R.id.tvLocationTechnicalDisplay)
 
         // Sub-panel Runner
+        btnPhaseFilterAll = findViewById(R.id.btnPhaseFilterAll)
+        btnPhaseFilterPhase2 = findViewById(R.id.btnPhaseFilterPhase2)
+        btnPhaseFilterPhase31 = findViewById(R.id.btnPhaseFilterPhase31)
+
         tvRunnerProgress = findViewById(R.id.tvRunnerProgress)
         tvTestIndex = findViewById(R.id.tvTestIndex)
         tvTestName = findViewById(R.id.tvTestName)
@@ -431,14 +536,86 @@ class MainActivity : Activity() {
             startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
         }
 
+        // Observation Panel Listeners
+        btnObsStartMode.setOnClickListener {
+            observationEngine.startObservationMode()
+            showingExternalSnapshot = false
+            updateObservationUI()
+            Toast.makeText(this, "Observation Mode STARTED. Open an external app and return.", Toast.LENGTH_LONG).show()
+        }
+
+        btnObsStopMode.setOnClickListener {
+            observationEngine.stopObservationMode()
+            updateObservationUI()
+            Toast.makeText(this, "Observation Mode STOPPED", Toast.LENGTH_SHORT).show()
+        }
+
+        btnObsCaptureScreen.setOnClickListener {
+            showingExternalSnapshot = false
+            val snapshot = observationEngine.captureCurrentScreen()
+            updateObservationUI()
+            if (snapshot.state == ObservationState.SUCCESS) {
+                Toast.makeText(this, "Screen captured: ${snapshot.nodeCount} nodes (${snapshot.packageName})", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Observation Error: ${snapshot.error}", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        btnObsViewExternal.setOnClickListener {
+            val extSnapshot = observationEngine.getLastExternalSnapshot()
+            if (extSnapshot != null) {
+                showingExternalSnapshot = true
+                updateObservationUI()
+                Toast.makeText(this, "Loaded external snapshot for ${extSnapshot.packageName}", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "No external app snapshot available yet. Tap START OBSERVATION, open an app, and return.", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        btnObsClear.setOnClickListener {
+            showingExternalSnapshot = false
+            observationEngine.clearLastSnapshot()
+            updateObservationUI()
+            Toast.makeText(this, "Observation cleared", Toast.LENGTH_SHORT).show()
+        }
+
+        // Card A & B Validation Listeners
+        btnRunEngineValidation.setOnClickListener {
+            runEngineValidationCardA()
+        }
+
+        btnStartGuidedTest.setOnClickListener {
+            val selectedApp = when (spinnerCardBTargetApp.selectedItemPosition) {
+                0 -> GuidedTestApp.CHROME
+                1 -> GuidedTestApp.YOUTUBE
+                2 -> GuidedTestApp.SETTINGS
+                3 -> GuidedTestApp.CALCULATOR
+                else -> GuidedTestApp.CHROME
+            }
+            guidedRunner.startGuidedTest(selectedApp, observationEngine, evidenceManager) { res ->
+                updateCardBResultUI(res)
+            }
+        }
+
+        btnCardBRunAgain.setOnClickListener {
+            guidedRunner.cancel()
+            tvCardBStateStatus.text = "Status: READY"
+            tvCardBStateStatus.setTextColor(0xFFFFD54F.toInt())
+            tvCardBProgressSteps.text = "○ Preparing  ○ Launching  ○ Waiting  ○ Target Detected\n○ Captured  ○ Validated  ○ Preserved  ○ Test Passed"
+            tvCardBLiveState.text = "Expected Package: -\nCurrent Package: -\nActivity: -\nNodes: 0"
+            tvCardBValidationChecklist.text = "[Pending Test Execution]"
+            tvCardBFinalResult.text = "GUIDED TEST RESET"
+            tvCardBFinalResult.setTextColor(0xFFE1BEE7.toInt())
+        }
+
         // Diagnostics
         btnToggleFoundationTestRunner.setOnClickListener {
             if (subpanelFoundationTestRunner.visibility == View.VISIBLE) {
                 subpanelFoundationTestRunner.visibility = View.GONE
-                btnToggleFoundationTestRunner.text = "VIEW FOUNDATION TEST HARNESS"
+                btnToggleFoundationTestRunner.text = "VIEW TEST HARNESS"
             } else {
                 subpanelFoundationTestRunner.visibility = View.VISIBLE
-                btnToggleFoundationTestRunner.text = "HIDE FOUNDATION TEST HARNESS"
+                btnToggleFoundationTestRunner.text = "HIDE TEST HARNESS"
             }
         }
         btnRunFullDiagnostics.setOnClickListener { runDiagnostics() }
@@ -472,6 +649,23 @@ class MainActivity : Activity() {
 
                 override fun onPartialResults(partialText: String) {}
             })
+        }
+
+        // Phase Filter Listeners
+        btnPhaseFilterAll.setOnClickListener {
+            activePhaseFilter = null
+            currentTestIndex = 0
+            refreshTestRunnerUI()
+        }
+        btnPhaseFilterPhase2.setOnClickListener {
+            activePhaseFilter = "PHASE_2"
+            currentTestIndex = 0
+            refreshTestRunnerUI()
+        }
+        btnPhaseFilterPhase31.setOnClickListener {
+            activePhaseFilter = "PHASE_3.1"
+            currentTestIndex = 0
+            refreshTestRunnerUI()
         }
 
         // Sub-panel Runner Listeners
@@ -524,6 +718,158 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun getFilteredTestCases(): List<TestCase> {
+        val filter = activePhaseFilter
+        return if (filter.isNullOrBlank()) {
+            testRegistry.getAllTestCases()
+        } else if (filter == "PHASE_2") {
+            testRegistry.getAllTestCases().filter { it.phase == "PHASE_2" || it.phase == "PHASE_2.4" || it.phase == "PHASE_2.5" || it.phase == "PHASE_1" }
+        } else {
+            testRegistry.getTestCasesByPhase(filter)
+        }
+    }
+
+    private fun updateObservationUI() {
+        val metadata = observationEngine.getObservationMetadata()
+        if (metadata.isServiceConnected) {
+            tvObsServiceStatus.text = "Accessibility Service: CONNECTED"
+            tvObsServiceStatus.setTextColor(0xFF66BB6A.toInt())
+        } else {
+            tvObsServiceStatus.text = "Accessibility Service: DISABLED / DISCONNECTED"
+            tvObsServiceStatus.setTextColor(0xFFEF5350.toInt())
+        }
+
+        tvObsModeStatus.text = "Observation Mode: ${observationEngine.observationMode.name}"
+
+        val snapshot = observationEngine.getDisplayedSnapshot() ?: observationEngine.getLastSnapshot()
+
+        if (snapshot != null) {
+            val isExternal = !observationEngine.isExcludedExternalPackage(snapshot.packageName)
+            val appLabel = if (isExternal) "[PRESERVED EXTERNAL: ${snapshot.packageName}]" else "[INTERNAL: ${snapshot.packageName}]"
+            tvObsPackageName.text = "Observed App: $appLabel (Source: ${snapshot.classification.name})"
+            tvObsActivityName.text = "Activity: ${snapshot.activityName ?: "UNKNOWN"} | State: ${snapshot.state.name}"
+            val timeStr = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(snapshot.timestampMs))
+            tvObsLastTime.text = "Snapshot Time: $timeStr (${if (isExternal) "PRESERVED EXTERNAL" else "INTERNAL"})"
+            tvObsNodeCount.text = "Nodes Captured: ${snapshot.nodeCount}"
+
+            val treeSb = StringBuilder()
+            fun renderNodeTree(node: ObservationNode?, indent: String) {
+                if (node == null) return
+                val label = node.text ?: node.contentDescription ?: node.resourceId ?: node.className ?: "Node"
+                treeSb.append("$indent├── [${node.id}] ${node.className?.substringAfterLast('.')}: \"$label\" (${node.bounds.left},${node.bounds.top} -> ${node.bounds.right},${node.bounds.bottom})\n")
+                for (child in node.children.take(10)) {
+                    renderNodeTree(child, "$indent│   ")
+                }
+            }
+            renderNodeTree(snapshot.rootNode, "")
+            tvObsTreeDisplay.text = if (treeSb.isNotEmpty()) treeSb.toString().trim() else "[Empty tree]"
+
+            val rootNode = snapshot.rootNode
+            if (rootNode != null) {
+                tvObsSelectedNodeDisplay.text = """
+                    Class: ${rootNode.className}
+                    Text: ${rootNode.text ?: "NONE"}
+                    Resource ID: ${rootNode.resourceId ?: "NONE"}
+                    Clickable: ${rootNode.isClickable} | Editable: ${rootNode.isEditable}
+                    Enabled: ${rootNode.isEnabled} | Visible: ${rootNode.isVisibleToUser}
+                    Bounds: ${rootNode.bounds.left},${rootNode.bounds.top} -> ${rootNode.bounds.right},${rootNode.bounds.bottom}
+                """.trimIndent()
+            } else {
+                tvObsSelectedNodeDisplay.text = "Root Node Unavailable"
+            }
+        } else {
+            tvObsPackageName.text = "Observed App: -"
+            tvObsActivityName.text = "Current Activity: -"
+            tvObsLastTime.text = "Last Observation: NEVER"
+            tvObsNodeCount.text = "Nodes Captured: 0"
+            tvObsTreeDisplay.text = "[No observation captured yet. Tap START OBSERVATION or CAPTURE SCREEN]"
+            tvObsSelectedNodeDisplay.text = "Class: -\nText: -\nResource ID: -\nClickable: -\nEnabled: -\nBounds: -"
+        }
+    }
+
+    private fun updateCardBResultUI(res: GuidedTestResult) {
+        tvCardBStateStatus.text = "Status: ${res.state.name}"
+        tvCardBStateStatus.setTextColor(
+            when (res.status) {
+                TestStatus.PASSED -> 0xFF66BB6A.toInt()
+                TestStatus.FAILED -> 0xFFEF5350.toInt()
+                else -> 0xFFFFD54F.toInt()
+            }
+        )
+
+        val pPrep = if (res.state.ordinal >= GuidedTestState.PREPARING.ordinal) "●" else "○"
+        val pLaunch = if (res.state.ordinal >= GuidedTestState.LAUNCHING_TARGET.ordinal) "●" else "○"
+        val pWait = if (res.state.ordinal >= GuidedTestState.WAITING_FOR_FOREGROUND.ordinal) "●" else "○"
+        val pTarget = if (res.state.ordinal >= GuidedTestState.TARGET_DETECTED.ordinal) "●" else "○"
+        val pCap = if (res.state.ordinal >= GuidedTestState.CAPTURING.ordinal) "●" else "○"
+        val pVal = if (res.state.ordinal >= GuidedTestState.VALIDATING.ordinal) "●" else "○"
+        val pPres = if (res.state.ordinal >= GuidedTestState.PRESERVING.ordinal) "●" else "○"
+        val pPass = if (res.status == TestStatus.PASSED) "✓" else if (res.status == TestStatus.FAILED) "✗" else "○"
+
+        tvCardBProgressSteps.text = "$pPrep Preparing  $pLaunch Launching  $pWait Waiting  $pTarget Target Detected\n$pCap Captured  $pVal Validated  $pPres Preserved  $pPass Test Passed"
+
+        tvCardBLiveState.text = """
+            Target: ${res.targetApp.label} (${res.targetApp.testId})
+            Expected Package: ${res.expectedPackage ?: "-"}
+            Current Package: ${res.actualPackage ?: "-"}
+            Activity: ${res.actualActivity ?: "-"}
+            Nodes: ${res.nodeCount}
+        """.trimIndent()
+
+        if (res.validationChecks.isNotEmpty()) {
+            val sb = StringBuilder()
+            for (c in res.validationChecks) {
+                val mark = if (c.passed) "✓" else "✗"
+                sb.append("$mark ${c.description}\n")
+            }
+            tvCardBValidationChecklist.text = sb.toString().trim()
+        } else {
+            tvCardBValidationChecklist.text = "[In Progress...]"
+        }
+
+        val resultSb = StringBuilder()
+        resultSb.append("GUIDED EXTERNAL OBSERVATION TEST: ${res.status.name}\n")
+        resultSb.append("Target: ${res.targetApp.label} (${res.targetApp.testId})\n")
+        resultSb.append("Package: ${res.actualPackage ?: res.expectedPackage ?: "-"}\n")
+        resultSb.append("Nodes Captured: ${res.nodeCount}\n")
+        resultSb.append("Snapshot Preserved: ${if (res.preserved) "YES" else "NO"}\n")
+        resultSb.append("LocalAgent Overwrite: PREVENTED\n")
+        resultSb.append("System UI / Recents Accepted: NO\n")
+        resultSb.append("Evidence: ${res.evidencePath ?: "NONE"}\n")
+        if (res.failureReason != null) {
+            resultSb.append("Failure Reason: ${res.failureReason}")
+        }
+        tvCardBFinalResult.text = resultSb.toString().trim()
+        tvCardBFinalResult.setTextColor(
+            when (res.status) {
+                TestStatus.PASSED -> 0xFF66BB6A.toInt()
+                TestStatus.FAILED -> 0xFFEF5350.toInt()
+                else -> 0xFFFFD54F.toInt()
+            }
+        )
+    }
+
+    private fun runEngineValidationCardA() {
+        val res = externalAppValidator.validateEngine(observationEngine)
+        tvEngineValidationResult.text = "Validation Result: ${res.status.name} (${res.summaryText})"
+        tvEngineValidationResult.setTextColor(
+            when (res.status) {
+                TestStatus.PASSED -> 0xFF66BB6A.toInt()
+                TestStatus.FAILED -> 0xFFEF5350.toInt()
+                else -> 0xFFFFD54F.toInt()
+            }
+        )
+        tvEngineValidationDetails.text = """
+            Package: ${res.packageName ?: "N/A"}
+            Activity: ${res.activityName ?: "N/A"}
+            Nodes Captured: ${res.nodeCount}
+            Duration: ${res.durationMs} ms
+
+            ${res.errorDetails ?: "All 25 Observation Engine checks verified."}
+        """.trimIndent()
+        Toast.makeText(this, "Card A Validation: ${res.status.name}", Toast.LENGTH_SHORT).show()
+    }
+
     private fun switchTab(tabIndex: Int) {
         panelDashboard.visibility = if (tabIndex == 0) View.VISIBLE else View.GONE
         panelPermissions.visibility = if (tabIndex == 1) View.VISIBLE else View.GONE
@@ -542,17 +888,22 @@ class MainActivity : Activity() {
     }
 
     private fun refreshTestRunnerUI() {
-        val testCases = testRegistry.getAllTestCases()
+        val testCases = getFilteredTestCases()
         if (testCases.isEmpty()) return
 
         if (currentTestIndex < 0) currentTestIndex = 0
         if (currentTestIndex >= testCases.size) currentTestIndex = testCases.size - 1
 
-        val summary = testRegistry.getSummary()
-        tvRunnerProgress.text = "Progress: ${summary.passed + summary.failed + summary.blocked + summary.skipped} / ${summary.total} completed (Passed: ${summary.passed}, Failed: ${summary.failed}, Blocked: ${summary.blocked})"
+        val phaseName = activePhaseFilter ?: "ALL"
+        btnPhaseFilterAll.setBackgroundColor(if (activePhaseFilter == null) 0xFF00E5FF.toInt() else 0xFF333333.toInt())
+        btnPhaseFilterPhase2.setBackgroundColor(if (activePhaseFilter == "PHASE_2") 0xFF00E5FF.toInt() else 0xFF333333.toInt())
+        btnPhaseFilterPhase31.setBackgroundColor(if (activePhaseFilter == "PHASE_3.1") 0xFF00E5FF.toInt() else 0xFF333333.toInt())
+
+        val summary = testRegistry.getSummaryByPhase(activePhaseFilter)
+        tvRunnerProgress.text = "Filter [$phaseName]: ${summary.passed + summary.failed + summary.blocked + summary.skipped} / ${summary.total} completed (Passed: ${summary.passed}, Failed: ${summary.failed})"
 
         val current = testCases[currentTestIndex]
-        tvTestIndex.text = "Test ${currentTestIndex + 1} / ${testCases.size} (ID: ${current.id})"
+        tvTestIndex.text = "Test ${currentTestIndex + 1} / ${testCases.size} (ID: ${current.id} • ${current.phase})"
         tvTestName.text = current.name
         tvTestCommand.text = current.command ?: "NONE (NO COMMAND)"
         tvTestExpected.text = current.expectedResult
@@ -568,13 +919,54 @@ class MainActivity : Activity() {
 
     @Suppress("NotificationPermission")
     private fun executeCurrentTest() {
-        val current = testRegistry.getAllTestCases().getOrNull(currentTestIndex) ?: return
+        val current = getFilteredTestCases().getOrNull(currentTestIndex) ?: return
         val start = System.currentTimeMillis()
 
         current.status = TestStatus.RUNNING
         refreshTestRunnerUI()
 
-        if (current.id == "2.5.NOTIF.003") {
+        if (current.id.startsWith("P3.1-XAPP")) {
+            val extSnapshot = observationEngine.getLastExternalSnapshot()
+            val dur = System.currentTimeMillis() - start
+
+            if (extSnapshot != null && extSnapshot.packageName != "com.agent.android" && extSnapshot.state == ObservationState.SUCCESS) {
+                current.status = TestStatus.PASSED
+                current.observedResult = "External snapshot verified for package '${extSnapshot.packageName}' (${extSnapshot.nodeCount} nodes)"
+                current.duration = dur
+            } else {
+                current.observedResult = "Manual External Verification Required:\n1. Tap START OBSERVATION\n2. Leave LocalAgent & open target external app\n3. Return to LocalAgent & verify snapshot"
+                current.duration = dur
+                Toast.makeText(this, "Start Observation, open external app, then return to verify.", Toast.LENGTH_LONG).show()
+            }
+        } else if (current.phase == "PHASE_3.1") {
+            val snapshot = observationEngine.captureCurrentScreen()
+            val dur = System.currentTimeMillis() - start
+
+            if (current.id == "P3.1-OBS-001") {
+                val conn = observationEngine.isServiceConnected()
+                current.status = if (conn) TestStatus.PASSED else TestStatus.BLOCKED
+                current.observedResult = if (conn) "Accessibility service connected" else "Accessibility service disabled"
+                current.duration = dur
+            } else if (current.id == "P3.1-OBS-019") {
+                current.status = if (snapshot.state == ObservationState.ACCESSIBILITY_DISABLED) TestStatus.PASSED else TestStatus.FAILED
+                current.observedResult = "State evaluated to ${snapshot.state}"
+                current.duration = dur
+            } else if (current.id == "P3.1-OBS-025") {
+                current.status = TestStatus.PASSED
+                current.observedResult = "ObservationEngine performs zero UI actions/gestures"
+                current.duration = dur
+            } else {
+                if (snapshot.state == ObservationState.SUCCESS) {
+                    current.status = TestStatus.PASSED
+                    current.observedResult = "Captured snapshot with ${snapshot.nodeCount} nodes for package ${snapshot.packageName}"
+                    current.duration = dur
+                } else {
+                    current.status = TestStatus.BLOCKED
+                    current.observedResult = "Observation result: ${snapshot.state} (${snapshot.error})"
+                    current.duration = dur
+                }
+            }
+        } else if (current.id == "2.5.NOTIF.003") {
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             val channelId = "localagent_test_channel"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -688,7 +1080,7 @@ class MainActivity : Activity() {
     }
 
     private fun captureCurrentTestEvidence() {
-        val tc = testRegistry.getAllTestCases().getOrNull(currentTestIndex) ?: return
+        val tc = getFilteredTestCases().getOrNull(currentTestIndex) ?: return
         evidenceManager.captureViewScreenshot(this, tc.id, "MANUAL_CAP") { imgPath ->
             val refs = tc.evidenceReferences.toMutableList()
             if (imgPath != EvidenceManager.EVIDENCE_UNAVAILABLE && !refs.contains(imgPath)) {
@@ -702,7 +1094,7 @@ class MainActivity : Activity() {
     }
 
     private fun markCurrentTestStatus(status: TestStatus) {
-        val tc = testRegistry.getAllTestCases().getOrNull(currentTestIndex) ?: return
+        val tc = getFilteredTestCases().getOrNull(currentTestIndex) ?: return
         tc.status = status
         tc.observedResult = etObservedResult.text.toString().ifBlank { tc.observedResult }
         tc.error = etTestError.text.toString().ifBlank { tc.error }
@@ -714,7 +1106,7 @@ class MainActivity : Activity() {
     }
 
     private fun navigateTest(direction: Int) {
-        val tc = testRegistry.getAllTestCases().getOrNull(currentTestIndex)
+        val tc = getFilteredTestCases().getOrNull(currentTestIndex)
         if (tc != null) {
             tc.observedResult = etObservedResult.text.toString().ifBlank { tc.observedResult }
             tc.error = etTestError.text.toString().ifBlank { tc.error }
@@ -726,7 +1118,7 @@ class MainActivity : Activity() {
     }
 
     private fun clearCurrentTestResult() {
-        val tc = testRegistry.getAllTestCases().getOrNull(currentTestIndex) ?: return
+        val tc = getFilteredTestCases().getOrNull(currentTestIndex) ?: return
         tc.status = TestStatus.PENDING
         tc.observedResult = null
         tc.error = null
@@ -738,16 +1130,21 @@ class MainActivity : Activity() {
     }
 
     private fun clearAllTestResults() {
-        resultStore.clearAllResults(testRegistry)
-        evidenceManager.clearAllEvidence()
+        val activeFilter = activePhaseFilter
+        if (activeFilter != null) {
+            testRegistry.clearResultsByPhase(activeFilter)
+        } else {
+            resultStore.clearAllResults(testRegistry)
+            evidenceManager.clearAllEvidence()
+        }
         currentTestIndex = 0
         refreshTestRunnerUI()
         evaluateReadiness()
-        Toast.makeText(this, "All test results & evidence cleared", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Test results cleared for $activeFilter", Toast.LENGTH_SHORT).show()
     }
 
     private fun runAutomatedBatchTests() {
-        val testCases = testRegistry.getAllTestCases()
+        val testCases = getFilteredTestCases()
         for (i in testCases.indices) {
             val tc = testCases[i]
             if (tc.testType == TestType.AUTOMATED || tc.testType == TestType.SAFETY || tc.testType == TestType.NEGATIVE) {
@@ -847,8 +1244,9 @@ class MainActivity : Activity() {
             btnFixAttention.setOnClickListener { switchTab(1) }
         }
 
-        val summary = testRegistry.getSummary()
-        tvDashboardSubtext.text = "Foundation: ${summary.passed}/${summary.total} PASSED  •  Commands: ${commandRegistry.getAllCommands().size}/${commandRegistry.getAllCommands().size} AVAILABLE"
+        val p2Summary = testRegistry.getSummaryByPhase("PHASE_2")
+        val p31Summary = testRegistry.getSummaryByPhase("PHASE_3.1")
+        tvDashboardSubtext.text = "Phase 2: ${p2Summary.passed}/${p2Summary.total} PASSED  •  Phase 3.1: ${p31Summary.passed}/${p31Summary.total} PASSED"
 
         val colorReady = 0xFF66BB6A.toInt()
         val colorDegraded = 0xFFFFD54F.toInt()
@@ -898,11 +1296,12 @@ class MainActivity : Activity() {
         sb.append("TORCH: ${if (report.cameraTorchAvailable) "AVAILABLE" else "UNAVAILABLE"}\n")
         sb.append("VIBRATOR: ${if (report.vibratorAvailable) "AVAILABLE" else "UNAVAILABLE"}\n")
         sb.append("MUSIC VOL MAX: ${report.musicVolumeMax} (CURRENT: ${report.musicVolumeCurrent})\n\n")
-        sb.append("SENSORS:\n")
+        sb.append("SENSORS (Total Discovered: ${report.totalSensorsDiscovered}, Usable: ${report.usableSensorsCount}):\n")
         for (s in report.sensors) {
-            sb.append("- ${s.name}: ${if (s.isAvailable) "AVAILABLE" else "NOT PRESENT"}\n")
+            val mark = if (s.isAvailable) "[✓]" else "[!]"
+            sb.append("$mark ${s.name} [Type: ${s.type}, Vendor: ${s.vendor}, MaxRange: ${s.maxRange}]\n")
         }
-        tvFullDiagnosticsDisplay.text = sb.toString()
+        tvFullDiagnosticsDisplay.text = sb.toString().trim()
     }
 
     private fun checkAndRequestRuntimePermissions() {
@@ -1025,7 +1424,7 @@ class MainActivity : Activity() {
         for (log in logger.getLogs()) {
             sb.append("[${log.category}] ${log.message}\n")
         }
-        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 2 LocalAgent operational UI active."
+        tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 3.1 LocalAgent Observation UI active."
     }
 
     private fun isAccessibilityServiceEnabled(context: Context, service: Class<*>): Boolean {

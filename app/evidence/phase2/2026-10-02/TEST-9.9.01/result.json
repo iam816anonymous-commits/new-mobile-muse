@@ -1,0 +1,12 @@
+{
+  "id": "9.9.01",
+  "phase": "PHASE_2.4",
+  "category": "TEST",
+  "name": "Test \"Escaping\" \nNewline",
+  "command": "test",
+  "status": "PASSED",
+  "observedResult": "Observed \"quotes\"",
+  "error": "None",
+  "duration": 5,
+  "timestamp": 1790933157687
+}

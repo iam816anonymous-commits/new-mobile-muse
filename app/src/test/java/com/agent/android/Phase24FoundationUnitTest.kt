@@ -107,6 +107,72 @@ class Phase24FoundationUnitTest {
     }
 
     @Test
+    fun testFlashlightControllerMultiTorchAndDiagnostics() {
+        val nullController = com.agent.android.agent.device.FlashlightController(null)
+
+        val nullDiag = nullController.getTorchDiagnostic()
+        assertFalse(nullDiag.capabilityExists)
+        assertFalse(nullDiag.capabilityPermitted)
+        assertFalse(nullDiag.capabilityUsable)
+        assertTrue(nullDiag.summaryText.contains("EXISTS=false"))
+
+        val statusRes = nullController.setFlashlightTarget("status")
+        assertEquals(com.agent.android.agent.skills.SkillStatus.SUCCESS, statusRes.status)
+
+        val invalidRes = nullController.setFlashlightTarget("invalid_target")
+        assertEquals(com.agent.android.agent.skills.SkillStatus.FAILED, invalidRes.status)
+        assertEquals("INVALID_TARGET", invalidRes.errorCode)
+
+        val frontResNull = nullController.setFlashlightTarget("front")
+        assertEquals("NO_CONTEXT", frontResNull.errorCode)
+
+        // Mock/Fake Provider with Dual Torches (Back: "0", Front: "1")
+        val fakeProvider = object : com.agent.android.agent.device.TorchHardwareProvider {
+            val activeTorches = mutableSetOf<String>()
+            override fun getTorchDiagnostic(): com.agent.android.agent.device.TorchMappingDiagnostic {
+                return com.agent.android.agent.device.TorchMappingDiagnostic(
+                    backCameraIds = listOf("0"),
+                    frontCameraIds = listOf("1"),
+                    otherCameraIds = emptyList(),
+                    capabilityExists = true,
+                    capabilityPermitted = true,
+                    capabilityUsable = true
+                )
+            }
+
+            override fun setTorchMode(cameraId: String, enabled: Boolean) {
+                if (enabled) activeTorches.add(cameraId) else activeTorches.remove(cameraId)
+            }
+        }
+
+        val dummyContext = android.content.ContextWrapper(null)
+        val multiTorchController = com.agent.android.agent.device.FlashlightController(dummyContext, fakeProvider)
+
+        val dualDiag = multiTorchController.getTorchDiagnostic()
+        assertTrue(dualDiag.capabilityExists)
+        assertTrue(dualDiag.capabilityPermitted)
+        assertTrue(dualDiag.capabilityUsable)
+        assertEquals(listOf("0"), dualDiag.backCameraIds)
+        assertEquals(listOf("1"), dualDiag.frontCameraIds)
+
+        val backRes = multiTorchController.setFlashlightTarget("back", true)
+        assertEquals(com.agent.android.agent.skills.SkillStatus.SUCCESS, backRes.status)
+        assertTrue(fakeProvider.activeTorches.contains("0"))
+
+        val frontRes = multiTorchController.setFlashlightTarget("front", true)
+        assertEquals(com.agent.android.agent.skills.SkillStatus.SUCCESS, frontRes.status)
+        assertTrue(fakeProvider.activeTorches.contains("1"))
+
+        val offRes = multiTorchController.setFlashlightTarget("off", false)
+        assertEquals(com.agent.android.agent.skills.SkillStatus.SUCCESS, offRes.status)
+        assertTrue(fakeProvider.activeTorches.isEmpty())
+
+        val bothRes = multiTorchController.setFlashlightTarget("both", true)
+        assertEquals(com.agent.android.agent.skills.SkillStatus.SUCCESS, bothRes.status)
+        assertTrue(fakeProvider.activeTorches.contains("0") && fakeProvider.activeTorches.contains("1"))
+    }
+
+    @Test
     fun testEnhancedCapabilityRegistry() {
         val registry = CapabilityRegistry(null)
         val detailed = registry.checkDetailedCapabilities()

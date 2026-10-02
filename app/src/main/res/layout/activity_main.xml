@@ -27,7 +27,7 @@
             android:id="@+id/tvHeaderSub"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Device Agent • Phase 2"
+            android:text="Device Agent • Phase 3.1"
             android:textColor="#80D8FF"
             android:textSize="11sp" />
     </LinearLayout>
@@ -161,7 +161,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Foundation: 82/82 PASSED  •  Commands: 53/53 AVAILABLE"
+                        android:text="Foundation: 82/82 PASSED  •  Phase 3.1: READY"
                         android:textColor="#B0BEC5"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -182,7 +182,6 @@
                     android:layout_marginTop="4dp"
                     android:orientation="vertical">
 
-                    <!-- Capability Cards Grid/Rows -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -660,12 +659,386 @@
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
+                <!-- PHASE 3.1 OBSERVATION FOUNDATION CARD -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="PHASE 3.1 — OBSERVATION FOUNDATION"
+                    android:textColor="#00E5FF"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#1E272C"
+                    android:padding="10dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvObsServiceStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Accessibility Service: DISABLED"
+                        android:textColor="#EF5350"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvObsModeStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Observation Mode: READY"
+                        android:textColor="#FFD54F"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvObsPackageName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Current Package: -"
+                        android:textColor="#ECEFF1"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvObsActivityName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Current Activity: -"
+                        android:textColor="#ECEFF1"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvObsLastTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Last Observation: NEVER"
+                        android:textColor="#B0BEC5"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/tvObsNodeCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Nodes Captured: 0"
+                        android:textColor="#B0BEC5"
+                        android:textSize="10sp" />
+
+                    <!-- OBSERVATION CONTROL BUTTONS -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btnObsStartMode"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="2dp"
+                            android:textSize="10sp"
+                            android:text="START OBSERVATION" />
+
+                        <Button
+                            android:id="@+id/btnObsStopMode"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="2dp"
+                            android:textSize="10sp"
+                            android:text="STOP OBSERVATION" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btnObsCaptureScreen"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="2dp"
+                            android:textSize="9sp"
+                            android:text="CAPTURE SCREEN" />
+
+                        <Button
+                            android:id="@+id/btnObsViewExternal"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="2dp"
+                            android:layout_marginEnd="2dp"
+                            android:textSize="9sp"
+                            android:text="VIEW EXTERNAL SNAPSHOT" />
+
+                        <Button
+                            android:id="@+id/btnObsClear"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="2dp"
+                            android:textSize="9sp"
+                            android:text="CLEAR" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="OBSERVATION TREE:"
+                        android:textColor="#FFD54F"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvObsTreeDisplay"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="[No observation captured yet]"
+                        android:textColor="#80D8FF"
+                        android:typeface="monospace"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="SELECTED NODE DETAILS:"
+                        android:textColor="#FFD54F"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvObsSelectedNodeDisplay"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="Class: -\nText: -\nResource ID: -\nClickable: -\nEnabled: -\nBounds: -"
+                        android:textColor="#A5D6A7"
+                        android:typeface="monospace"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <!-- CARD A: OBSERVATION ENGINE VALIDATION (CURRENT SCREEN) -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="CARD A — OBSERVATION ENGINE VALIDATION (CURRENT SCREEN)"
+                    android:textColor="#80D8FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#1A2327"
+                    android:padding="10dp"
+                    android:orientation="vertical">
+
+                    <Button
+                        android:id="@+id/btnRunEngineValidation"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="RUN ENGINE VALIDATION" />
+
+                    <TextView
+                        android:id="@+id/tvEngineValidationResult"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Validation Result: UNTESTED"
+                        android:textColor="#FFD54F"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvEngineValidationDetails"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="Tap 'RUN ENGINE VALIDATION' to evaluate observation engine criteria (25 checks)."
+                        android:textColor="#B0BEC5"
+                        android:typeface="monospace"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <!-- CARD B: GUIDED EXTERNAL OBSERVATION TEST -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="CARD B — GUIDED EXTERNAL OBSERVATION TEST"
+                    android:textColor="#CE93D8"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="#231A27"
+                    android:padding="10dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Target Application:"
+                        android:textColor="#E1BEE7"
+                        android:textSize="11sp" />
+
+                    <Spinner
+                        android:id="@+id/spinnerCardBTargetApp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:background="#1A1A1A"
+                        android:padding="4dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btnStartGuidedTest"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="2dp"
+                            android:text="START GUIDED TEST" />
+
+                        <Button
+                            android:id="@+id/btnCardBRunAgain"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="2dp"
+                            android:text="RESET / RE-RUN" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvCardBStateStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Status: READY"
+                        android:textColor="#FFD54F"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="TEST PROGRESS:"
+                        android:textColor="#FFD54F"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvCardBProgressSteps"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="○ Preparing  ○ Launching  ○ Waiting  ○ Target Detected\n○ Captured  ○ Validated  ○ Preserved  ○ Test Passed"
+                        android:textColor="#B0BEC5"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="LIVE TEST STATE:"
+                        android:textColor="#FFD54F"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvCardBLiveState"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="Expected Package: -\nCurrent Package: -\nActivity: -\nNodes: 0"
+                        android:textColor="#80D8FF"
+                        android:typeface="monospace"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="VALIDATION CHECKLIST:"
+                        android:textColor="#FFD54F"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvCardBValidationChecklist"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="[Pending Test Execution]"
+                        android:textColor="#A5D6A7"
+                        android:typeface="monospace"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="FINAL RESULT:"
+                        android:textColor="#FFD54F"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvCardBFinalResult"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:background="#121212"
+                        android:padding="6dp"
+                        android:text="GUIDED TEST NOT RUN YET"
+                        android:textColor="#E1BEE7"
+                        android:typeface="monospace"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
                 <!-- FOUNDATION READINESS SUMMARY -->
                 <TextView
                     android:id="@+id/tvReadinessOverallBanner"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="12dp"
                     android:background="#3300E5FF"
                     android:padding="10dp"
                     android:text="FOUNDATION STATUS: READY (82/82 Passed, 53/53 Implemented)"
@@ -678,7 +1051,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="VIEW FOUNDATION TEST HARNESS" />
+                    android:text="VIEW TEST HARNESS" />
 
                 <!-- SUB-PANEL: SEQUENTIAL TEST RUNNER (HIDDEN BY DEFAULT) -->
                 <LinearLayout
@@ -694,16 +1067,55 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="FOUNDATION TEST HARNESS"
+                        android:text="TEST HARNESS &amp; ISOLATED SUITES"
                         android:textColor="#FFD54F"
                         android:textSize="12sp"
                         android:textStyle="bold" />
+
+                    <!-- PHASE FILTER BAR -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btnPhaseFilterAll"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="2dp"
+                            android:textSize="9sp"
+                            android:padding="0dp"
+                            android:text="ALL" />
+
+                        <Button
+                            android:id="@+id/btnPhaseFilterPhase2"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="2dp"
+                            android:layout_marginEnd="2dp"
+                            android:textSize="9sp"
+                            android:padding="0dp"
+                            android:text="PHASE 2" />
+
+                        <Button
+                            android:id="@+id/btnPhaseFilterPhase31"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="2dp"
+                            android:textSize="9sp"
+                            android:padding="0dp"
+                            android:text="PHASE 3.1" />
+                    </LinearLayout>
 
                     <TextView
                         android:id="@+id/tvRunnerProgress"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
+                        android:layout_marginTop="4dp"
                         android:text="Progress: 0 / 82 completed"
                         android:textColor="#FFD54F"
                         android:textSize="11sp" />
@@ -900,7 +1312,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="RUN ALL AUTOMATED TESTS" />
+                        android:text="RUN FILTERED AUTOMATED TESTS" />
                 </LinearLayout>
 
                 <!-- SYSTEM INFORMATION -->
@@ -1209,7 +1621,7 @@
                     android:layout_marginTop="6dp"
                     android:background="#1E1E1E"
                     android:padding="8dp"
-                    android:text="[SYSTEM] Phase 2 LocalAgent operational UI active."
+                    android:text="[SYSTEM] Phase 3.1 LocalAgent Observation UI active."
                     android:textColor="#00FF66"
                     android:typeface="monospace"
                     android:textSize="11sp" />

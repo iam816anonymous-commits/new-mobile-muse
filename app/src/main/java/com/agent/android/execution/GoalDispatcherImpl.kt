@@ -39,6 +39,10 @@ import com.agent.android.permissions.PermissionStatus
 import com.agent.android.safety.CancellationReason
 import com.agent.android.speech.SpeechToTextEngine
 import com.agent.android.speech.TextToSpeechEngine
+import com.agent.android.target.TargetQuery
+import com.agent.android.target.TargetResolver
+import com.agent.android.target.TargetResolutionStatus
+import com.agent.android.target.TargetSelector
 import com.agent.android.test.FoundationTestRegistry
 
 data class DispatchDetails(
@@ -82,7 +86,9 @@ class GoalDispatcherImpl(
     private val readinessEvaluator: FoundationReadinessEvaluator? = null,
     private val sttEngine: SpeechToTextEngine? = null,
     private val ttsEngine: TextToSpeechEngine? = null,
-    val permissionManager: PermissionManager? = null
+    val permissionManager: PermissionManager? = null,
+    val observationEngine: com.agent.android.observation.AccessibilityObservationEngine? = null,
+    val targetResolver: TargetResolver = TargetResolver()
 ) : GoalDispatcher {
 
     override fun dispatchGoal(goal: String): Boolean {
@@ -319,7 +325,7 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "flashlight.status" -> {
-                val res = flashlightController?.setFlashlight(false) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                val res = flashlightController?.setFlashlightTarget("status") ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "flashlight.on" -> {
@@ -328,12 +334,49 @@ class GoalDispatcherImpl(
                     val res = SkillResult("FLASHLIGHT", SkillStatus.PERMISSION_REQUIRED, "CAMERA permission required for flashlight. Grant in Settings.", 0L, "CAMERA_PERMISSION_REQUIRED")
                     return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
                 }
-                val res = flashlightController?.setFlashlight(true) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
-                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, "Torch state = ON")
+                val res = flashlightController?.setFlashlightTarget("back", true) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "flashlight.front" -> {
+                val perm = permissionManager?.registry?.getPermissionById("perm_camera")
+                if (perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("FLASHLIGHT", SkillStatus.PERMISSION_REQUIRED, "CAMERA permission required for flashlight. Grant in Settings.", 0L, "CAMERA_PERMISSION_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
+                val res = flashlightController?.setFlashlightTarget("front", true) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "flashlight.back" -> {
+                val perm = permissionManager?.registry?.getPermissionById("perm_camera")
+                if (perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("FLASHLIGHT", SkillStatus.PERMISSION_REQUIRED, "CAMERA permission required for flashlight. Grant in Settings.", 0L, "CAMERA_PERMISSION_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
+                val res = flashlightController?.setFlashlightTarget("back", true) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "flashlight.both" -> {
+                val perm = permissionManager?.registry?.getPermissionById("perm_camera")
+                if (perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("FLASHLIGHT", SkillStatus.PERMISSION_REQUIRED, "CAMERA permission required for flashlight. Grant in Settings.", 0L, "CAMERA_PERMISSION_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
+                val res = flashlightController?.setFlashlightTarget("both", true) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "flashlight.off" -> {
-                val res = flashlightController?.setFlashlight(false) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
-                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, "Torch state = OFF")
+                val res = flashlightController?.setFlashlightTarget("off", false) ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "flashlight.target" -> {
+                val target = parsedArgs.getString("target") ?: "status"
+                val perm = permissionManager?.registry?.getPermissionById("perm_camera")
+                if (target != "status" && target != "off" && perm != null && permissionManager?.checkStatus(perm) != PermissionStatus.OBTAINED) {
+                    val res = SkillResult("FLASHLIGHT", SkillStatus.PERMISSION_REQUIRED, "CAMERA permission required for flashlight. Grant in Settings.", 0L, "CAMERA_PERMISSION_REQUIRED")
+                    return DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+                }
+                val res = flashlightController?.setFlashlightTarget(target, target != "off") ?: SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
             }
             "haptics.status" -> {
                 val res = hapticController?.getVibratorStatus() ?: SkillResult("VIBRATION", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
@@ -403,6 +446,44 @@ class GoalDispatcherImpl(
             "battery.status" -> {
                 val res = hardwareObservationControllers?.getBatteryStatus() ?: SkillResult("BATTERY", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
                 DispatchDetails(trimmed, "BATTERY", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "sensor.list", "sensor.discovery" -> {
+                val res = hardwareObservationControllers?.getSensorList() ?: SkillResult("SENSOR", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, "SENSOR", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "sensor.status" -> {
+                val discovered = hardwareObservationControllers?.discoverAllSensors() ?: emptyList()
+                val res = SkillResult("SENSOR_STATUS", SkillStatus.SUCCESS, "Discovered ${discovered.size} total sensors via SensorManager.TYPE_ALL", 0L)
+                DispatchDetails(trimmed, "SENSOR", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "sensor.info" -> {
+                val sensorTypeStr = parsedArgs.getString("sensorType") ?: "accelerometer"
+                val typeInt = when (sensorTypeStr.lowercase()) {
+                    "accelerometer" -> android.hardware.Sensor.TYPE_ACCELEROMETER
+                    "gyroscope" -> android.hardware.Sensor.TYPE_GYROSCOPE
+                    "proximity" -> android.hardware.Sensor.TYPE_PROXIMITY
+                    "light" -> android.hardware.Sensor.TYPE_LIGHT
+                    else -> sensorTypeStr.toIntOrNull() ?: android.hardware.Sensor.TYPE_ACCELEROMETER
+                }
+                val validated = hardwareObservationControllers?.validateSingleSensor(typeInt, 100L)
+                val res = if (validated != null) {
+                    SkillResult("SENSOR_INFO", SkillStatus.SUCCESS, "Sensor ${validated.name} [Vendor: ${validated.vendor}, MaxRange: ${validated.maximumRange}, Res: ${validated.resolution}, Power: ${validated.power}mA, State: ${validated.capabilityState}]", 0L)
+                } else {
+                    SkillResult("SENSOR_INFO", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                }
+                DispatchDetails(trimmed, "SENSOR", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "sensor.test", "sensor.sample" -> {
+                val sensorTypeStr = parsedArgs.getString("sensorType") ?: "accelerometer"
+                val typeInt = when (sensorTypeStr.lowercase()) {
+                    "accelerometer" -> android.hardware.Sensor.TYPE_ACCELEROMETER
+                    "gyroscope" -> android.hardware.Sensor.TYPE_GYROSCOPE
+                    "proximity" -> android.hardware.Sensor.TYPE_PROXIMITY
+                    "light" -> android.hardware.Sensor.TYPE_LIGHT
+                    else -> sensorTypeStr.toIntOrNull() ?: android.hardware.Sensor.TYPE_ACCELEROMETER
+                }
+                val res = hardwareObservationControllers?.sampleSensor(typeInt, sensorTypeStr, 500L) ?: SkillResult("SENSOR", SkillStatus.UNAVAILABLE, "No Controller", 0L, "NO_CONTROLLER")
+                DispatchDetails(trimmed, "SENSOR", cmdDef.handlerIdentifier, res, res.message)
             }
             "sensor.accelerometer.sample" -> {
                 val res = hardwareObservationControllers?.sampleSensor(android.hardware.Sensor.TYPE_ACCELEROMETER, "accelerometer")
@@ -505,6 +586,32 @@ class GoalDispatcherImpl(
                     SkillResult("READINESS", SkillStatus.SUCCESS, "Readiness Evaluator registered", 0L)
                 }
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)
+            }
+            "target.resolve", "target.find", "target.candidates" -> {
+                val qStr = parsedArgs.getString("query") ?: ""
+                val snapshot = observationEngine?.getDisplayedSnapshot() ?: observationEngine?.getLastSnapshot()
+                val targetQuery = TargetQuery(text = qStr, selectorType = TargetSelector.AUTO)
+                val res = targetResolver.resolve(snapshot, targetQuery)
+                val skillStatus = when (res.status) {
+                    TargetResolutionStatus.RESOLVED -> SkillStatus.SUCCESS
+                    TargetResolutionStatus.AMBIGUOUS -> SkillStatus.FAILED
+                    TargetResolutionStatus.NOT_FOUND -> SkillStatus.FAILED
+                    else -> SkillStatus.UNAVAILABLE
+                }
+                val skillRes = SkillResult("TARGET_RESOLUTION", skillStatus, res.explanation, 0L, res.status.name)
+                DispatchDetails(trimmed, "TARGET_RESOLVE", cmdDef.handlerIdentifier, skillRes, res.explanation)
+            }
+            "target.inspect" -> {
+                val nodeId = parsedArgs.getString("nodeId") ?: ""
+                val snapshot = observationEngine?.getDisplayedSnapshot() ?: observationEngine?.getLastSnapshot()
+                val matchedNode = snapshot?.allNodesList?.find { it.id == nodeId }
+                val msg = if (matchedNode != null) {
+                    "Node '$nodeId': Class=${matchedNode.className}, Text='${matchedNode.text}', Desc='${matchedNode.contentDescription}', Clickable=${matchedNode.isClickable}, Editable=${matchedNode.isEditable}"
+                } else {
+                    "Node '$nodeId' not found in current snapshot"
+                }
+                val skillRes = SkillResult("TARGET_INSPECT", if (matchedNode != null) SkillStatus.SUCCESS else SkillStatus.FAILED, msg, 0L)
+                DispatchDetails(trimmed, "TARGET_INSPECT", cmdDef.handlerIdentifier, skillRes, msg)
             }
             else -> {
                 val res = SkillResult(cmdDef.commandId, SkillStatus.SUCCESS, "Executed command '${cmdDef.commandId}'", 0L)
