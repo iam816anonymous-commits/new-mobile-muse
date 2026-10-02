@@ -793,4 +793,35 @@ class Phase31CrossAppObservationUnitTest {
         assertEquals(ObservationState.SUPPORTED_SURFACE_BUT_NOT_EXPOSED, launcherNotExposedSnap.state)
         assertEquals(0, launcherNotExposedSnap.nodeCount)
     }
+
+    @Test
+    fun testPhase3TestTargetControllerResolutionAndValidation() {
+        val controller = com.agent.android.observation.Phase3TestTargetController(null)
+
+        // LocalAgent target spec
+        val localSpec = controller.resolveTargetSpec("P3.1-SYS-LOCAL-001")
+        assertEquals(com.agent.android.observation.ObservationTargetType.LOCALAGENT, localSpec.targetType)
+        assertEquals("com.agent.android", localSpec.expectedPackage)
+
+        // Chrome target spec
+        val chromeSpec = controller.resolveTargetSpec("P3.1-POS-CHROME")
+        assertEquals(com.agent.android.observation.ObservationTargetType.CHROME, chromeSpec.targetType)
+        assertEquals("com.android.chrome", chromeSpec.expectedPackage)
+
+        // Settings target spec
+        val settingsSpec = controller.resolveTargetSpec("P3.1-POS-SETTINGS")
+        assertEquals(com.agent.android.observation.ObservationTargetType.ANDROID_SETTINGS, settingsSpec.targetType)
+        assertEquals("com.android.settings", settingsSpec.expectedPackage)
+
+        // Target verification: Match
+        val chromeMatch = controller.verifyTargetMatch(chromeSpec, "com.android.chrome", "ChromeTabbedActivity")
+        assertTrue(chromeMatch.success)
+        assertEquals("TARGET_CONFIRMED", chromeMatch.statusText)
+
+        // Target verification: Wrong target (LocalAgent when expecting Chrome)
+        val wrongTargetMatch = controller.verifyTargetMatch(chromeSpec, "com.agent.android", "MainActivity")
+        assertEquals(false, wrongTargetMatch.success)
+        assertEquals("WRONG_TARGET", wrongTargetMatch.statusText)
+        assertNotNull(wrongTargetMatch.errorReason)
+    }
 }
