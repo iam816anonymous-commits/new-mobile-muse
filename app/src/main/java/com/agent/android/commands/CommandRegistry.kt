@@ -154,6 +154,16 @@ class CommandRegistry {
         register(CommandDefinition("test.scroll", "Test Action Scroll", CommandCategory.OBSERVATION, "Executes test SCROLL action against target", CommandStatus.IMPLEMENTED, "test scroll <direction>", listOf("test scroll forward"), listOf("direction"), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
         register(CommandDefinition("test.back", "Test Action Back", CommandCategory.OBSERVATION, "Executes test GLOBAL_BACK action", CommandStatus.IMPLEMENTED, "test back", listOf("test back"), emptyList(), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
         register(CommandDefinition("test.run", "Test Run Scenario", CommandCategory.OBSERVATION, "Executes complete automated Phase 3.2 real-device test scenario", CommandStatus.IMPLEMENTED, "test run <test_id>", listOf("test run P3.2-ACT-001"), listOf("testId"), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "GuidedPhase32ActionRunner"))
+
+        // 22. DISCOVERY, NAMESPACED OBSERVATION & SYSTEM UI COMMANDS
+        register(CommandDefinition("help", "Command Discovery Help", CommandCategory.DIAGNOSTICS, "Lists available command categories or detailed command help", CommandStatus.IMPLEMENTED, "help", listOf("help", "help action"), listOf("query"), handlerIdentifier = "CommandRegistry"))
+        register(CommandDefinition("commands", "List Production Commands", CommandCategory.DIAGNOSTICS, "Lists all registered production commands", CommandStatus.IMPLEMENTED, "commands", listOf("commands", "commands observation"), listOf("filter"), handlerIdentifier = "CommandRegistry"))
+        register(CommandDefinition("observe.start", "Start Observation Mode", CommandCategory.OBSERVATION, "Starts Accessibility Observation Mode", CommandStatus.IMPLEMENTED, "observe start", listOf("observe start"), handlerIdentifier = "AccessibilityObservationEngine"))
+        register(CommandDefinition("observe.stop", "Stop Observation Mode", CommandCategory.OBSERVATION, "Stops Accessibility Observation Mode", CommandStatus.IMPLEMENTED, "observe stop", listOf("observe stop"), handlerIdentifier = "AccessibilityObservationEngine"))
+        register(CommandDefinition("observe.current", "Current Observation Summary", CommandCategory.OBSERVATION, "Queries current foreground package and observation snapshot summary", CommandStatus.IMPLEMENTED, "observe current", listOf("observe current"), handlerIdentifier = "AccessibilityObservationEngine"))
+        register(CommandDefinition("observe.nodes", "Visible Nodes Summary", CommandCategory.OBSERVATION, "Summarizes visible nodes in active observation snapshot", CommandStatus.IMPLEMENTED, "observe nodes", listOf("observe nodes"), handlerIdentifier = "AccessibilityObservationEngine"))
+        register(CommandDefinition("system.status", "System Status Query", CommandCategory.DIAGNOSTICS, "Queries unified system readiness, capabilities, and service states", CommandStatus.IMPLEMENTED, "system status", listOf("system status"), handlerIdentifier = "FoundationReadinessEvaluator"))
+        register(CommandDefinition("ui.state", "UI State Query", CommandCategory.DIAGNOSTICS, "Queries central UI state and speech configuration", CommandStatus.IMPLEMENTED, "ui state", listOf("ui state"), handlerIdentifier = "AgentUiState"))
     }
 
     fun register(command: CommandDefinition) {
@@ -285,6 +295,16 @@ class CommandRegistry {
             }
             "target.inspect" -> {
                 if (parts.size >= 3) params["nodeId"] = parts[2]
+            }
+            "help" -> {
+                if (trimmed.length > "help".length) {
+                    params["query"] = trimmed.substring("help".length).trim()
+                }
+            }
+            "commands" -> {
+                if (trimmed.length > "commands".length) {
+                    params["filter"] = trimmed.substring("commands".length).trim()
+                }
             }
             else -> {
                 if (definition.commandId.startsWith("volume.") && definition.commandId.endsWith(".set")) {

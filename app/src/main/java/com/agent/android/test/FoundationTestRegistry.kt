@@ -283,6 +283,16 @@ class FoundationTestRegistry {
         add(TestCase("P3.2-HARN-007", "test.back", "PHASE_3.2", "TEST_HARNESS", "Test Back Harness Command", "Executes test back action.", "test back", "Action executed", TestType.AUTOMATED))
         add(TestCase("P3.2-HARN-008", "test.run", "PHASE_3.2", "TEST_HARNESS", "Test Run Scenario Harness Command", "Executes automated test scenario.", "test run P3.2-ACT-001", "Scenario executed", TestType.AUTOMATED))
 
+        // DISCOVERY, NAMESPACED OBSERVATION & SYSTEM UI TEST CASES
+        add(TestCase("P3.2-DISC-001", "help", "PHASE_3.2", "DISCOVERY", "Command Help Discovery", "Queries help and usage information for command categories.", "help", "Category help returned", TestType.AUTOMATED))
+        add(TestCase("P3.2-DISC-002", "commands", "PHASE_3.2", "DISCOVERY", "List Registered Commands", "Lists registered production commands.", "commands", "Registered commands listed", TestType.AUTOMATED))
+        add(TestCase("P3.2-DISC-003", "observe.start", "PHASE_3.2", "OBSERVATION", "Observe Start Command", "Starts observation mode.", "observe start", "Observation mode started", TestType.AUTOMATED))
+        add(TestCase("P3.2-DISC-004", "observe.stop", "PHASE_3.2", "OBSERVATION", "Observe Stop Command", "Stops observation mode.", "observe stop", "Observation mode stopped", TestType.AUTOMATED))
+        add(TestCase("P3.2-DISC-005", "observe.current", "PHASE_3.2", "OBSERVATION", "Observe Current Command", "Queries active foreground observation summary.", "observe current", "Current observation reported", TestType.AUTOMATED))
+        add(TestCase("P3.2-DISC-006", "observe.nodes", "PHASE_3.2", "OBSERVATION", "Observe Nodes Command", "Summarizes visible node hierarchy.", "observe nodes", "Node hierarchy summarized", TestType.AUTOMATED))
+        add(TestCase("P3.2-DISC-007", "system.status", "PHASE_3.2", "SYSTEM", "System Status Command", "Queries unified system readiness.", "system status", "System readiness reported", TestType.AUTOMATED))
+        add(TestCase("P3.2-DISC-008", "ui.state", "PHASE_3.2", "SYSTEM", "UI State Command", "Queries central UI state.", "ui state", "UI state reported", TestType.AUTOMATED))
+
         // PHASE 3.2 ACTION EXECUTION TESTS (P3.2-ACT-001 TO P3.2-ACT-025)
         add(TestCase("P3.2-ACT-001", "action.click", "PHASE_3.2", "ACTION_EXECUTION", "Click Success", "Launches Calculator, verifies foreground, resolves button '1', clicks, and verifies display = 1.", "action click 1", "Calculator display updated to 1", TestType.AUTOMATED))
         add(TestCase("P3.2-ACT-002", "action.click", "PHASE_3.2", "ACTION_EXECUTION", "Click Invalid Target", "Rejects CLICK action against non-clickable target view.", "action click TitleText", "ACTION_UNSUPPORTED returned cleanly", TestType.NEGATIVE))

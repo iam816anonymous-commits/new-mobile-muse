@@ -68,11 +68,14 @@ import com.agent.android.permissions.PermissionManager
 import com.agent.android.permissions.PermissionStatus
 import com.agent.android.safety.Phase1SafetyTestHarness
 import com.agent.android.service.LocalAgentAccessibilityService
+import com.agent.android.speech.AgentLanguage
 import com.agent.android.speech.SpeechToTextEngine
 import com.agent.android.speech.SpeechToTextListener
 import com.agent.android.speech.TextToSpeechEngine
 import com.agent.android.storage.Logger
 import com.agent.android.test.FoundationTestRegistry
+import com.agent.android.ui.AgentUiState
+import com.agent.android.ui.UiModel
 import com.agent.android.test.evidence.EvidenceManager
 import com.agent.android.test.model.TestCase
 import com.agent.android.test.model.TestStatus
@@ -118,6 +121,26 @@ class MainActivity : Activity() {
     private var showingExternalSnapshot = false
 
     private val historyLog: Deque<HistoryEntry> = ArrayDeque()
+
+    // Centralized UI Model State
+    private var uiModel = UiModel()
+
+    // JARVIS UI Views
+    private lateinit var tvAgentIndicatorCircle: TextView
+    private lateinit var tvAgentIndicatorStateLabel: TextView
+    private lateinit var btnJarvisMic: Button
+    private lateinit var tvMicStatus: TextView
+    private lateinit var spinnerJarvisLanguage: Spinner
+    private lateinit var tvLanguageAvailability: TextView
+    private lateinit var tvVoiceTranscript: TextView
+    private lateinit var tvResolvedCommandDisplay: TextView
+    private lateinit var etJarvisTextInput: EditText
+    private lateinit var btnJarvisTextSend: Button
+    private lateinit var panelJarvisConfirmation: LinearLayout
+    private lateinit var tvConfirmationPrompt: TextView
+    private lateinit var btnConfirmAction: Button
+    private lateinit var btnCancelAction: Button
+    private lateinit var tvTechnicalExecutionSummary: TextView
 
     // Tab buttons & Panels
     private lateinit var btnTabDashboard: Button
@@ -352,6 +375,31 @@ class MainActivity : Activity() {
     }
 
     private fun bindViews() {
+        // JARVIS UI Views
+        tvAgentIndicatorCircle = findViewById(R.id.tvAgentIndicatorCircle)
+        tvAgentIndicatorStateLabel = findViewById(R.id.tvAgentIndicatorStateLabel)
+        btnJarvisMic = findViewById(R.id.btnJarvisMic)
+        tvMicStatus = findViewById(R.id.tvMicStatus)
+        spinnerJarvisLanguage = findViewById(R.id.spinnerJarvisLanguage)
+        tvLanguageAvailability = findViewById(R.id.tvLanguageAvailability)
+        tvVoiceTranscript = findViewById(R.id.tvVoiceTranscript)
+        tvResolvedCommandDisplay = findViewById(R.id.tvResolvedCommandDisplay)
+        etJarvisTextInput = findViewById(R.id.etJarvisTextInput)
+        btnJarvisTextSend = findViewById(R.id.btnJarvisTextSend)
+        panelJarvisConfirmation = findViewById(R.id.panelJarvisConfirmation)
+        tvConfirmationPrompt = findViewById(R.id.tvConfirmationPrompt)
+        btnConfirmAction = findViewById(R.id.btnConfirmAction)
+        btnCancelAction = findViewById(R.id.btnCancelAction)
+        tvTechnicalExecutionSummary = findViewById(R.id.tvTechnicalExecutionSummary)
+
+        val langAdapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            AgentLanguage.values().map { "${it.displayName} (${it.nativeName})" }
+        )
+        langAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerJarvisLanguage.adapter = langAdapter
+
         btnTabDashboard = findViewById(R.id.btnTabDashboard)
         btnTabPermissions = findViewById(R.id.btnTabPermissions)
         btnTabDiagnostics = findViewById(R.id.btnTabDiagnostics)
@@ -500,6 +548,38 @@ class MainActivity : Activity() {
     }
 
     private fun setupListeners() {
+        btnJarvisMic.setOnClickListener { toggleJarvisMicListening() }
+
+        btnJarvisTextSend.setOnClickListener {
+            val query = etJarvisTextInput.text.toString().trim()
+            if (query.isNotEmpty()) {
+                etJarvisTextInput.setText("")
+                processJarvisInput(query)
+            }
+        }
+
+        btnConfirmAction.setOnClickListener {
+            val pendingCmd = uiModel.resolvedCommand
+            if (!pendingCmd.isNullOrBlank()) {
+                executeJarvisCommand(pendingCmd)
+            }
+            setUiState(AgentUiState.IDLE)
+        }
+
+        btnCancelAction.setOnClickListener {
+            setUiState(AgentUiState.IDLE, errorMessage = "Command execution cancelled by user")
+        }
+
+        spinnerJarvisLanguage.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selected = AgentLanguage.values().getOrNull(position) ?: AgentLanguage.ENGLISH
+                uiModel = uiModel.copy(selectedLanguage = selected)
+                updateLanguageAvailabilityUI()
+            }
+
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
+
         btnTabDashboard.setOnClickListener { switchTab(0) }
         btnTabPermissions.setOnClickListener { switchTab(1) }
         btnTabDiagnostics.setOnClickListener { switchTab(2) }
@@ -1342,7 +1422,7 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun executeLiveCommand(command: String) {
+    private fun executeLiveCommand(command: String): com.agent.android.execution.DispatchDetails {
         val details = goalDispatcher.dispatchAndProcessWithLock(command)
         val statusText = if (details.result.status == SkillStatus.SUCCESS) "SUCCESS" else "FAILED (${details.result.status})"
 
@@ -1366,6 +1446,7 @@ class MainActivity : Activity() {
         ))
 
         updateUIState()
+        return details
     }
 
     private fun runConcurrencyTest() {
@@ -1427,6 +1508,177 @@ class MainActivity : Activity() {
             sb.append("[${log.category}] ${log.message}\n")
         }
         tvLogArea.text = if (sb.isNotEmpty()) sb.toString() else "[SYSTEM] Phase 3.1 LocalAgent Observation UI active."
+    }
+
+    private fun setUiState(
+        state: AgentUiState,
+        transcript: String? = uiModel.lastTranscript,
+        resolvedCommand: String? = uiModel.resolvedCommand,
+        executionMessage: String? = uiModel.executionMessage,
+        errorMessage: String? = null
+    ) {
+        val isMic = state == AgentUiState.LISTENING || state == AgentUiState.TRANSCRIBING
+        val isSpk = state == AgentUiState.SPEAKING
+        val isConf = state == AgentUiState.CONFIRMATION_REQUIRED
+
+        uiModel = uiModel.copy(
+            state = state,
+            lastTranscript = transcript,
+            resolvedCommand = resolvedCommand,
+            executionMessage = executionMessage,
+            isMicActive = isMic,
+            isSpeaking = isSpk,
+            isConfirmationPending = isConf,
+            errorMessage = errorMessage
+        )
+
+        updateJarvisUiVisuals()
+    }
+
+    private fun updateJarvisUiVisuals() {
+        val st = uiModel.state
+        tvAgentIndicatorStateLabel.text = st.name
+
+        val circleBg = when (st) {
+            AgentUiState.IDLE -> 0xFF1A2634.toInt()
+            AgentUiState.LISTENING -> 0xFF00E5FF.toInt()
+            AgentUiState.TRANSCRIBING, AgentUiState.PROCESSING -> 0xFFFFD54F.toInt()
+            AgentUiState.EXECUTING, AgentUiState.OBSERVING, AgentUiState.VERIFYING -> 0xFF80D8FF.toInt()
+            AgentUiState.SPEAKING -> 0xFFCE93D8.toInt()
+            AgentUiState.SUCCESS -> 0xFF66BB6A.toInt()
+            AgentUiState.ERROR -> 0xFFEF5350.toInt()
+            AgentUiState.CONFIRMATION_REQUIRED -> 0xFFFFB74D.toInt()
+        }
+
+        val circleText = when (st) {
+            AgentUiState.IDLE -> "◉"
+            AgentUiState.LISTENING -> "~ ◉ ~"
+            AgentUiState.TRANSCRIBING, AgentUiState.PROCESSING -> "⚙"
+            AgentUiState.EXECUTING, AgentUiState.OBSERVING, AgentUiState.VERIFYING -> "⚡"
+            AgentUiState.SPEAKING -> "🔊"
+            AgentUiState.SUCCESS -> "✓"
+            AgentUiState.ERROR -> "!"
+            AgentUiState.CONFIRMATION_REQUIRED -> "?"
+        }
+
+        tvAgentIndicatorCircle.text = circleText
+        tvAgentIndicatorCircle.setBackgroundColor(circleBg)
+        tvAgentIndicatorCircle.setTextColor(if (st == AgentUiState.LISTENING) 0xFF0A0E14.toInt() else 0xFF00E5FF.toInt())
+
+        tvDashboardBanner.text = when (st) {
+            AgentUiState.IDLE -> "Ready for command"
+            AgentUiState.LISTENING -> "Listening..."
+            AgentUiState.TRANSCRIBING -> "Transcribing speech..."
+            AgentUiState.PROCESSING -> "Resolving intent..."
+            AgentUiState.EXECUTING -> "Executing..."
+            AgentUiState.OBSERVING -> "Observing target screen..."
+            AgentUiState.VERIFYING -> "Verifying result..."
+            AgentUiState.SPEAKING -> "Speaking response..."
+            AgentUiState.SUCCESS -> "Command completed"
+            AgentUiState.ERROR -> uiModel.errorMessage ?: "Execution failed"
+            AgentUiState.CONFIRMATION_REQUIRED -> "Confirmation required"
+        }
+
+        btnJarvisMic.text = if (uiModel.isMicActive) "■" else "🎙"
+        tvMicStatus.text = if (uiModel.isMicActive) "TAP AGAIN TO STOP LISTENING" else "TAP MICROPHONE TO SPEAK"
+        tvMicStatus.setTextColor(if (uiModel.isMicActive) 0xFFFFD54F.toInt() else 0xFF00E5FF.toInt())
+
+        tvVoiceTranscript.text = uiModel.lastTranscript ?: "[Awaiting voice or text input...]"
+        tvResolvedCommandDisplay.text = "Resolved Intent: ${uiModel.resolvedCommand ?: "-"}"
+
+        panelJarvisConfirmation.visibility = if (uiModel.isConfirmationPending) View.VISIBLE else View.GONE
+        if (uiModel.isConfirmationPending) {
+            tvConfirmationPrompt.text = "Action '${uiModel.resolvedCommand}' requires confirmation. Proceed?"
+        }
+
+        val execState = executionController.stateMachine.currentState.name
+        val safetyState = executionController.safetyState.status.name
+        tvTechnicalExecutionSummary.text = "UI State: ${st.name} | Execution: $execState | Safety: $safetyState | Lang: ${uiModel.selectedLanguage.code.uppercase()}"
+    }
+
+    private fun updateLanguageAvailabilityUI() {
+        val lang = uiModel.selectedLanguage
+        val sttAvailable = sttEngine.isAvailable() && sttEngine.isLanguageAvailable(lang)
+        val ttsAvailable = ttsEngine.isAvailable() && ttsEngine.isAgentLanguageAvailable(lang)
+
+        tvLanguageAvailability.text = "Language [${lang.displayName}]: STT ${if (sttAvailable) "✓ AVAILABLE" else "✗ UNAVAILABLE"} | TTS ${if (ttsAvailable) "✓ AVAILABLE" else "✗ UNAVAILABLE"}"
+        tvLanguageAvailability.setTextColor(if (sttAvailable) 0xFF66BB6A.toInt() else 0xFFFFD54F.toInt())
+    }
+
+    private fun toggleJarvisMicListening() {
+        if (uiModel.isMicActive) {
+            sttEngine.stopListening()
+            setUiState(AgentUiState.IDLE)
+            return
+        }
+
+        if (!sttEngine.hasRecordAudioPermission()) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), PERMISSION_REQUEST_CODE)
+            return
+        }
+
+        setUiState(AgentUiState.LISTENING, transcript = "Listening for ${uiModel.selectedLanguage.displayName} speech...")
+
+        sttEngine.startListening(uiModel.selectedLanguage, 10000L, object : SpeechToTextListener {
+            override fun onReadyForSpeech() {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onResults(text: String) {
+                if (text.isNotBlank()) {
+                    setUiState(AgentUiState.TRANSCRIBING, transcript = "\"$text\"")
+                    processJarvisInput(text)
+                } else {
+                    setUiState(AgentUiState.ERROR, transcript = "No speech detected", errorMessage = "No speech input recognized")
+                }
+            }
+
+            override fun onError(errorCode: Int, errorMessage: String) {
+                setUiState(AgentUiState.ERROR, transcript = "Speech recognition error: $errorMessage", errorMessage = errorMessage)
+            }
+
+            override fun onPartialResults(partialText: String) {
+                setUiState(AgentUiState.LISTENING, transcript = "\"$partialText...\"")
+            }
+        })
+    }
+
+    private fun processJarvisInput(inputText: String) {
+        setUiState(AgentUiState.PROCESSING, transcript = "\"$inputText\"")
+
+        val cmdDef = commandRegistry.findCommandForInput(inputText)
+        if (cmdDef == null) {
+            setUiState(AgentUiState.ERROR, transcript = "\"$inputText\"", errorMessage = "Unrecognized command: '$inputText'")
+            ttsEngine.speak("Command not understood", uiModel.selectedLanguage)
+            return
+        }
+
+        val resolvedCmdId = cmdDef.commandId
+        setUiState(AgentUiState.PROCESSING, transcript = "\"$inputText\"", resolvedCommand = resolvedCmdId)
+
+        if (cmdDef.requirement.changesDeviceState && (resolvedCmdId.contains("delete") || resolvedCmdId.contains("clear"))) {
+            setUiState(AgentUiState.CONFIRMATION_REQUIRED, transcript = "\"$inputText\"", resolvedCommand = resolvedCmdId)
+            return
+        }
+
+        executeJarvisCommand(inputText)
+    }
+
+    private fun executeJarvisCommand(command: String) {
+        setUiState(AgentUiState.EXECUTING)
+
+        val details = executeLiveCommand(command)
+        val success = details.result.status == SkillStatus.SUCCESS
+
+        val responseMsg = details.result.message
+        if (success) {
+            setUiState(AgentUiState.SUCCESS, executionMessage = responseMsg)
+            if (ttsEngine.isAvailable()) {
+                setUiState(AgentUiState.SPEAKING)
+                ttsEngine.speak(responseMsg, uiModel.selectedLanguage)
+            }
+        } else {
+            setUiState(AgentUiState.ERROR, errorMessage = responseMsg)
+        }
     }
 
     private fun isAccessibilityServiceEnabled(context: Context, service: Class<*>): Boolean {

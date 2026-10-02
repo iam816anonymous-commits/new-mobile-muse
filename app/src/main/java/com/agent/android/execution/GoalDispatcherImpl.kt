@@ -673,6 +673,75 @@ class GoalDispatcherImpl(
                 val res = SkillResult("TEST_RUN", SkillStatus.SUCCESS, "Executed test scenario '$testId'", 0L)
                 DispatchDetails(trimmed, "TEST_RUN", cmdDef.handlerIdentifier, res, res.message)
             }
+            "help" -> {
+                val q = parsedArgs.getString("query") ?: ""
+                val msg = if (q.isBlank()) {
+                    val categories = commandRegistry.getAllCommands().map { it.category.name }.distinct().joinToString(", ")
+                    "LocalAgent Commands. Usage: 'help <category_or_command>'. Available Categories: $categories"
+                } else {
+                    val matches = commandRegistry.getAllCommands().filter {
+                        it.commandId.contains(q, ignoreCase = true) || it.category.name.equals(q, ignoreCase = true)
+                    }
+                    if (matches.isNotEmpty()) {
+                        "Found ${matches.size} commands: " + matches.take(5).joinToString("; ") { "${it.commandId} (${it.syntax})" }
+                    } else {
+                        "No command or category matching '$q'"
+                    }
+                }
+                val res = SkillResult("HELP", SkillStatus.SUCCESS, msg, 0L)
+                DispatchDetails(trimmed, "HELP", cmdDef.handlerIdentifier, res, msg)
+            }
+            "commands" -> {
+                val filter = parsedArgs.getString("filter") ?: ""
+                val filtered = commandRegistry.getAllCommands().filter {
+                    filter.isBlank() || it.commandId.contains(filter, ignoreCase = true) || it.category.name.contains(filter, ignoreCase = true)
+                }
+                val msg = "Registered Commands (${filtered.size}): " + filtered.take(10).joinToString(", ") { it.commandId }
+                val res = SkillResult("COMMANDS", SkillStatus.SUCCESS, msg, 0L)
+                DispatchDetails(trimmed, "COMMANDS", cmdDef.handlerIdentifier, res, msg)
+            }
+            "observe.start" -> {
+                observationEngine?.startObservationMode()
+                val res = SkillResult("OBSERVE_START", SkillStatus.SUCCESS, "Observation mode STARTED", 0L)
+                DispatchDetails(trimmed, "OBSERVE_START", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "observe.stop" -> {
+                observationEngine?.stopObservationMode()
+                val res = SkillResult("OBSERVE_STOP", SkillStatus.SUCCESS, "Observation mode STOPPED", 0L)
+                DispatchDetails(trimmed, "OBSERVE_STOP", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "observe.current" -> {
+                val snap = observationEngine?.getDisplayedSnapshot() ?: observationEngine?.getLastSnapshot()
+                val msg = if (snap != null) {
+                    "Foreground App: ${snap.packageName} | Activity: ${snap.activityName} | Nodes: ${snap.nodeCount} | State: ${snap.state}"
+                } else {
+                    "No active observation snapshot"
+                }
+                val res = SkillResult("OBSERVE_CURRENT", if (snap != null) SkillStatus.SUCCESS else SkillStatus.FAILED, msg, 0L)
+                DispatchDetails(trimmed, "OBSERVE_CURRENT", cmdDef.handlerIdentifier, res, msg)
+            }
+            "observe.nodes" -> {
+                val snap = observationEngine?.getDisplayedSnapshot() ?: observationEngine?.getLastSnapshot()
+                val msg = if (snap != null) {
+                    "Nodes (${snap.allNodesList.size}): " + snap.allNodesList.take(5).joinToString("; ") { "${it.id}: '${it.text ?: it.contentDescription ?: it.className}'" }
+                } else {
+                    "No active observation snapshot"
+                }
+                val res = SkillResult("OBSERVE_NODES", if (snap != null) SkillStatus.SUCCESS else SkillStatus.FAILED, msg, 0L)
+                DispatchDetails(trimmed, "OBSERVE_NODES", cmdDef.handlerIdentifier, res, msg)
+            }
+            "system.status" -> {
+                val report = readinessEvaluator?.evaluate()
+                val statusStr = if (report?.isReady == true) "READY" else "DEGRADED"
+                val msg = "System Readiness: $statusStr (${report?.blockingReasons?.size ?: 0} blockers)"
+                val res = SkillResult("SYSTEM_STATUS", SkillStatus.SUCCESS, msg, 0L)
+                DispatchDetails(trimmed, "SYSTEM_STATUS", cmdDef.handlerIdentifier, res, msg)
+            }
+            "ui.state" -> {
+                val msg = "UI State: Operational"
+                val res = SkillResult("UI_STATE", SkillStatus.SUCCESS, msg, 0L)
+                DispatchDetails(trimmed, "UI_STATE", cmdDef.handlerIdentifier, res, msg)
+            }
             else -> {
                 val res = SkillResult(cmdDef.commandId, SkillStatus.SUCCESS, "Executed command '${cmdDef.commandId}'", 0L)
                 DispatchDetails(trimmed, opName, cmdDef.handlerIdentifier, res, res.message)

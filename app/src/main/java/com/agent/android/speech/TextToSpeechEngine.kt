@@ -79,10 +79,21 @@ class TextToSpeechEngine(private val context: Context) {
         return result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED
     }
 
-    fun speak(text: String, listener: TextToSpeechListener? = null): Boolean {
+    fun isAgentLanguageAvailable(language: AgentLanguage): Boolean {
+        return isLanguageAvailable(language.locale)
+    }
+
+    fun setLanguage(language: AgentLanguage): Boolean {
+        if (!isAvailable()) return false
+        val res = tts?.setLanguage(language.locale)
+        return res != TextToSpeech.LANG_MISSING_DATA && res != TextToSpeech.LANG_NOT_SUPPORTED
+    }
+
+    fun speak(text: String, language: AgentLanguage = AgentLanguage.ENGLISH, listener: TextToSpeechListener? = null): Boolean {
         if (!isAvailable()) {
             return false
         }
+        setLanguage(language)
         activeListener = listener
         val utteranceId = UUID.randomUUID().toString()
 

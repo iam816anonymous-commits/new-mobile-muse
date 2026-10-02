@@ -51,11 +51,19 @@ class SpeechToTextEngine(private val context: Context) {
     }
 
     fun startListening(
+        timeoutMs: Long,
+        listener: SpeechToTextListener
+    ) {
+        startListening(AgentLanguage.ENGLISH, timeoutMs, listener)
+    }
+
+    fun startListening(
+        language: AgentLanguage = AgentLanguage.ENGLISH,
         timeoutMs: Long = 10000L,
         listener: SpeechToTextListener
     ) {
         if (Looper.myLooper() != Looper.getMainLooper()) {
-            mainHandler.post { startListening(timeoutMs, listener) }
+            mainHandler.post { startListening(language, timeoutMs, listener) }
             return
         }
 
@@ -136,7 +144,8 @@ class SpeechToTextEngine(private val context: Context) {
                     RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
                 )
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().language)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, language.sttTag)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, language.sttTag)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             }
@@ -193,6 +202,14 @@ class SpeechToTextEngine(private val context: Context) {
             speechRecognizer?.cancel()
         } catch (ignored: Throwable) {}
         isListening = false
+    }
+
+    fun isLanguageAvailable(language: AgentLanguage): Boolean {
+        return isAvailable()
+    }
+
+    fun detectAvailableLanguages(): List<AgentLanguage> {
+        return if (isAvailable()) AgentLanguage.values().toList() else emptyList()
     }
 
     fun destroy() {

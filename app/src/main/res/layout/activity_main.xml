@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="10dp"
-    android:background="#121212">
+    android:background="#0A0E14">
 
     <!-- HEADER BAR -->
     <LinearLayout
@@ -18,16 +18,17 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="LocalAgent"
+            android:text="LOCALAGENT"
             android:textColor="#00E5FF"
             android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:letterSpacing="0.1" />
 
         <TextView
             android:id="@+id/tvHeaderSub"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Device Agent • Phase 3.1"
+            android:text="JARVIS Interface • Low Power"
             android:textColor="#80D8FF"
             android:textSize="11sp" />
     </LinearLayout>
@@ -46,7 +47,7 @@
             android:layout_weight="1"
             android:padding="0dp"
             android:textSize="10sp"
-            android:text="DASHBOARD" />
+            android:text="MAIN" />
 
         <Button
             android:id="@+id/btnTabPermissions"
@@ -64,7 +65,7 @@
             android:layout_weight="1"
             android:padding="0dp"
             android:textSize="10sp"
-            android:text="DIAGNOSTICS" />
+            android:text="OBSERVATION" />
 
         <Button
             android:id="@+id/btnTabConsole"
@@ -88,7 +89,7 @@
             android:orientation="vertical">
 
             <!-- ========================================================= -->
-            <!-- SCREEN 1: OPERATIONAL DASHBOARD                           -->
+            <!-- SCREEN 1: JARVIS MAIN / VOICE-FIRST SURFACE               -->
             <!-- ========================================================= -->
             <LinearLayout
                 android:id="@+id/panelDashboard"
@@ -97,379 +98,318 @@
                 android:orientation="vertical"
                 android:visibility="visible">
 
-                <!-- PRIMARY STATUS CARD -->
+                <!-- CENTRAL AGENT INDICATOR CARD -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="#1E272C"
-                    android:padding="12dp"
+                    android:background="#131B24"
+                    android:padding="16dp"
+                    android:gravity="center"
                     android:orientation="vertical">
+
+                    <!-- CENTRAL AGENT CIRCLE INDICATOR -->
+                    <TextView
+                        android:id="@+id/tvAgentIndicatorCircle"
+                        android:layout_width="72dp"
+                        android:layout_height="72dp"
+                        android:background="#1A2634"
+                        android:gravity="center"
+                        android:text="◉"
+                        android:textColor="#00E5FF"
+                        android:textSize="32sp" />
+
+                    <TextView
+                        android:id="@+id/tvAgentIndicatorStateLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="IDLE"
+                        android:textColor="#00E5FF"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1" />
 
                     <TextView
                         android:id="@+id/tvDashboardBanner"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="● AGENT READY"
-                        android:textColor="#66BB6A"
-                        android:textSize="16sp"
+                        android:layout_marginTop="2dp"
+                        android:text="Ready for command"
+                        android:textColor="#B0BEC5"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <!-- PUSH-TO-TALK MICROPHONE & LANGUAGE SELECTOR -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="#131B24"
+                    android:padding="12dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Language:"
+                            android:textColor="#B0BEC5"
+                            android:textSize="12sp" />
+
+                        <Spinner
+                            android:id="@+id/spinnerJarvisLanguage"
+                            android:layout_width="0dp"
+                            android:layout_height="36dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:background="#1C2833" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvLanguageAvailability"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Language Availability: Detected"
+                        android:textColor="#80D8FF"
+                        android:textSize="10sp" />
+
+                    <Button
+                        android:id="@+id/btnJarvisMic"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:layout_marginTop="12dp"
+                        android:background="#00E5FF"
+                        android:text="🎙"
+                        android:textColor="#0A0E14"
+                        android:textSize="28sp"
+                        android:contentDescription="Push-to-talk microphone button" />
+
+                    <TextView
+                        android:id="@+id/tvMicStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="TAP MICROPHONE TO SPEAK"
+                        android:textColor="#00E5FF"
+                        android:textSize="11sp"
                         android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- VOICE TRANSCRIPT & RESOLVED COMMAND -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="#131B24"
+                    android:padding="12dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="VOICE TRANSCRIPT"
+                        android:textColor="#FFD54F"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvVoiceTranscript"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="#0A0E14"
+                        android:padding="8dp"
+                        android:text="[Awaiting voice or text input...]"
+                        android:textColor="#ECEFF1"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tvResolvedCommandDisplay"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="#0A0E14"
+                        android:padding="8dp"
+                        android:text="Resolved Intent: -"
+                        android:textColor="#80D8FF"
+                        android:typeface="monospace"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <!-- TEXT FALLBACK INPUT -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="#131B24"
+                    android:padding="12dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TEXT FALLBACK INPUT"
+                        android:textColor="#FFD54F"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:orientation="horizontal">
+
+                        <EditText
+                            android:id="@+id/etJarvisTextInput"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:background="#0A0E14"
+                            android:hint="Ask LocalAgent..."
+                            android:padding="8dp"
+                            android:textColor="#FFFFFF"
+                            android:textColorHint="#666666"
+                            android:textSize="12sp" />
+
+                        <Button
+                            android:id="@+id/btnJarvisTextSend"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:text="SEND" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- CONFIRMATION PANEL (IF REQUIRED) -->
+                <LinearLayout
+                    android:id="@+id/panelJarvisConfirmation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="#261C14"
+                    android:padding="12dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="CONFIRMATION REQUIRED"
+                        android:textColor="#FFD54F"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvConfirmationPrompt"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Confirm execution of this sensitive action?"
+                        android:textColor="#ECEFF1"
+                        android:textSize="12sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:orientation="vertical">
+                        android:orientation="horizontal">
 
-                        <TextView
-                            android:id="@+id/tvAgentStatusBadge"
-                            android:layout_width="wrap_content"
+                        <Button
+                            android:id="@+id/btnConfirmAction"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text="Agent Status: IDLE"
-                            android:textColor="#80D8FF"
-                            android:textSize="12sp" />
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="CONFIRM" />
 
-                        <TextView
-                            android:id="@+id/tvExecutionBadge"
-                            android:layout_width="wrap_content"
+                        <Button
+                            android:id="@+id/btnCancelAction"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Execution: READY"
-                            android:textColor="#A5D6A7"
-                            android:textSize="12sp" />
-
-                        <TextView
-                            android:id="@+id/tvSafetyBadge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Safety: SAFE_IDLE"
-                            android:textColor="#66BB6A"
-                            android:textSize="12sp" />
-
-                        <TextView
-                            android:id="@+id/tvAccessibilityBadge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Accessibility: ENABLED"
-                            android:textColor="#66BB6A"
-                            android:textSize="12sp" />
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="CANCEL" />
                     </LinearLayout>
+                </LinearLayout>
+
+                <!-- TECHNICAL EXECUTION SUMMARY -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="#131B24"
+                    android:padding="12dp"
+                    android:orientation="vertical">
 
                     <TextView
-                        android:id="@+id/tvDashboardSubtext"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Foundation: 82/82 PASSED  •  Phase 3.1: READY"
-                        android:textColor="#B0BEC5"
+                        android:text="CURRENT EXECUTION STATE"
+                        android:textColor="#FFD54F"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvTechnicalExecutionSummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="#0A0E14"
+                        android:padding="8dp"
+                        android:text="Status: IDLE | Safety: SAFE_IDLE | Accessibility: READY"
+                        android:textColor="#A5D6A7"
+                        android:typeface="monospace"
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <!-- CAPABILITY OVERVIEW -->
-                <TextView
+                <!-- HIDDEN BACKWARD-COMPATIBLE VIEWS -->
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="CAPABILITY OVERVIEW"
-                    android:textColor="#FFD54F"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:orientation="vertical"
+                    android:visibility="gone">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:orientation="vertical">
+                    <TextView android:id="@+id/tvAgentStatusBadge" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <TextView android:id="@+id/tvExecutionBadge" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <TextView android:id="@+id/tvSafetyBadge" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <TextView android:id="@+id/tvAccessibilityBadge" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <TextView android:id="@+id/tvDashboardSubtext" android:layout_width="wrap_content" android:layout_height="wrap_content" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                    <LinearLayout android:id="@+id/cardAutomation" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical" />
+                    <LinearLayout android:id="@+id/cardDeviceControl" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical" />
+                    <LinearLayout android:id="@+id/cardVoice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical" />
+                    <LinearLayout android:id="@+id/cardAppControl" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical" />
+                    <LinearLayout android:id="@+id/cardSensors" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical" />
+                    <LinearLayout android:id="@+id/cardPermissions" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical" />
 
-                        <LinearLayout
-                            android:id="@+id/cardAutomation"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="4dp"
-                            android:background="#1C2833"
-                            android:padding="8dp"
-                            android:orientation="vertical">
+                    <TextView android:id="@+id/tvCapAutomationStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <TextView android:id="@+id/tvCapDeviceControlStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <TextView android:id="@+id/tvCapVoiceStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <TextView android:id="@+id/tvCapAppControlStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <TextView android:id="@+id/tvCapSensorsStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <TextView android:id="@+id/tvCapPermissionsStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Automation"
-                                android:textColor="#B0BEC5"
-                                android:textSize="11sp" />
+                    <LinearLayout android:id="@+id/panelAttentionRequired" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical" />
+                    <TextView android:id="@+id/tvAttentionText" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <Button android:id="@+id/btnFixAttention" android:layout_width="wrap_content" android:layout_height="wrap_content" />
 
-                            <TextView
-                                android:id="@+id/tvCapAutomationStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="READY"
-                                android:textColor="#66BB6A"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/cardDeviceControl"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="4dp"
-                            android:background="#1C2833"
-                            android:padding="8dp"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Device Control"
-                                android:textColor="#B0BEC5"
-                                android:textSize="11sp" />
-
-                            <TextView
-                                android:id="@+id/tvCapDeviceControlStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="READY"
-                                android:textColor="#66BB6A"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:orientation="horizontal">
-
-                        <LinearLayout
-                            android:id="@+id/cardVoice"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="4dp"
-                            android:background="#1C2833"
-                            android:padding="8dp"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Voice (STT/TTS)"
-                                android:textColor="#B0BEC5"
-                                android:textSize="11sp" />
-
-                            <TextView
-                                android:id="@+id/tvCapVoiceStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="READY"
-                                android:textColor="#66BB6A"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/cardAppControl"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="4dp"
-                            android:background="#1C2833"
-                            android:padding="8dp"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="App Control"
-                                android:textColor="#B0BEC5"
-                                android:textSize="11sp" />
-
-                            <TextView
-                                android:id="@+id/tvCapAppControlStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="READY"
-                                android:textColor="#66BB6A"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:orientation="horizontal">
-
-                        <LinearLayout
-                            android:id="@+id/cardSensors"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="4dp"
-                            android:background="#1C2833"
-                            android:padding="8dp"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Sensors"
-                                android:textColor="#B0BEC5"
-                                android:textSize="11sp" />
-
-                            <TextView
-                                android:id="@+id/tvCapSensorsStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="AVAILABLE"
-                                android:textColor="#66BB6A"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/cardPermissions"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="4dp"
-                            android:background="#1C2833"
-                            android:padding="8dp"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Permissions"
-                                android:textColor="#B0BEC5"
-                                android:textSize="11sp" />
-
-                            <TextView
-                                android:id="@+id/tvCapPermissionsStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="READY"
-                                android:textColor="#66BB6A"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- ATTENTION REQUIRED SECTION -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="ATTENTION REQUIRED"
-                    android:textColor="#FFD54F"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-                <LinearLayout
-                    android:id="@+id/panelAttentionRequired"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:background="#261C14"
-                    android:padding="10dp"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/tvAttentionText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="ALL SYSTEMS READY"
-                        android:textColor="#66BB6A"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <Button
-                        android:id="@+id/btnFixAttention"
-                        android:layout_width="wrap_content"
-                        android:layout_height="32dp"
-                        android:layout_marginTop="4dp"
-                        android:paddingLeft="12dp"
-                        android:paddingRight="12dp"
-                        android:textSize="10sp"
-                        android:visibility="gone"
-                        android:text="RESOLVE" />
-                </LinearLayout>
-
-                <!-- QUICK ACTIONS -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="QUICK ACTIONS"
-                    android:textColor="#FFD54F"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/btnQuickCheckStatus"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginEnd="2dp"
-                        android:textSize="10sp"
-                        android:text="CHECK STATUS" />
-
-                    <Button
-                        android:id="@+id/btnQuickGoPermissions"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="2dp"
-                        android:layout_marginEnd="2dp"
-                        android:textSize="10sp"
-                        android:text="PERMISSIONS" />
-
-                    <Button
-                        android:id="@+id/btnQuickGoDiagnostics"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="2dp"
-                        android:layout_marginEnd="2dp"
-                        android:textSize="10sp"
-                        android:text="DIAGNOSTICS" />
-
-                    <Button
-                        android:id="@+id/btnQuickGoConsole"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="2dp"
-                        android:textSize="10sp"
-                        android:text="CONSOLE" />
+                    <Button android:id="@+id/btnQuickCheckStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <Button android:id="@+id/btnQuickGoPermissions" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <Button android:id="@+id/btnQuickGoDiagnostics" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    <Button android:id="@+id/btnQuickGoConsole" android:layout_width="wrap_content" android:layout_height="wrap_content" />
                 </LinearLayout>
 
             </LinearLayout>
 
             <!-- ========================================================= -->
-            <!-- SCREEN 2: PERMISSIONS & LOCATION ACCESS PANEL             -->
+            <!-- SCREEN 2: PERMISSIONS & SYSTEM ACCESS PANEL               -->
             <!-- ========================================================= -->
             <LinearLayout
                 android:id="@+id/panelPermissions"
@@ -1041,7 +981,7 @@
                     android:layout_marginTop="12dp"
                     android:background="#3300E5FF"
                     android:padding="10dp"
-                    android:text="FOUNDATION STATUS: READY (82/82 Passed, 53/53 Implemented)"
+                    android:text="FOUNDATION STATUS: READY"
                     android:textColor="#00E5FF"
                     android:textSize="13sp"
                     android:textStyle="bold" />
@@ -1116,7 +1056,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Progress: 0 / 82 completed"
+                        android:text="Progress: 0 completed"
                         android:textColor="#FFD54F"
                         android:textSize="11sp" />
 
@@ -1125,7 +1065,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Test: 1 / 82"
+                        android:text="Test: 1"
                         android:textColor="#00E5FF"
                         android:textSize="12sp"
                         android:textStyle="bold" />
