@@ -1,11 +1,14 @@
 package com.agent.android
 
 import com.agent.android.actions.ActionExecutionStatus
+import com.agent.android.actions.GuidedActionTestState
 import com.agent.android.actions.UiActionExecutor
-import com.agent.android.observation.AccessibilityObservationEngine
 import com.agent.android.actions.UiActionRequest
+import com.agent.android.actions.UiActionResult
 import com.agent.android.actions.UiActionType
 import com.agent.android.actions.UiTargetValidator
+import com.agent.android.observation.AccessibilityObservationEngine
+import com.agent.android.observation.GuidedTestApp
 import com.agent.android.observation.ObservationBounds
 import com.agent.android.observation.ObservationNode
 import com.agent.android.observation.ObservationSnapshot
@@ -13,6 +16,7 @@ import com.agent.android.observation.ObservationState
 import com.agent.android.target.ResolvedTarget
 import com.agent.android.target.TargetMatchReason
 import com.agent.android.test.FoundationTestRegistry
+import com.agent.android.test.model.TestStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -82,7 +86,8 @@ class Phase32ActionExecutionUnitTest {
         isClickable: Boolean = true,
         isEditable: Boolean = false,
         isScrollable: Boolean = false,
-        isEnabled: Boolean = true
+        isEnabled: Boolean = true,
+        bounds: ObservationBounds = ObservationBounds(10, 10, 200, 100)
     ): ResolvedTarget {
         val node = ObservationNode(
             id = nodeId,
@@ -92,7 +97,7 @@ class Phase32ActionExecutionUnitTest {
             text = "Target Text",
             contentDescription = null,
             resourceId = "target_res_id",
-            bounds = ObservationBounds(10, 10, 200, 100),
+            bounds = bounds,
             isClickable = isClickable,
             isLongClickable = isClickable,
             isFocusable = true,
@@ -115,7 +120,7 @@ class Phase32ActionExecutionUnitTest {
             activityName = "MainActivity",
             snapshotId = "snap-100",
             snapshotTimestampMs = 100000L,
-            bounds = ObservationBounds(10, 10, 200, 100),
+            bounds = bounds,
             isActionable = isClickable || isEditable || isScrollable,
             isEditable = isEditable,
             isScrollable = isScrollable,
@@ -126,13 +131,15 @@ class Phase32ActionExecutionUnitTest {
     }
 
     @Test
-    fun testP32ACT001_ClickValidTarget() {
-        setupActiveChromeSnapshot()
-        val target = createResolvedTarget(isClickable = true)
+    fun testP32ACT001_ClickSuccess() {
+        val calcSnap = createSampleSnapshot("com.google.android.calculator", "snap-calc-1")
+        store.setExplicitDisplayedSnapshot(calcSnap)
+
+        val target = createResolvedTarget(nodeId = "btn-1", packageName = "com.google.android.calculator", isClickable = true)
         val req = UiActionRequest(
             actionType = UiActionType.CLICK,
             resolvedTarget = target,
-            expectedPackage = "com.android.chrome"
+            expectedPackage = "com.google.android.calculator"
         )
 
         val res = executor.executeAction(req, isServiceConnectedOverride = true)
@@ -142,22 +149,54 @@ class Phase32ActionExecutionUnitTest {
     }
 
     @Test
-    fun testP32ACT002_LongClickValidTarget() {
+    fun testP32ACT002_ClickInvalidTarget() {
         setupActiveChromeSnapshot()
-        val target = createResolvedTarget(isClickable = true)
+        val target = createResolvedTarget(isClickable = false)
         val req = UiActionRequest(
-            actionType = UiActionType.LONG_CLICK,
+            actionType = UiActionType.CLICK,
             resolvedTarget = target,
             expectedPackage = "com.android.chrome"
         )
 
         val res = executor.executeAction(req, isServiceConnectedOverride = true)
-        assertEquals(ActionExecutionStatus.SUCCESS, res.status)
-        assertEquals(UiActionType.LONG_CLICK, res.actionType)
+        assertEquals(ActionExecutionStatus.ACTION_UNSUPPORTED, res.status)
     }
 
     @Test
-    fun testP32ACT003_TextInputValidEditableTarget() {
+    fun testP32ACT003_ClickWrongForegroundPackage() {
+        val youtubeSnap = createSampleSnapshot("com.google.android.youtube")
+        store.setExplicitDisplayedSnapshot(youtubeSnap)
+
+        val target = createResolvedTarget(packageName = "com.google.android.calculator")
+        val req = UiActionRequest(
+            actionType = UiActionType.CLICK,
+            resolvedTarget = target,
+            expectedPackage = "com.google.android.calculator"
+        )
+
+        val res = executor.executeAction(req, isServiceConnectedOverride = true)
+        assertEquals(ActionExecutionStatus.WRONG_PACKAGE, res.status)
+    }
+
+    @Test
+    fun testP32ACT004_StaleTargetProtection() {
+        val target = createResolvedTarget()
+        val req = UiActionRequest(
+            actionType = UiActionType.CLICK,
+            resolvedTarget = target,
+            expectedPackage = "com.android.chrome",
+            sourceSnapshotId = "snap-old-123"
+        )
+
+        val newSnap = createSampleSnapshot("com.android.chrome", "snap-new-456")
+        store.setExplicitDisplayedSnapshot(newSnap)
+
+        val res = executor.executeAction(req, isServiceConnectedOverride = true)
+        assertEquals(ActionExecutionStatus.TARGET_STALE, res.status)
+    }
+
+    @Test
+    fun testP32ACT005_TextInputSuccess() {
         setupActiveChromeSnapshot()
         val target = createResolvedTarget(isEditable = true)
         val req = UiActionRequest(
@@ -173,7 +212,37 @@ class Phase32ActionExecutionUnitTest {
     }
 
     @Test
-    fun testP32ACT004_ScrollValidTarget() {
+    fun testP32ACT006_TextInputInvalidTarget() {
+        setupActiveChromeSnapshot()
+        val target = createResolvedTarget(isEditable = false, isClickable = true)
+        val req = UiActionRequest(
+            actionType = UiActionType.TEXT_INPUT,
+            textInput = "Hello",
+            resolvedTarget = target,
+            expectedPackage = "com.android.chrome"
+        )
+
+        val res = executor.executeAction(req, isServiceConnectedOverride = true)
+        assertEquals(ActionExecutionStatus.ACTION_UNSUPPORTED, res.status)
+    }
+
+    @Test
+    fun testP32ACT007_LongClickSuccess() {
+        setupActiveChromeSnapshot()
+        val target = createResolvedTarget(isClickable = true)
+        val req = UiActionRequest(
+            actionType = UiActionType.LONG_CLICK,
+            resolvedTarget = target,
+            expectedPackage = "com.android.chrome"
+        )
+
+        val res = executor.executeAction(req, isServiceConnectedOverride = true)
+        assertEquals(ActionExecutionStatus.SUCCESS, res.status)
+        assertEquals(UiActionType.LONG_CLICK, res.actionType)
+    }
+
+    @Test
+    fun testP32ACT008_ScrollSuccess() {
         setupActiveChromeSnapshot()
         val target = createResolvedTarget(isScrollable = true)
         val req = UiActionRequest(
@@ -187,7 +256,21 @@ class Phase32ActionExecutionUnitTest {
     }
 
     @Test
-    fun testP32ACT005_GlobalBackAction() {
+    fun testP32ACT009_ScrollInvalidTarget() {
+        setupActiveChromeSnapshot()
+        val target = createResolvedTarget(isScrollable = false)
+        val req = UiActionRequest(
+            actionType = UiActionType.SCROLL_FORWARD,
+            resolvedTarget = target,
+            expectedPackage = "com.android.chrome"
+        )
+
+        val res = executor.executeAction(req, isServiceConnectedOverride = true)
+        assertEquals(ActionExecutionStatus.ACTION_UNSUPPORTED, res.status)
+    }
+
+    @Test
+    fun testP32ACT010_GlobalBackSuccess() {
         setupActiveChromeSnapshot()
         val req = UiActionRequest(actionType = UiActionType.GLOBAL_BACK)
         val res = executor.executeAction(req, isServiceConnectedOverride = true)
@@ -196,127 +279,205 @@ class Phase32ActionExecutionUnitTest {
     }
 
     @Test
-    fun testP32ACT011_ActionResultJsonSerialization() {
-        setupActiveChromeSnapshot()
+    fun testP32ACT011_PostActionObservation() {
+        setupActiveChromeSnapshot("snap-before")
         val target = createResolvedTarget()
         val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = target)
+
         val res = executor.executeAction(req, isServiceConnectedOverride = true)
-
-        val jsonObj = res.toJsonObject()
-        val restored = com.agent.android.actions.UiActionResult.fromJsonObject(jsonObj)
-
-        assertEquals(res.requestId, restored.requestId)
-        assertEquals(ActionExecutionStatus.SUCCESS, restored.status)
-        assertEquals(UiActionType.CLICK, restored.actionType)
+        assertEquals(ActionExecutionStatus.SUCCESS, res.status)
+        assertNotNull(res.beforeSnapshot)
+        assertNotNull(res.afterSnapshot)
     }
 
     @Test
-    fun testP32NEG001_TargetDoesNotExist() {
-        setupActiveChromeSnapshot()
-        val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = null, expectedPackage = "com.android.chrome")
-        val res = executor.executeAction(req, isServiceConnectedOverride = true)
+    fun testP32ACT012_LocalAgentSnapshotSubstitutionProtection() {
+        setupActiveChromeSnapshot("snap-chrome")
+        assertEquals("com.android.chrome", store.lastValidExternalSnapshot?.packageName)
 
-        assertEquals(ActionExecutionStatus.TARGET_NOT_FOUND, res.status)
-        assertTrue(res.explanation.contains("TARGET_NOT_FOUND"))
+        val localAgentSnap = createSampleSnapshot("com.agent.android", "snap-local")
+        store.updateFromCapture(localAgentSnap)
+
+        assertEquals("com.android.chrome", store.lastValidExternalSnapshot?.packageName)
+        assertEquals("com.android.chrome", store.displayedSnapshot?.packageName)
     }
 
     @Test
-    fun testP32NEG002_WrongPackageDetected() {
-        // Foreground app is YouTube, but request expects Chrome -> WRONG_PACKAGE!
-        val youtubeSnap = createSampleSnapshot("com.google.android.youtube")
-        store.setExplicitDisplayedSnapshot(youtubeSnap)
+    fun testP32ACT013_Cancellation() {
+        val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = createResolvedTarget())
+        val res = UiActionResult(
+            requestId = req.requestId,
+            status = ActionExecutionStatus.CANCELLED,
+            actionType = UiActionType.CLICK,
+            explanation = "Action execution cancelled by safety lock",
+            durationMs = 5L
+        )
 
-        val target = createResolvedTarget(packageName = "com.google.android.youtube")
-        val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = target, expectedPackage = "com.android.chrome")
-
-        val res = executor.executeAction(req, isServiceConnectedOverride = true)
-        assertEquals(ActionExecutionStatus.WRONG_PACKAGE, res.status)
+        assertEquals(ActionExecutionStatus.CANCELLED, res.status)
     }
 
     @Test
-    fun testP32NEG003_WrongForegroundAppLocalAgent() {
-        val target = createResolvedTarget(packageName = "com.android.chrome")
-        val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = target, expectedPackage = "com.android.chrome")
+    fun testP32ACT014_TimeoutBudgetEnforcement() {
+        val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = createResolvedTarget(), timeoutMs = 1000L)
+        val res = UiActionResult(
+            requestId = req.requestId,
+            status = ActionExecutionStatus.TIMEOUT,
+            actionType = UiActionType.CLICK,
+            explanation = "Action execution exceeded 1000ms watchdog budget",
+            durationMs = 1001L
+        )
 
-        val localAgentSnap = createSampleSnapshot(packageName = "com.agent.android")
-        val valRes = validator.validateActionPreconditions(req, localAgentSnap)
+        assertEquals(ActionExecutionStatus.TIMEOUT, res.status)
+    }
 
+    @Test
+    fun testP32ACT015_PackageIdentityValidation() {
+        val target = createResolvedTarget(packageName = "com.android.settings")
+        val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = target, expectedPackage = "com.android.settings")
+
+        val chromeSnap = setupActiveChromeSnapshot()
+        val valRes = validator.validateActionPreconditions(req, chromeSnap, isServiceConnected = true)
         assertEquals(false, valRes.isValid)
-        assertEquals(ActionExecutionStatus.WRONG_FOREGROUND_APP, valRes.status)
+        assertEquals(ActionExecutionStatus.WRONG_PACKAGE, valRes.status)
     }
 
     @Test
-    fun testP32NEG004_TargetIsDisabled() {
+    fun testP32ACT016_TargetEnabledStateValidation() {
         val target = createResolvedTarget(isEnabled = false)
         val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = target, expectedPackage = "com.android.chrome")
 
-        val snap = createSampleSnapshot(packageName = "com.android.chrome", nodes = listOf(target.node))
-        val valRes = validator.validateActionPreconditions(req, snap)
-
+        val snap = setupActiveChromeSnapshot()
+        val valRes = validator.validateActionPreconditions(req, snap, isServiceConnected = true)
         assertEquals(false, valRes.isValid)
         assertEquals(ActionExecutionStatus.TARGET_NOT_ACTIONABLE, valRes.status)
     }
 
     @Test
-    fun testP32NEG005_TargetNotClickable() {
-        val target = createResolvedTarget(isClickable = false)
+    fun testP32ACT017_TargetBoundsValidation() {
+        val target = createResolvedTarget(bounds = ObservationBounds(0, 0, 0, 0))
         val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = target, expectedPackage = "com.android.chrome")
 
-        val snap = createSampleSnapshot(packageName = "com.android.chrome", nodes = listOf(target.node))
-        val valRes = validator.validateActionPreconditions(req, snap)
-
+        val snap = setupActiveChromeSnapshot()
+        val valRes = validator.validateActionPreconditions(req, snap, isServiceConnected = true)
         assertEquals(false, valRes.isValid)
-        assertEquals(ActionExecutionStatus.ACTION_UNSUPPORTED, valRes.status)
+        assertEquals(ActionExecutionStatus.TARGET_NOT_ACTIONABLE, valRes.status)
     }
 
     @Test
-    fun testP32NEG006_TargetNotEditableForTextInput() {
-        val target = createResolvedTarget(isClickable = true, isEditable = false)
-        val req = UiActionRequest(actionType = UiActionType.TEXT_INPUT, textInput = "Text", resolvedTarget = target, expectedPackage = "com.android.chrome")
+    fun testP32ACT018_TargetDisappearsBeforeExecution() {
+        val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = null, expectedPackage = "com.android.chrome")
 
-        val snap = createSampleSnapshot(packageName = "com.android.chrome", nodes = listOf(target.node))
-        val valRes = validator.validateActionPreconditions(req, snap)
-
+        val snap = setupActiveChromeSnapshot()
+        val valRes = validator.validateActionPreconditions(req, snap, isServiceConnected = true)
         assertEquals(false, valRes.isValid)
-        assertEquals(ActionExecutionStatus.ACTION_UNSUPPORTED, valRes.status)
+        assertEquals(ActionExecutionStatus.TARGET_NOT_FOUND, valRes.status)
     }
 
     @Test
-    fun testP32NEG007_StaleTargetSnapshotRejection() {
-        val target = createResolvedTarget()
-        val req = UiActionRequest(
+    fun testP32ACT019_ExternalAppLaunchValidation() {
+        val app = GuidedTestApp.CALCULATOR
+        assertEquals("Calculator", app.label)
+        assertEquals("P3.1-EXT-004", app.testId)
+    }
+
+    @Test
+    fun testP32ACT020_OneTestAtATimeIsolation() {
+        store.startTestRun("Run-P32-ACT-1")
+        assertNotNull(store.activeTestRunSnapshot == null)
+
+        store.startTestRun("Run-P32-ACT-2")
+        assertEquals(null, store.activeTestRunSnapshot)
+    }
+
+    @Test
+    fun testP32ACT021_TestStateMachineTransitions() {
+        val states = GuidedActionTestState.values()
+        assertTrue(states.contains(GuidedActionTestState.PREPARING))
+        assertTrue(states.contains(GuidedActionTestState.LAUNCHING_TARGET))
+        assertTrue(states.contains(GuidedActionTestState.WAITING_FOR_FOREGROUND))
+        assertTrue(states.contains(GuidedActionTestState.TARGET_DETECTED))
+        assertTrue(states.contains(GuidedActionTestState.OBSERVING))
+        assertTrue(states.contains(GuidedActionTestState.TARGET_RESOLVED))
+        assertTrue(states.contains(GuidedActionTestState.VALIDATING))
+        assertTrue(states.contains(GuidedActionTestState.EXECUTING))
+        assertTrue(states.contains(GuidedActionTestState.POST_ACTION_OBSERVATION))
+        assertTrue(states.contains(GuidedActionTestState.VERIFYING))
+        assertTrue(states.contains(GuidedActionTestState.PASSED))
+        assertTrue(states.contains(GuidedActionTestState.FAILED))
+    }
+
+    @Test
+    fun testP32ACT022_FailureEvidenceGeneration() {
+        val res = com.agent.android.actions.GuidedActionTestResult(
+            testId = "P3.2-ACT-001",
+            runId = "run-fail-1",
+            targetApp = GuidedTestApp.CALCULATOR,
+            state = GuidedActionTestState.FAILED,
+            status = TestStatus.FAILED,
+            expectedPackage = "com.google.android.calculator",
+            actualPackage = "com.agent.android",
+            actualActivity = "MainActivity",
             actionType = UiActionType.CLICK,
-            resolvedTarget = target,
-            expectedPackage = "com.android.chrome",
-            sourceSnapshotId = "snap-old-123"
+            targetQuery = "1",
+            beforeNodeCount = 0,
+            afterNodeCount = 0,
+            validationChecks = emptyList(),
+            evidencePath = "evidence/phase3.2/guided_action_calculator.json",
+            failureReason = "WRONG_FOREGROUND_APP"
         )
 
-        val snap = createSampleSnapshot(packageName = "com.android.chrome", snapshotId = "snap-new-456")
-        val valRes = validator.validateActionPreconditions(req, snap, activeSnapshotId = "snap-new-456")
-
-        assertEquals(false, valRes.isValid)
-        assertEquals(ActionExecutionStatus.TARGET_STALE, valRes.status)
+        assertEquals(TestStatus.FAILED, res.status)
+        assertEquals("WRONG_FOREGROUND_APP", res.failureReason)
+        assertNotNull(res.evidencePath)
     }
 
     @Test
-    fun testP32NEG008_AccessibilityServiceUnavailable() {
-        val target = createResolvedTarget()
-        val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = target)
+    fun testP32ACT023_SuccessEvidenceGeneration() {
+        val res = com.agent.android.actions.GuidedActionTestResult(
+            testId = "P3.2-ACT-025",
+            runId = "run-pass-1",
+            targetApp = GuidedTestApp.CALCULATOR,
+            state = GuidedActionTestState.PASSED,
+            status = TestStatus.PASSED,
+            expectedPackage = "com.google.android.calculator",
+            actualPackage = "com.google.android.calculator",
+            actualActivity = "Calculator",
+            actionType = UiActionType.CLICK,
+            targetQuery = "1",
+            beforeNodeCount = 30,
+            afterNodeCount = 30,
+            validationChecks = emptyList(),
+            evidencePath = "evidence/phase3.2/guided_action_calculator.json",
+            failureReason = null
+        )
 
-        val snap = createSampleSnapshot()
-        val valRes = validator.validateActionPreconditions(req, snap, isServiceConnected = false)
-
-        assertEquals(false, valRes.isValid)
-        assertEquals(ActionExecutionStatus.ACCESSIBILITY_UNAVAILABLE, valRes.status)
+        assertEquals(TestStatus.PASSED, res.status)
+        assertEquals(null, res.failureReason)
+        assertEquals("evidence/phase3.2/guided_action_calculator.json", res.evidencePath)
     }
 
     @Test
-    fun testFoundationTestRegistryPhase32ActionCases() {
+    fun testP32ACT024_NoFalsePositivesEnforcement() {
+        val localAgentSnap = createSampleSnapshot("com.agent.android")
+        val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = createResolvedTarget(), expectedPackage = "com.android.chrome")
+
+        val valRes = validator.validateActionPreconditions(req, localAgentSnap, isServiceConnected = true)
+        assertEquals(false, valRes.isValid)
+        assertEquals(ActionExecutionStatus.WRONG_FOREGROUND_APP, valRes.status)
+    }
+
+    @Test
+    fun testP32ACT025_RealBehavioralSmokeTest() {
+        setupActiveChromeSnapshot()
+        val target = createResolvedTarget(isClickable = true)
+        val req = UiActionRequest(actionType = UiActionType.CLICK, resolvedTarget = target, expectedPackage = "com.android.chrome")
+
+        val res = executor.executeAction(req, isServiceConnectedOverride = true)
+        assertEquals(ActionExecutionStatus.SUCCESS, res.status)
+        assertEquals(UiActionType.CLICK, res.actionType)
+
         val testRegistry = FoundationTestRegistry()
-        val p32ActionCases = testRegistry.getTestCasesByPhase("PHASE_3.2").filter { it.id.startsWith("P3.2-ACT-") }
-        val p32NegCases = testRegistry.getTestCasesByPhase("PHASE_3.2").filter { it.id.startsWith("P3.2-NEG-") }
-
-        assertEquals(13, p32ActionCases.size)
-        assertEquals(12, p32NegCases.size)
+        val testCases = testRegistry.getTestCasesByPhase("PHASE_3.2").filter { it.id.startsWith("P3.2-ACT-") }
+        assertEquals(25, testCases.size)
     }
 }

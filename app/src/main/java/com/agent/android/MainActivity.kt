@@ -104,6 +104,7 @@ class MainActivity : Activity() {
     private lateinit var observationEngine: AccessibilityObservationEngine
     private lateinit var externalAppValidator: ExternalAppTestValidator
     private lateinit var guidedRunner: GuidedExternalObservationRunner
+    private lateinit var guidedActionRunner: com.agent.android.actions.GuidedPhase32ActionRunner
 
     private lateinit var testRegistry: FoundationTestRegistry
     private lateinit var resultStore: TestResultStore
@@ -266,6 +267,7 @@ class MainActivity : Activity() {
         observationEngine = AccessibilityObservationEngine()
         externalAppValidator = ExternalAppTestValidator(this)
         guidedRunner = GuidedExternalObservationRunner(this)
+        guidedActionRunner = com.agent.android.actions.GuidedPhase32ActionRunner(this)
         testHarness = Phase1SafetyTestHarness(executionController, logger)
         capabilityRegistry = CapabilityRegistry(this)
         commandRegistry = CommandRegistry()
