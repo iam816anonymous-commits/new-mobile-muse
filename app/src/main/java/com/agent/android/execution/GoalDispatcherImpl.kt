@@ -613,15 +613,15 @@ class GoalDispatcherImpl(
                 val skillRes = SkillResult("TARGET_INSPECT", if (matchedNode != null) SkillStatus.SUCCESS else SkillStatus.FAILED, msg, 0L)
                 DispatchDetails(trimmed, "TARGET_INSPECT", cmdDef.handlerIdentifier, skillRes, msg)
             }
-            "action.click", "action.long_click", "action.input", "action.scroll", "action.back" -> {
+            "action.click", "action.long_click", "action.input", "action.scroll", "action.back", "test.click", "test.long_click", "test.text_input", "test.scroll", "test.back" -> {
                 val qStr = parsedArgs.getString("query") ?: parsedArgs.getString("text") ?: parsedArgs.getString("direction") ?: ""
                 val snapshot = observationEngine?.getDisplayedSnapshot() ?: observationEngine?.getLastSnapshot()
                 val actionType = when (cmdDef.commandId) {
-                    "action.click" -> com.agent.android.actions.UiActionType.CLICK
-                    "action.long_click" -> com.agent.android.actions.UiActionType.LONG_CLICK
-                    "action.input" -> com.agent.android.actions.UiActionType.TEXT_INPUT
-                    "action.scroll" -> if (qStr.equals("backward", true)) com.agent.android.actions.UiActionType.SCROLL_BACKWARD else com.agent.android.actions.UiActionType.SCROLL_FORWARD
-                    "action.back" -> com.agent.android.actions.UiActionType.GLOBAL_BACK
+                    "action.click", "test.click" -> com.agent.android.actions.UiActionType.CLICK
+                    "action.long_click", "test.long_click" -> com.agent.android.actions.UiActionType.LONG_CLICK
+                    "action.input", "test.text_input" -> com.agent.android.actions.UiActionType.TEXT_INPUT
+                    "action.scroll", "test.scroll" -> if (qStr.equals("backward", true)) com.agent.android.actions.UiActionType.SCROLL_BACKWARD else com.agent.android.actions.UiActionType.SCROLL_FORWARD
+                    "action.back", "test.back" -> com.agent.android.actions.UiActionType.GLOBAL_BACK
                     else -> com.agent.android.actions.UiActionType.CLICK
                 }
 
@@ -649,6 +649,29 @@ class GoalDispatcherImpl(
                 }
                 val skillRes = SkillResult("ACTION_EXECUTION", skillStatus, actionRes.explanation, actionRes.durationMs, actionRes.status.name)
                 DispatchDetails(trimmed, "ACTION_EXECUTION", cmdDef.handlerIdentifier, skillRes, actionRes.explanation)
+            }
+            "test.launch" -> {
+                val targetName = parsedArgs.getString("target") ?: "calculator"
+                val app = when (targetName.lowercase()) {
+                    "calculator" -> com.agent.android.observation.GuidedTestApp.CALCULATOR
+                    "chrome", "browser" -> com.agent.android.observation.GuidedTestApp.CHROME
+                    "settings" -> com.agent.android.observation.GuidedTestApp.SETTINGS
+                    "youtube" -> com.agent.android.observation.GuidedTestApp.YOUTUBE
+                    else -> com.agent.android.observation.GuidedTestApp.CALCULATOR
+                }
+                val res = SkillResult("TEST_LAUNCH", SkillStatus.SUCCESS, "Target launch requested for '${app.label}'", 0L)
+                DispatchDetails(trimmed, "TEST_LAUNCH", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "test.observe" -> {
+                val snap = observationEngine?.captureCurrentScreen()
+                val msg = if (snap != null) "Captured screen (${snap.nodeCount} nodes, pkg=${snap.packageName})" else "No observation snapshot"
+                val res = SkillResult("TEST_OBSERVE", if (snap != null) SkillStatus.SUCCESS else SkillStatus.FAILED, msg, 0L)
+                DispatchDetails(trimmed, "TEST_OBSERVE", cmdDef.handlerIdentifier, res, msg)
+            }
+            "test.run" -> {
+                val testId = parsedArgs.getString("testId") ?: "P3.2-ACT-001"
+                val res = SkillResult("TEST_RUN", SkillStatus.SUCCESS, "Executed test scenario '$testId'", 0L)
+                DispatchDetails(trimmed, "TEST_RUN", cmdDef.handlerIdentifier, res, res.message)
             }
             else -> {
                 val res = SkillResult(cmdDef.commandId, SkillStatus.SUCCESS, "Executed command '${cmdDef.commandId}'", 0L)

@@ -273,6 +273,16 @@ class FoundationTestRegistry {
         add(TestCase("P3.2-TGT-010", "target.candidates", "PHASE_3.2", "TARGET_RESOLUTION", "Target Candidate Ranking Analysis", "Lists ranked candidate nodes with match scores and reasons.", "target candidates Search", "Ranked candidate analysis generated", TestType.AUTOMATED))
         add(TestCase("P3.2-TGT-011", "target.find", "PHASE_3.2", "TARGET_RESOLUTION", "Target Candidate Search", "Finds candidate nodes matching target query.", "target find Search", "Target candidates found", TestType.AUTOMATED))
 
+        // PHASE 3.2 TEST HARNESS TEST CASES
+        add(TestCase("P3.2-HARN-001", "test.launch", "PHASE_3.2", "TEST_HARNESS", "Test App Launch Harness Command", "Launches test app target and waits for foreground package.", "test launch calculator", "Target launch requested", TestType.AUTOMATED))
+        add(TestCase("P3.2-HARN-002", "test.observe", "PHASE_3.2", "TEST_HARNESS", "Test Observe Harness Command", "Captures active UI observation snapshot.", "test observe", "Screen snapshot captured", TestType.AUTOMATED))
+        add(TestCase("P3.2-HARN-003", "test.click", "PHASE_3.2", "TEST_HARNESS", "Test Click Harness Command", "Executes test click action.", "test click 1", "Action executed", TestType.AUTOMATED))
+        add(TestCase("P3.2-HARN-004", "test.long_click", "PHASE_3.2", "TEST_HARNESS", "Test Long Click Harness Command", "Executes test long click action.", "test long_click Item", "Action executed", TestType.AUTOMATED))
+        add(TestCase("P3.2-HARN-005", "test.text_input", "PHASE_3.2", "TEST_HARNESS", "Test Text Input Harness Command", "Executes test text input action.", "test text_input Hello", "Action executed", TestType.AUTOMATED))
+        add(TestCase("P3.2-HARN-006", "test.scroll", "PHASE_3.2", "TEST_HARNESS", "Test Scroll Harness Command", "Executes test scroll action.", "test scroll forward", "Action executed", TestType.AUTOMATED))
+        add(TestCase("P3.2-HARN-007", "test.back", "PHASE_3.2", "TEST_HARNESS", "Test Back Harness Command", "Executes test back action.", "test back", "Action executed", TestType.AUTOMATED))
+        add(TestCase("P3.2-HARN-008", "test.run", "PHASE_3.2", "TEST_HARNESS", "Test Run Scenario Harness Command", "Executes automated test scenario.", "test run P3.2-ACT-001", "Scenario executed", TestType.AUTOMATED))
+
         // PHASE 3.2 ACTION EXECUTION TESTS (P3.2-ACT-001 TO P3.2-ACT-025)
         add(TestCase("P3.2-ACT-001", "action.click", "PHASE_3.2", "ACTION_EXECUTION", "Click Success", "Launches Calculator, verifies foreground, resolves button '1', clicks, and verifies display = 1.", "action click 1", "Calculator display updated to 1", TestType.AUTOMATED))
         add(TestCase("P3.2-ACT-002", "action.click", "PHASE_3.2", "ACTION_EXECUTION", "Click Invalid Target", "Rejects CLICK action against non-clickable target view.", "action click TitleText", "ACTION_UNSUPPORTED returned cleanly", TestType.NEGATIVE))

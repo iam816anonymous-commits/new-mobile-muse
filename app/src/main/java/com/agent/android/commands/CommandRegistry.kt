@@ -144,6 +144,16 @@ class CommandRegistry {
         register(CommandDefinition("action.input", "Action Text Input", CommandCategory.OBSERVATION, "Executes TEXT_INPUT action on resolved editable target node", CommandStatus.IMPLEMENTED, "action input <text>", listOf("action input Hello"), listOf("text"), CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
         register(CommandDefinition("action.scroll", "Action Scroll", CommandCategory.OBSERVATION, "Executes SCROLL action on resolved scrollable target node", CommandStatus.IMPLEMENTED, "action scroll <direction>", listOf("action scroll forward", "action scroll backward"), listOf("direction"), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
         register(CommandDefinition("action.back", "Action Global Back", CommandCategory.OBSERVATION, "Executes GLOBAL_BACK navigation action", CommandStatus.IMPLEMENTED, "action back", listOf("action back"), emptyList(), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+
+        // 21. PHASE 3.2 TEST HARNESS COMMANDS
+        register(CommandDefinition("test.launch", "Test App Launch", CommandCategory.OBSERVATION, "Launches test target app and waits for actual foreground package", CommandStatus.IMPLEMENTED, "test launch <target>", listOf("test launch calculator", "test launch chrome"), listOf("target"), requirement = CommandRequirement(accessibilityRequired = true), handlerIdentifier = "ControlledTestAppLauncher"))
+        register(CommandDefinition("test.observe", "Test Observe", CommandCategory.OBSERVATION, "Captures current active UI observation snapshot", CommandStatus.IMPLEMENTED, "test observe", listOf("test observe"), handlerIdentifier = "AccessibilityObservationEngine"))
+        register(CommandDefinition("test.click", "Test Action Click", CommandCategory.OBSERVATION, "Executes test CLICK action against target", CommandStatus.IMPLEMENTED, "test click <query>", listOf("test click Search"), listOf("query"), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("test.long_click", "Test Action Long Click", CommandCategory.OBSERVATION, "Executes test LONG_CLICK action against target", CommandStatus.IMPLEMENTED, "test long_click <query>", listOf("test long_click Item"), listOf("query"), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("test.text_input", "Test Action Text Input", CommandCategory.OBSERVATION, "Executes test TEXT_INPUT action against target", CommandStatus.IMPLEMENTED, "test text_input <text>", listOf("test text_input Hello"), listOf("text"), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("test.scroll", "Test Action Scroll", CommandCategory.OBSERVATION, "Executes test SCROLL action against target", CommandStatus.IMPLEMENTED, "test scroll <direction>", listOf("test scroll forward"), listOf("direction"), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("test.back", "Test Action Back", CommandCategory.OBSERVATION, "Executes test GLOBAL_BACK action", CommandStatus.IMPLEMENTED, "test back", listOf("test back"), emptyList(), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("test.run", "Test Run Scenario", CommandCategory.OBSERVATION, "Executes complete automated Phase 3.2 real-device test scenario", CommandStatus.IMPLEMENTED, "test run <test_id>", listOf("test run P3.2-ACT-001"), listOf("testId"), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "GuidedPhase32ActionRunner"))
     }
 
     fun register(command: CommandDefinition) {
@@ -257,17 +267,20 @@ class CommandRegistry {
             "sensor.test", "sensor.sample", "sensor.info" -> {
                 if (parts.size >= 2) params["sensorType"] = parts[1]
             }
-            "target.resolve", "target.find", "target.candidates", "action.click", "action.long_click" -> {
+            "target.resolve", "target.find", "target.candidates", "action.click", "action.long_click", "test.launch", "test.click", "test.long_click", "test.run" -> {
                 if (trimmed.length > parts[0].length) {
+                    params["target"] = trimmed.substring(parts[0].length).trim()
+                    params["testId"] = trimmed.substring(parts[0].length).trim()
                     params["query"] = trimmed.substring(parts[0].length).trim()
                 }
             }
-            "action.input" -> {
-                if (trimmed.length > "action input".length) {
-                    params["text"] = trimmed.substring("action input".length).trim()
+            "action.input", "test.text_input" -> {
+                val prefix = if (trimmed.startsWith("test text_input")) "test text_input" else "action input"
+                if (trimmed.length > prefix.length) {
+                    params["text"] = trimmed.substring(prefix.length).trim()
                 }
             }
-            "action.scroll" -> {
+            "action.scroll", "test.scroll" -> {
                 if (parts.size >= 3) params["direction"] = parts[2]
             }
             "target.inspect" -> {

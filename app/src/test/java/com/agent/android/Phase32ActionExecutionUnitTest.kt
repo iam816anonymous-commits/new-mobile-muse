@@ -2,6 +2,7 @@ package com.agent.android
 
 import com.agent.android.actions.ActionExecutionStatus
 import com.agent.android.actions.GuidedActionTestState
+import com.agent.android.agent.skills.SkillStatus
 import com.agent.android.actions.UiActionExecutor
 import com.agent.android.actions.UiActionRequest
 import com.agent.android.actions.UiActionResult
@@ -479,5 +480,51 @@ class Phase32ActionExecutionUnitTest {
         val testRegistry = FoundationTestRegistry()
         val testCases = testRegistry.getTestCasesByPhase("PHASE_3.2").filter { it.id.startsWith("P3.2-ACT-") }
         assertEquals(25, testCases.size)
+    }
+
+    @Test
+    fun testControlledTestAppLauncherAndTargets() {
+        val calcTarget = com.agent.android.actions.ControlledTestTargets.getTargetForApp(GuidedTestApp.CALCULATOR)
+        assertNotNull(calcTarget)
+        assertEquals("Calculator", calcTarget.displayName)
+
+        val chromeTarget = com.agent.android.actions.ControlledTestTargets.getTargetForApp(GuidedTestApp.CHROME)
+        assertNotNull(chromeTarget)
+        assertEquals("com.android.chrome", chromeTarget.expectedPackage)
+
+        val settingsTarget = com.agent.android.actions.ControlledTestTargets.getTargetForApp(GuidedTestApp.SETTINGS)
+        assertNotNull(settingsTarget)
+        assertEquals("com.android.settings", settingsTarget.expectedPackage)
+
+        val youtubeTarget = com.agent.android.actions.ControlledTestTargets.getTargetForApp(GuidedTestApp.YOUTUBE)
+        assertNotNull(youtubeTarget)
+        assertEquals("com.google.android.youtube", youtubeTarget.expectedPackage)
+
+        val launcher = com.agent.android.actions.ControlledTestAppLauncher(context = null)
+        val resolvedPkg = launcher.resolveTargetPackage(GuidedTestApp.CHROME)
+        assertEquals("com.android.chrome", resolvedPkg)
+    }
+
+    @Test
+    fun testTestHarnessCommandsDispatch() {
+        val execCtrl = com.agent.android.execution.ExecutionController()
+        val dispatcher = com.agent.android.execution.GoalDispatcherImpl(
+            executionController = execCtrl,
+            observationEngine = observationEngine
+        )
+
+        val launchRes = dispatcher.dispatchAndProcess("test launch calculator")
+        assertEquals(SkillStatus.SUCCESS, launchRes.result.status)
+        assertEquals("TEST_LAUNCH", launchRes.operation)
+
+        val observeRes = dispatcher.dispatchAndProcess("test observe")
+        assertEquals("TEST_OBSERVE", observeRes.operation)
+
+        val clickRes = dispatcher.dispatchAndProcess("test click Search")
+        assertEquals("ACTION_EXECUTION", clickRes.operation)
+
+        val runRes = dispatcher.dispatchAndProcess("test run P3.2-ACT-001")
+        assertEquals(SkillStatus.SUCCESS, runRes.result.status)
+        assertEquals("TEST_RUN", runRes.operation)
     }
 }

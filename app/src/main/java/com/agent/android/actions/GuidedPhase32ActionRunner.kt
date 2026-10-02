@@ -68,7 +68,7 @@ class GuidedPhase32ActionRunner(private val context: Context) {
     var currentResult: GuidedActionTestResult? = null
         private set
 
-    private val targetController = Phase3TestTargetController(context)
+    private val targetLauncher = ControlledTestAppLauncher(context)
     private val targetResolver = TargetResolver()
     private val actionExecutor = UiActionExecutor()
     private val handler = Handler(Looper.getMainLooper())
@@ -91,234 +91,128 @@ class GuidedPhase32ActionRunner(private val context: Context) {
         currentState = GuidedActionTestState.PREPARING
         observationEngine.snapshotStore.startTestRun(runId)
 
-        val resolvedPkg = targetController.resolveTargetSpec(testId).expectedPackage ?: targetController.resolveCalculatorPackage()
-
-        if (resolvedPkg == null) {
-            currentState = GuidedActionTestState.FAILED
-            observationEngine.snapshotStore.endTestRun()
-            val failRes = GuidedActionTestResult(
-                testId = testId,
-                runId = runId,
-                targetApp = targetApp,
-                state = GuidedActionTestState.FAILED,
-                status = TestStatus.FAILED,
-                expectedPackage = targetApp.staticPackage ?: "Calculator",
-                actualPackage = null,
-                actualActivity = null,
-                actionType = actionType,
-                targetQuery = targetQueryText,
-                beforeNodeCount = 0,
-                afterNodeCount = 0,
-                validationChecks = listOf(GuidedTestValidationCheck("Package Resolution", false)),
-                evidencePath = null,
-                failureReason = "TARGET APPLICATION NOT INSTALLED / NOT RESOLVABLE"
-            )
-            currentResult = failRes
-            onUpdate(failRes)
-            return
-        }
-
-        val pm = context.packageManager
-        val launchIntent = pm.getLaunchIntentForPackage(resolvedPkg)
-        if (launchIntent == null) {
-            currentState = GuidedActionTestState.FAILED
-            observationEngine.snapshotStore.endTestRun()
-            val failRes = GuidedActionTestResult(
-                testId = testId,
-                runId = runId,
-                targetApp = targetApp,
-                state = GuidedActionTestState.FAILED,
-                status = TestStatus.FAILED,
-                expectedPackage = resolvedPkg,
-                actualPackage = null,
-                actualActivity = null,
-                actionType = actionType,
-                targetQuery = targetQueryText,
-                beforeNodeCount = 0,
-                afterNodeCount = 0,
-                validationChecks = listOf(GuidedTestValidationCheck("Launch Intent Available", false)),
-                evidencePath = null,
-                failureReason = "NO LAUNCH INTENT FOR PACKAGE $resolvedPkg"
-            )
-            currentResult = failRes
-            onUpdate(failRes)
-            return
-        }
-
-        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
         currentState = GuidedActionTestState.LAUNCHING_TARGET
         observationEngine.startObservationMode()
 
-        var prepRes = GuidedActionTestResult(
-            testId = testId,
-            runId = runId,
-            targetApp = targetApp,
-            state = GuidedActionTestState.LAUNCHING_TARGET,
-            status = TestStatus.RUNNING,
-            expectedPackage = resolvedPkg,
-            actualPackage = null,
-            actualActivity = null,
-            actionType = actionType,
-            targetQuery = targetQueryText,
-            beforeNodeCount = 0,
-            afterNodeCount = 0,
-            validationChecks = emptyList(),
-            evidencePath = null,
-            failureReason = null
-        )
-        currentResult = prepRes
-        onUpdate(prepRes)
-
-        try {
-            context.startActivity(launchIntent)
-        } catch (e: Exception) {
-            currentState = GuidedActionTestState.FAILED
-            observationEngine.snapshotStore.endTestRun()
-            val failRes = prepRes.copy(
-                state = GuidedActionTestState.FAILED,
-                status = TestStatus.FAILED,
-                failureReason = "Failed to launch target app: ${e.message}"
-            )
-            currentResult = failRes
-            onUpdate(failRes)
-            return
-        }
-
-        currentState = GuidedActionTestState.WAITING_FOR_FOREGROUND
-
-        pollRunnable = object : Runnable {
-            override fun run() {
-                val elapsed = System.currentTimeMillis() - startTime
-                val beforeSnap = observationEngine.captureCurrentScreen()
-                val currentPkg = beforeSnap.packageName
-
-                val isRunOwnedSnapshot = beforeSnap.timestampMs >= startTime
-
-                if (currentPkg == resolvedPkg && beforeSnap.state == ObservationState.SUCCESS && isRunOwnedSnapshot) {
-                    currentState = GuidedActionTestState.TARGET_DETECTED
-                    currentState = GuidedActionTestState.OBSERVING
-
-                    val checks = mutableListOf<GuidedTestValidationCheck>()
-                    checks.add(GuidedTestValidationCheck("Accessibility Service Connected", observationEngine.isServiceConnected()))
-                    checks.add(GuidedTestValidationCheck("Target Package Match ($resolvedPkg)", currentPkg == resolvedPkg))
-                    checks.add(GuidedTestValidationCheck("Pre-Action Snapshot SUCCESS", beforeSnap.state == ObservationState.SUCCESS))
-
-                    // Resolve target node
-                    currentState = GuidedActionTestState.TARGET_RESOLVED
-                    val targetRes = targetResolver.resolve(beforeSnap, TargetQuery(text = targetQueryText))
-                    val resolvedTarget = targetRes.resolvedTarget
-
-                    val checkTargetResolved = GuidedTestValidationCheck("Target Resolution ($targetQueryText)", targetRes.status == TargetResolutionStatus.RESOLVED && resolvedTarget != null)
-                    checks.add(checkTargetResolved)
-
-                    if (resolvedTarget == null) {
-                        currentState = GuidedActionTestState.FAILED
-                        observationEngine.snapshotStore.endTestRun()
-                        val failRes = prepRes.copy(
-                            state = GuidedActionTestState.FAILED,
-                            status = TestStatus.FAILED,
-                            actualPackage = currentPkg,
-                            actualActivity = beforeSnap.activityName,
-                            beforeNodeCount = beforeSnap.nodeCount,
-                            validationChecks = checks,
-                            failureReason = "TARGET RESOLUTION FAILED: ${targetRes.explanation}"
-                        )
-                        currentResult = failRes
-                        onUpdate(failRes)
-                        return
-                    }
-
-                    // Validate action preconditions
-                    currentState = GuidedActionTestState.VALIDATING
-                    val actionReq = UiActionRequest(
-                        actionType = actionType,
-                        targetQueryText = targetQueryText,
-                        resolvedTarget = resolvedTarget,
-                        expectedPackage = resolvedPkg,
-                        textInput = textInputVal,
-                        sourceSnapshotId = beforeSnap.snapshotId
-                    )
-
-                    val executorInstance = UiActionExecutor(observationEngine = observationEngine)
-
-                    currentState = GuidedActionTestState.EXECUTING
-                    val actionRes = executorInstance.executeAction(actionReq, isServiceConnectedOverride = true)
-
-                    currentState = GuidedActionTestState.POST_ACTION_OBSERVATION
-                    val afterSnap = observationEngine.captureCurrentScreen()
-
-                    currentState = GuidedActionTestState.VERIFYING
-                    checks.add(GuidedTestValidationCheck("Action Execution SUCCESS (${actionRes.status})", actionRes.status == ActionExecutionStatus.SUCCESS))
-                    checks.add(GuidedTestValidationCheck("Post-Action Snapshot Captured", afterSnap.state == ObservationState.SUCCESS))
-
-                    val allPassed = checks.all { it.passed }
-                    val evPath = saveEvidenceJson(runId, testId, targetApp, resolvedPkg, beforeSnap, afterSnap, actionRes, checks, allPassed)
-
-                    currentState = if (allPassed) GuidedActionTestState.PASSED else GuidedActionTestState.FAILED
-                    observationEngine.snapshotStore.endTestRun()
-
-                    val finalRes = GuidedActionTestResult(
-                        testId = testId,
-                        runId = runId,
-                        targetApp = targetApp,
-                        state = currentState,
-                        status = if (allPassed) TestStatus.PASSED else TestStatus.FAILED,
-                        expectedPackage = resolvedPkg,
-                        actualPackage = currentPkg,
-                        actualActivity = afterSnap.activityName ?: beforeSnap.activityName,
-                        actionType = actionType,
-                        targetQuery = targetQueryText,
-                        beforeNodeCount = beforeSnap.nodeCount,
-                        afterNodeCount = afterSnap.nodeCount,
-                        validationChecks = checks,
-                        evidencePath = evPath,
-                        failureReason = if (allPassed) null else actionRes.explanation
-                    )
-                    currentResult = finalRes
-                    onUpdate(finalRes)
-                    return
-                }
-
-                if (elapsed >= WAIT_TIMEOUT_MS) {
-                    currentState = GuidedActionTestState.TIMED_OUT
-                    observationEngine.snapshotStore.endTestRun()
-                    val failRes = GuidedActionTestResult(
-                        testId = testId,
-                        runId = runId,
-                        targetApp = targetApp,
-                        state = GuidedActionTestState.TIMED_OUT,
-                        status = TestStatus.FAILED,
-                        expectedPackage = resolvedPkg,
-                        actualPackage = currentPkg,
-                        actualActivity = beforeSnap.activityName,
-                        actionType = actionType,
-                        targetQuery = targetQueryText,
-                        beforeNodeCount = 0,
-                        afterNodeCount = 0,
-                        validationChecks = listOf(GuidedTestValidationCheck("Target Foreground Detection Within 15s", false)),
-                        evidencePath = null,
-                        failureReason = "TARGET APPLICATION DID NOT BECOME FOREGROUND (Last detected: $currentPkg)"
-                    )
-                    currentResult = failRes
-                    onUpdate(failRes)
-                    return
-                }
-
-                val waitRes = prepRes.copy(
-                    state = GuidedActionTestState.WAITING_FOR_FOREGROUND,
-                    status = TestStatus.RUNNING,
-                    actualPackage = currentPkg,
-                    actualActivity = beforeSnap.activityName
+        targetLauncher.launchAndWaitForForeground(targetApp, observationEngine) { launchRes ->
+            if (launchRes.status != LaunchStatus.SUCCESS) {
+                currentState = if (launchRes.status == LaunchStatus.FOREGROUND_TIMEOUT) GuidedActionTestState.TIMED_OUT else GuidedActionTestState.FAILED
+                observationEngine.snapshotStore.endTestRun()
+                val failRes = GuidedActionTestResult(
+                    testId = testId,
+                    runId = runId,
+                    targetApp = targetApp,
+                    state = currentState,
+                    status = TestStatus.FAILED,
+                    expectedPackage = launchRes.expectedPackage,
+                    actualPackage = launchRes.actualPackage,
+                    actualActivity = launchRes.actualActivity,
+                    actionType = actionType,
+                    targetQuery = targetQueryText,
+                    beforeNodeCount = 0,
+                    afterNodeCount = 0,
+                    validationChecks = listOf(GuidedTestValidationCheck("Foreground Confirmation", false)),
+                    evidencePath = null,
+                    failureReason = launchRes.message
                 )
-                currentResult = waitRes
-                onUpdate(waitRes)
-
-                handler.postDelayed(this, POLL_INTERVAL_MS)
+                currentResult = failRes
+                onUpdate(failRes)
+                return@launchAndWaitForForeground
             }
-        }
 
-        handler.postDelayed(pollRunnable!!, POLL_INTERVAL_MS)
+            val resolvedPkg = launchRes.actualPackage ?: launchRes.expectedPackage ?: ""
+            val beforeSnap = observationEngine.captureCurrentScreen()
+
+            currentState = GuidedActionTestState.TARGET_DETECTED
+            currentState = GuidedActionTestState.OBSERVING
+
+            val checks = mutableListOf<GuidedTestValidationCheck>()
+            checks.add(GuidedTestValidationCheck("Accessibility Service Connected", observationEngine.isServiceConnected()))
+            checks.add(GuidedTestValidationCheck("Target Package Match ($resolvedPkg)", beforeSnap.packageName == resolvedPkg))
+            checks.add(GuidedTestValidationCheck("Pre-Action Snapshot SUCCESS", beforeSnap.state == ObservationState.SUCCESS))
+
+            // Resolve target node
+            currentState = GuidedActionTestState.TARGET_RESOLVED
+            val targetRes = targetResolver.resolve(beforeSnap, TargetQuery(text = targetQueryText))
+            val resolvedTarget = targetRes.resolvedTarget
+
+            val checkTargetResolved = GuidedTestValidationCheck("Target Resolution ($targetQueryText)", targetRes.status == TargetResolutionStatus.RESOLVED && resolvedTarget != null)
+            checks.add(checkTargetResolved)
+
+            if (resolvedTarget == null) {
+                currentState = GuidedActionTestState.FAILED
+                observationEngine.snapshotStore.endTestRun()
+                val failRes = GuidedActionTestResult(
+                    testId = testId,
+                    runId = runId,
+                    targetApp = targetApp,
+                    state = GuidedActionTestState.FAILED,
+                    status = TestStatus.FAILED,
+                    expectedPackage = resolvedPkg,
+                    actualPackage = beforeSnap.packageName,
+                    actualActivity = beforeSnap.activityName,
+                    actionType = actionType,
+                    targetQuery = targetQueryText,
+                    beforeNodeCount = beforeSnap.nodeCount,
+                    afterNodeCount = 0,
+                    validationChecks = checks,
+                    evidencePath = null,
+                    failureReason = "TARGET RESOLUTION FAILED: ${targetRes.explanation}"
+                )
+                currentResult = failRes
+                onUpdate(failRes)
+                return@launchAndWaitForForeground
+            }
+
+            // Validate action preconditions
+            currentState = GuidedActionTestState.VALIDATING
+            val actionReq = UiActionRequest(
+                actionType = actionType,
+                targetQueryText = targetQueryText,
+                resolvedTarget = resolvedTarget,
+                expectedPackage = resolvedPkg,
+                textInput = textInputVal,
+                sourceSnapshotId = beforeSnap.snapshotId
+            )
+
+            val executorInstance = UiActionExecutor(observationEngine = observationEngine)
+
+            currentState = GuidedActionTestState.EXECUTING
+            val actionRes = executorInstance.executeAction(actionReq, isServiceConnectedOverride = true)
+
+            currentState = GuidedActionTestState.POST_ACTION_OBSERVATION
+            val afterSnap = observationEngine.captureCurrentScreen()
+
+            currentState = GuidedActionTestState.VERIFYING
+            checks.add(GuidedTestValidationCheck("Action Execution SUCCESS (${actionRes.status})", actionRes.status == ActionExecutionStatus.SUCCESS))
+            checks.add(GuidedTestValidationCheck("Post-Action Snapshot Captured", afterSnap.state == ObservationState.SUCCESS))
+
+            val allPassed = checks.all { it.passed }
+            val evPath = saveEvidenceJson(runId, testId, targetApp, resolvedPkg, beforeSnap, afterSnap, actionRes, checks, allPassed)
+
+            currentState = if (allPassed) GuidedActionTestState.PASSED else GuidedActionTestState.FAILED
+            observationEngine.snapshotStore.endTestRun()
+
+            val finalRes = GuidedActionTestResult(
+                testId = testId,
+                runId = runId,
+                targetApp = targetApp,
+                state = currentState,
+                status = if (allPassed) TestStatus.PASSED else TestStatus.FAILED,
+                expectedPackage = resolvedPkg,
+                actualPackage = beforeSnap.packageName,
+                actualActivity = afterSnap.activityName ?: beforeSnap.activityName,
+                actionType = actionType,
+                targetQuery = targetQueryText,
+                beforeNodeCount = beforeSnap.nodeCount,
+                afterNodeCount = afterSnap.nodeCount,
+                validationChecks = checks,
+                evidencePath = evPath,
+                failureReason = if (allPassed) null else actionRes.explanation
+            )
+            currentResult = finalRes
+            onUpdate(finalRes)
+        }
     }
 
     private fun saveEvidenceJson(
