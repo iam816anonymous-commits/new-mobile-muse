@@ -23,9 +23,13 @@ data class TorchMappingDiagnostic(
                 "EXISTS=$capabilityExists, PERMITTED=$capabilityPermitted, USABLE=$capabilityUsable"
 }
 
-class FlashlightController(private val context: Context?) {
+interface TorchHardwareProvider {
+    fun getTorchDiagnostic(): TorchMappingDiagnostic
+    fun setTorchMode(cameraId: String, enabled: Boolean)
+}
 
-    fun getTorchDiagnostic(): TorchMappingDiagnostic {
+class CameraManagerTorchProvider(private val context: Context?) : TorchHardwareProvider {
+    override fun getTorchDiagnostic(): TorchMappingDiagnostic {
         val backIds = mutableListOf<String>()
         val frontIds = mutableListOf<String>()
         val otherIds = mutableListOf<String>()
@@ -62,15 +66,28 @@ class FlashlightController(private val context: Context?) {
         )
     }
 
+    override fun setTorchMode(cameraId: String, enabled: Boolean) {
+        val cameraManager = context?.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
+            ?: throw IllegalStateException("CameraManager unavailable")
+        cameraManager.setTorchMode(cameraId, enabled)
+    }
+}
+
+class FlashlightController(
+    private val context: Context?,
+    private val torchProvider: TorchHardwareProvider = CameraManagerTorchProvider(context)
+) {
+
+    fun getTorchDiagnostic(): TorchMappingDiagnostic {
+        return torchProvider.getTorchDiagnostic()
+    }
+
     fun setFlashlight(enable: Boolean): SkillResult {
         return setFlashlightTarget(if (enable) "back" else "off", enable)
     }
 
     fun setFlashlightTarget(targetInput: String, enable: Boolean = true): SkillResult {
         val start = System.currentTimeMillis()
-        if (context == null) {
-            return SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "Context unavailable", System.currentTimeMillis() - start, "NO_CONTEXT")
-        }
 
         val target = targetInput.trim().lowercase()
         val validTargets = setOf("back", "front", "both", "off", "on", "status")
@@ -89,6 +106,10 @@ class FlashlightController(private val context: Context?) {
         if (target == "status") {
             val statusMsg = "Flashlight Status: ${diag.summaryText}"
             return SkillResult("FLASHLIGHT", SkillStatus.SUCCESS, statusMsg, System.currentTimeMillis() - start)
+        }
+
+        if (context == null && torchProvider is CameraManagerTorchProvider) {
+            return SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "Context unavailable", System.currentTimeMillis() - start, "NO_CONTEXT")
         }
 
         if (!diag.capabilityExists) {
@@ -111,16 +132,13 @@ class FlashlightController(private val context: Context?) {
             )
         }
 
-        val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
-            ?: return SkillResult("FLASHLIGHT", SkillStatus.UNAVAILABLE, "CameraManager unavailable", System.currentTimeMillis() - start, "NO_CAMERA_MANAGER")
-
         return try {
             val allTorchIds = (diag.backCameraIds + diag.frontCameraIds + diag.otherCameraIds).distinct()
 
             when (target) {
                 "off" -> {
                     for (id in allTorchIds) {
-                        try { cameraManager.setTorchMode(id, false) } catch (ignored: Exception) {}
+                        try { torchProvider.setTorchMode(id, false) } catch (ignored: Exception) {}
                     }
                     SkillResult("FLASHLIGHT", SkillStatus.SUCCESS, "Flashlight set to OFF on all camera torches", System.currentTimeMillis() - start)
                 }
@@ -135,7 +153,7 @@ class FlashlightController(private val context: Context?) {
                         )
                     }
                     for (id in diag.frontCameraIds) {
-                        cameraManager.setTorchMode(id, enable)
+                        torchProvider.setTorchMode(id, enable)
                     }
                     val actionStr = if (enable) "ON" else "OFF"
                     SkillResult("FLASHLIGHT", SkillStatus.SUCCESS, "Front flashlight set to $actionStr (Cameras: ${diag.frontCameraIds.joinToString()})", System.currentTimeMillis() - start)
@@ -152,7 +170,7 @@ class FlashlightController(private val context: Context?) {
                         )
                     }
                     for (id in targetBackIds) {
-                        cameraManager.setTorchMode(id, enable)
+                        torchProvider.setTorchMode(id, enable)
                     }
                     val actionStr = if (enable) "ON" else "OFF"
                     SkillResult("FLASHLIGHT", SkillStatus.SUCCESS, "Back flashlight set to $actionStr (Cameras: ${targetBackIds.joinToString()})", System.currentTimeMillis() - start)
@@ -168,7 +186,7 @@ class FlashlightController(private val context: Context?) {
                         )
                     }
                     for (id in allTorchIds) {
-                        cameraManager.setTorchMode(id, enable)
+                        torchProvider.setTorchMode(id, enable)
                     }
                     val actionStr = if (enable) "ON" else "OFF"
                     SkillResult("FLASHLIGHT", SkillStatus.SUCCESS, "Both front and back flashlights set to $actionStr (Cameras: ${allTorchIds.joinToString()})", System.currentTimeMillis() - start)
