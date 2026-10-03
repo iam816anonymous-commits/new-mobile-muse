@@ -296,6 +296,18 @@ class Phase3IntegrationUnitTest {
     }
 
     @Test
+    fun test11_OverlayActionIntegration() {
+        val showRes = goalDispatcher.dispatchAndProcessWithLock("overlay show")
+        assertEquals("OVERLAY_SHOW", showRes.operation)
+
+        val hideRes = goalDispatcher.dispatchAndProcessWithLock("overlay hide")
+        assertEquals("OVERLAY_HIDE", hideRes.operation)
+
+        val statusRes = goalDispatcher.dispatchAndProcessWithLock("overlay status")
+        assertEquals("OVERLAY_STATUS", statusRes.operation)
+    }
+
+    @Test
     fun test10_ConsoleCommandRouting_AllActionCommands() {
         val button = createNode("btn-1", "android.widget.Button", "com.example.app", "Submit", isClickable = true)
         val snap = createSampleSnapshot(nodes = listOf(button))

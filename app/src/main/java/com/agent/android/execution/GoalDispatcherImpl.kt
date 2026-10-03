@@ -91,6 +91,15 @@ class GoalDispatcherImpl(
     val targetResolver: TargetResolver = TargetResolver()
 ) : GoalDispatcher {
 
+    init {
+        instance = this
+    }
+
+    companion object {
+        @Volatile
+        var instance: GoalDispatcherImpl? = null
+    }
+
     override fun dispatchGoal(goal: String): Boolean {
         return dispatchAndProcessWithLock(goal).result.status == SkillStatus.SUCCESS
     }
@@ -656,6 +665,23 @@ class GoalDispatcherImpl(
                 }
                 val skillRes = SkillResult("ACTION_EXECUTION", skillStatus, actionRes.explanation, actionRes.durationMs, actionRes.status.name)
                 DispatchDetails(trimmed, "ACTION_EXECUTION", cmdDef.handlerIdentifier, skillRes, actionRes.explanation)
+            }
+            "overlay.show" -> {
+                val isVis = com.agent.android.overlay.LocalAgentOverlayService.isOverlayVisible
+                val msg = if (isVis) "Movable action overlay is ACTIVE" else "Movable action overlay SHOW requested"
+                val res = SkillResult("OVERLAY_SHOW", SkillStatus.SUCCESS, msg, 0L)
+                DispatchDetails(trimmed, "OVERLAY_SHOW", cmdDef.handlerIdentifier, res, msg)
+            }
+            "overlay.hide" -> {
+                com.agent.android.overlay.LocalAgentOverlayService.instance?.hideOverlay()
+                val res = SkillResult("OVERLAY_HIDE", SkillStatus.SUCCESS, "Movable action overlay HIDDEN", 0L)
+                DispatchDetails(trimmed, "OVERLAY_HIDE", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "overlay.status" -> {
+                val isVis = com.agent.android.overlay.LocalAgentOverlayService.isOverlayVisible
+                val msg = "Movable Overlay Subsystem Status: ${if (isVis) "VISIBLE" else "HIDDEN/COLLAPSED"}"
+                val res = SkillResult("OVERLAY_STATUS", SkillStatus.SUCCESS, msg, 0L)
+                DispatchDetails(trimmed, "OVERLAY_STATUS", cmdDef.handlerIdentifier, res, msg)
             }
             "action.status" -> {
                 val liveService = com.agent.android.service.LocalAgentAccessibilityService.instance

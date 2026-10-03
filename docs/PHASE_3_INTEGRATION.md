@@ -311,3 +311,37 @@ During real-device testing on Android Calculator:
 - **Root Cause:** `UiActionExecutor` set `status = ActionExecutionStatus.SUCCESS` whenever `performAction(...)` returned `true`, even if post-action re-observation revealed zero UI state change (`stateChanged == false`).
 - **Fix Applied:** `UiActionExecutor` was updated so that when `beforeSnap` and `afterSnap` exist (or fall back to `beforeSnap`), `status` evaluates to `ActionExecutionStatus.SUCCESS` **only if `stateChanged == true`**. If `stateChanged == false` (e.g., display text remains `""`), `status` evaluates to `ActionExecutionStatus.ACTION_FAILED` with explanation `[DISPATCHED_BUT_NOT_VERIFIED: No UI state change observed post-action]`.
 - **Regression Tests:** Added `testCalculatorClickDispatchedButNotVerifiedFailsSuccessStatus` and `testCalculatorClickVerifiedSuccessWhenDisplayChanges` in `Phase32ActionExecutionUnitTest.kt`.
+
+---
+
+## 17. Movable Action Overlay Subsystem Architecture
+
+### Architecture Overview
+LocalAgent provides a lightweight floating action overlay (`LocalAgentOverlayService`) that allows user interaction while in external target applications (e.g. Calculator, Settings, Chrome) without returning to the LocalAgent main screen.
+
+```
+Movable Action Overlay Panel
+    ↓ Touch Event / Button Press
+GoalDispatcherImpl.dispatchAndProcessWithLock(command)
+    ↓
+CommandRegistry
+    ↓
+TargetResolver / UiTargetValidator
+    ↓
+UiActionExecutor
+    ↓
+LocalAgentAccessibilityService
+    ↓
+Android Accessibility API
+    ↓
+Fresh Post-Action Observation & Verification
+```
+
+### Key Technical Specs
+- **WindowManager Integration:** Renders via `WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY` (API 26+) / `TYPE_PHONE` (API < 26).
+- **Zero Duplicate Logic:** Overlay buttons dispatch commands directly through `GoalDispatcherImpl.dispatchAndProcessWithLock()`. No duplicate or parallel action execution code exists.
+- **Drag & Clamp Bounds:** Touch drag on `[LA]` collapsed header updates `params.x` and `params.y` with immediate `windowManager.updateViewLayout()` calls, using a 10px motion threshold to prevent drag/tap ambiguity.
+- **Registered Commands:**
+  - `overlay.show` -> Shows/launches overlay panel
+  - `overlay.hide` -> Hides/collapses overlay panel
+  - `overlay.status` -> Queries overlay subsystem status (`VISIBLE` / `HIDDEN`)

@@ -6,8 +6,8 @@ This document is the **single canonical source of truth** for all commands and c
 
 ## Command Inventory Summary
 
-- **Total Registered Commands:** 122
-- **Implemented Production Commands:** 101
+- **Total Registered Commands:** 125
+- **Implemented Production Commands:** 104
 - **Diagnostic Commands:** 13
 - **Test-Only Commands:** 8
 - **Test Registry Coverage:** 100% (229 test cases in `FoundationTestRegistry`)
@@ -211,7 +211,14 @@ For each audio stream (`music`, `ring`, `alarm`, `notification`), 5 commands are
 | `action.home` | `action home`, `home` | `IMPLEMENTED_DEVICE_DEPENDENT` | Executes `GLOBAL_ACTION_HOME` navigation action | `UiActionExecutor` |
 | `action.status` | `action status` | `IMPLEMENTED_DIAGNOSTIC` | Queries action subsystem readiness and connection status | `UiActionExecutor` |
 
-### 15. Discovery, Namespaced Observation & System Status
+### 15. Movable Action Overlay
+| Command ID | Aliases | Status | Purpose | Handler |
+|------------|---------|--------|---------|---------|
+| `overlay.show` | `overlay show` | `IMPLEMENTED_DEVICE_DEPENDENT` | Launches or shows movable action overlay panel | `LocalAgentOverlayService` |
+| `overlay.hide` | `overlay hide` | `IMPLEMENTED` | Hides movable action overlay panel | `LocalAgentOverlayService` |
+| `overlay.status` | `overlay status` | `IMPLEMENTED_DIAGNOSTIC` | Queries movable action overlay status | `LocalAgentOverlayService` |
+
+### 16. Discovery, Namespaced Observation & System Status
 | Command ID | Aliases | Status | Purpose | Handler |
 |------------|---------|--------|---------|---------|
 | `help` | `help <query>` | `IMPLEMENTED_DIAGNOSTIC` | Lists available command categories or detailed command help | `CommandRegistry` |

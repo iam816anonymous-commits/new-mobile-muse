@@ -148,6 +148,11 @@ class CommandRegistry {
         register(CommandDefinition("action.home", "Action Global Home", CommandCategory.OBSERVATION, "Executes GLOBAL_HOME navigation action", CommandStatus.IMPLEMENTED, "action home", listOf("action home", "home"), emptyList(), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
         register(CommandDefinition("action.status", "Action Subsystem Status", CommandCategory.DIAGNOSTICS, "Queries action subsystem readiness, accessibility service status, and capabilities", CommandStatus.IMPLEMENTED, "action status", listOf("action status"), emptyList(), handlerIdentifier = "UiActionExecutor"))
 
+        // 20.1 OVERLAY COMMANDS
+        register(CommandDefinition("overlay.show", "Show Overlay", CommandCategory.DIAGNOSTICS, "Launches or shows movable action overlay", CommandStatus.IMPLEMENTED, "overlay show", listOf("overlay show"), emptyList(), handlerIdentifier = "LocalAgentOverlayService"))
+        register(CommandDefinition("overlay.hide", "Hide Overlay", CommandCategory.DIAGNOSTICS, "Hides movable action overlay panel", CommandStatus.IMPLEMENTED, "overlay hide", listOf("overlay hide"), emptyList(), handlerIdentifier = "LocalAgentOverlayService"))
+        register(CommandDefinition("overlay.status", "Overlay Status", CommandCategory.DIAGNOSTICS, "Queries movable action overlay status", CommandStatus.IMPLEMENTED, "overlay status", listOf("overlay status"), emptyList(), handlerIdentifier = "LocalAgentOverlayService"))
+
         // 21. PHASE 3.2 TEST HARNESS COMMANDS
         register(CommandDefinition("test.launch", "Test App Launch", CommandCategory.OBSERVATION, "Launches test target app and waits for actual foreground package", CommandStatus.IMPLEMENTED, "test launch <target>", listOf("test launch calculator", "test launch chrome"), listOf("target"), requirement = CommandRequirement(accessibilityRequired = true), handlerIdentifier = "ControlledTestAppLauncher"))
         register(CommandDefinition("test.observe", "Test Observe", CommandCategory.OBSERVATION, "Captures current active UI observation snapshot", CommandStatus.IMPLEMENTED, "test observe", listOf("test observe"), handlerIdentifier = "AccessibilityObservationEngine"))

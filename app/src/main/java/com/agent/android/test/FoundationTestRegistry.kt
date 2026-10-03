@@ -288,6 +288,11 @@ class FoundationTestRegistry {
         add(TestCase("P3.2-ACT-EXT-002", "action.home", "PHASE_3.2", "ACTION_EXECUTION", "Action Global Home", "Executes GLOBAL_HOME navigation action.", "action home", "GLOBAL_HOME executed", TestType.AUTOMATED))
         add(TestCase("P3.2-ACT-EXT-003", "action.status", "PHASE_3.2", "DIAGNOSTICS", "Action Subsystem Status Query", "Queries action subsystem readiness and capabilities.", "action status", "Action status reported", TestType.AUTOMATED))
 
+        // MOVABLE ACTION OVERLAY TEST CASES (3)
+        add(TestCase("P3.2-OVERLAY-001", "overlay.show", "PHASE_3.2", "DIAGNOSTICS", "Show Action Overlay", "Requests launching or showing movable action overlay panel.", "overlay show", "Overlay show requested", TestType.AUTOMATED))
+        add(TestCase("P3.2-OVERLAY-002", "overlay.hide", "PHASE_3.2", "DIAGNOSTICS", "Hide Action Overlay", "Hides movable action overlay panel.", "overlay hide", "Overlay hidden", TestType.AUTOMATED))
+        add(TestCase("P3.2-OVERLAY-003", "overlay.status", "PHASE_3.2", "DIAGNOSTICS", "Overlay Status Query", "Queries movable action overlay status.", "overlay status", "Overlay status reported", TestType.AUTOMATED))
+
         // DISCOVERY, NAMESPACED OBSERVATION & SYSTEM UI TEST CASES
         add(TestCase("P3.2-DISC-001", "help", "PHASE_3.2", "DISCOVERY", "Command Help Discovery", "Queries help and usage information for command categories.", "help", "Category help returned", TestType.AUTOMATED))
         add(TestCase("P3.2-DISC-002", "commands", "PHASE_3.2", "DISCOVERY", "List Registered Commands", "Lists registered production commands.", "commands", "Registered commands listed", TestType.AUTOMATED))
