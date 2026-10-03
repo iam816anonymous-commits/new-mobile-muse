@@ -218,6 +218,14 @@ For each audio stream (`music`, `ring`, `alarm`, `notification`), 5 commands are
 | `overlay.hide` | `overlay hide` | `IMPLEMENTED` | Hides movable action overlay panel | `LocalAgentOverlayService` |
 | `overlay.status` | `overlay status` | `IMPLEMENTED_DIAGNOSTIC` | Queries movable action overlay status | `LocalAgentOverlayService` |
 
+### 15.1 Persistent Logging Commands
+| Command ID | Aliases | Status | Purpose | Handler |
+|------------|---------|--------|---------|---------|
+| `logs.recent` | `logs recent` | `IMPLEMENTED_DIAGNOSTIC` | Queries recent persistent structured SQLite log records | `LocalAgentLogger` |
+| `logs.errors` | `logs errors` | `IMPLEMENTED_DIAGNOSTIC` | Queries error log records from SQLite database | `LocalAgentLogger` |
+| `logs.command` | `logs command <correlationId>` | `IMPLEMENTED_DIAGNOSTIC` | Queries log trace for a specific correlation ID | `LocalAgentLogger` |
+| `logs.clear` | `logs clear` | `IMPLEMENTED_DIAGNOSTIC` | Clears persistent SQLite log database | `LocalAgentLogger` |
+
 ### 16. Discovery, Namespaced Observation & System Status
 | Command ID | Aliases | Status | Purpose | Handler |
 |------------|---------|--------|---------|---------|

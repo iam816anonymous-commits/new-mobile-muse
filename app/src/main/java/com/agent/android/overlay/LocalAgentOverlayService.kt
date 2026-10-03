@@ -18,6 +18,7 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import com.agent.android.execution.GoalDispatcherImpl
 
 class LocalAgentOverlayService : Service() {
@@ -131,11 +132,11 @@ class LocalAgentOverlayService : Service() {
                 "RECENTS" to "action.recents",
                 "SCROLL UP" to "action.scroll backward",
                 "SCROLL DOWN" to "action.scroll forward",
-                "CLICK" to "action.click target",
-                "LONG CLICK" to "action.long_click target",
+                "CLICK" to "action.click",
+                "LONG CLICK" to "action.long_click",
                 "OBSERVE" to "observe.current",
                 "STATUS" to "action.status",
-                "HIDE" to "HIDE"
+                "HIDE" to "overlay.hide"
             )
 
             for ((label, cmd) in actions) {
@@ -145,8 +146,9 @@ class LocalAgentOverlayService : Service() {
                     setTextColor(Color.WHITE)
                     setBackgroundColor(Color.argb(180, 30, 40, 60))
                     setOnClickListener {
-                        if (label == "HIDE") {
+                        if (label == "HIDE" || cmd == "overlay.hide") {
                             toggleExpand(false)
+                            hideOverlay()
                         } else {
                             dispatchOverlayAction(cmd)
                         }
@@ -232,10 +234,22 @@ class LocalAgentOverlayService : Service() {
     fun dispatchOverlayAction(command: String) {
         val dispatcher = goalDispatcher ?: GoalDispatcherImpl.instance
         if (dispatcher != null) {
-            Log.i(TAG, "[Overlay] Dispatching overlay action: '$command'")
-            dispatcher.dispatchAndProcessWithLock(command)
+            Log.i(TAG, "[OverlayAction] Pressed command: '$command'")
+            val details = dispatcher.dispatchAndProcessWithLock(command)
+            val res = details.result
+            val statusStr = res.errorCode ?: res.status.name
+            val msg = "[$command] $statusStr: ${res.message}"
+            Log.i(TAG, "[OverlayAction] command='$command' status=${res.status} errorCode=${res.errorCode} msg='${res.message}'")
+            try {
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                // Ignore toast failure in headless/unit test contexts
+            }
         } else {
-            Log.w(TAG, "[Overlay] GoalDispatcher instance unavailable for overlay command '$command'")
+            Log.w(TAG, "[OverlayAction] GoalDispatcher instance unavailable for overlay command '$command'")
+            try {
+                Toast.makeText(this, "GoalDispatcher unavailable", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {}
         }
     }
 

@@ -1,9 +1,19 @@
 package com.agent.android
 
+import com.agent.android.actions.ActionExecutionStatus
+import com.agent.android.actions.UiActionExecutor
+import com.agent.android.actions.UiActionRequest
+import com.agent.android.actions.UiActionType
+import com.agent.android.actions.UiTargetValidator
 import com.agent.android.agent.skills.SkillStatus
 import com.agent.android.commands.CommandRegistry
 import com.agent.android.execution.ExecutionController
 import com.agent.android.execution.GoalDispatcherImpl
+import com.agent.android.observation.ObservationBounds
+import com.agent.android.observation.ObservationNode
+import com.agent.android.observation.ObservationSnapshot
+import com.agent.android.observation.ObservationState
+import com.agent.android.observation.WindowClassification
 import com.agent.android.overlay.LocalAgentOverlayService
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -36,15 +46,15 @@ class OverlaySubsystemUnitTest {
 
     @Test
     fun test2_OverlayCommandDispatch() {
-        val showDetails = goalDispatcher.dispatchAndProcessWithLock("overlay show")
+        val showDetails = goalDispatcher.dispatchAndProcessWithLock("overlay show", source = "OVERLAY")
         assertEquals(SkillStatus.SUCCESS, showDetails.result.status)
         assertEquals("OVERLAY_SHOW", showDetails.operation)
 
-        val statusDetails = goalDispatcher.dispatchAndProcessWithLock("overlay status")
+        val statusDetails = goalDispatcher.dispatchAndProcessWithLock("overlay status", source = "OVERLAY")
         assertEquals(SkillStatus.SUCCESS, statusDetails.result.status)
         assertEquals("OVERLAY_STATUS", statusDetails.operation)
 
-        val hideDetails = goalDispatcher.dispatchAndProcessWithLock("overlay hide")
+        val hideDetails = goalDispatcher.dispatchAndProcessWithLock("overlay hide", source = "OVERLAY")
         assertEquals(SkillStatus.SUCCESS, hideDetails.result.status)
         assertEquals("OVERLAY_HIDE", hideDetails.operation)
     }
@@ -54,9 +64,9 @@ class OverlaySubsystemUnitTest {
         LocalAgentOverlayService.goalDispatcher = goalDispatcher
         val overlayService = LocalAgentOverlayService()
 
-        overlayService.dispatchOverlayAction("back")
+        overlayService.dispatchOverlayAction("action.back")
         val activeJob = executionController.getActiveJob()
-        assertNotNull("Active execution job should be released cleanly", activeJob == null)
+        assertTrue("Active execution job should be released cleanly", activeJob == null)
     }
 
     @Test
@@ -87,42 +97,79 @@ class OverlaySubsystemUnitTest {
     }
 
     @Test
-    fun test7_InitialPositionClampingAndBoundsLogic() {
-        val screenWidth = 1080
-        val screenHeight = 1920
-
-        val safeX = (screenWidth - 150).coerceAtLeast(0)
-        val safeY = (screenHeight / 2 - 100).coerceAtLeast(0)
-
-        assertTrue("Safe X must be within display width", safeX >= 0 && safeX < screenWidth)
-        assertTrue("Safe Y must be within display height", safeY >= 0 && safeY < screenHeight)
+    fun test7_ClickWithoutTargetReturnsTargetRequired() {
+        val details = goalDispatcher.dispatchAndProcessWithLock("action click", source = "OVERLAY")
+        assertEquals(SkillStatus.FAILED, details.result.status)
+        assertEquals("TARGET_REQUIRED", details.result.errorCode)
+        assertTrue(details.result.message.contains("TARGET_REQUIRED"))
     }
 
     @Test
-    fun test8_TapVsDragThresholdDistinction() {
-        val touchDownX = 100f
-        val touchDownY = 200f
-
-        val tapX = 105f
-        val tapY = 203f
-        val diffTapX = Math.abs(tapX - touchDownX)
-        val diffTapY = Math.abs(tapY - touchDownY)
-        val isTap = diffTapX < 10 && diffTapY < 10
-        assertTrue("Movement < 10px must evaluate to TAP", isTap)
-
-        val dragX = 150f
-        val dragY = 300f
-        val diffDragX = Math.abs(dragX - touchDownX)
-        val diffDragY = Math.abs(dragY - touchDownY)
-        val isDrag = diffDragX >= 10 || diffDragY >= 10
-        assertTrue("Movement >= 10px must evaluate to DRAG", isDrag)
+    fun test8_LongClickWithoutTargetReturnsTargetRequired() {
+        val details = goalDispatcher.dispatchAndProcessWithLock("action long_click", source = "OVERLAY")
+        assertEquals(SkillStatus.FAILED, details.result.status)
+        assertEquals("TARGET_REQUIRED", details.result.errorCode)
+        assertTrue(details.result.message.contains("TARGET_REQUIRED"))
     }
 
     @Test
-    fun test9_CodeVerifiedVsPhysicalVerifiedDistinction() {
-        val diag = LocalAgentOverlayService.getDiagnosticStatus(null)
-        assertNotNull(diag)
-        // Note: Unit tests run in JVM mock environment where physical WindowManager display rendering
-        // is validated programmatically ("CODE VERIFIED"), requiring physical device manual testing for "PHYSICALLY VERIFIED".
+    fun test9_ScrollWithoutScrollableContainerReturnsNoScrollableTarget() {
+        val req = UiActionRequest(actionType = UiActionType.SCROLL_FORWARD)
+        val mockNode = ObservationNode(
+            id = "node-0",
+            parentId = null,
+            className = "android.widget.LinearLayout",
+            packageName = "com.android.settings",
+            text = null,
+            contentDescription = null,
+            resourceId = null,
+            bounds = ObservationBounds(0, 0, 1080, 1920),
+            isClickable = false,
+            isLongClickable = false,
+            isFocusable = false,
+            isFocused = false,
+            isEnabled = true,
+            isEditable = false,
+            isScrollable = false,
+            isCheckable = false,
+            isChecked = false,
+            isSelected = false,
+            isVisibleToUser = true,
+            isPassword = false,
+            childCount = 0
+        )
+        val mockSnapshot = ObservationSnapshot(
+            timestampMs = System.currentTimeMillis(),
+            snapshotId = "snap-1",
+            packageName = "com.android.settings",
+            activityName = ".Settings",
+            windowType = "APPLICATION",
+            rootBounds = ObservationBounds(0, 0, 1080, 1920),
+            nodeCount = 1,
+            rootNode = mockNode,
+            allNodesList = listOf(mockNode),
+            state = ObservationState.SUCCESS,
+            classification = WindowClassification.APPLICATION
+        )
+        val validator = UiTargetValidator()
+        val valRes = validator.validateActionPreconditions(req, currentSnapshot = mockSnapshot, isServiceConnected = true)
+        assertEquals(ActionExecutionStatus.NO_SCROLLABLE_TARGET, valRes.status)
+        assertTrue(valRes.explanation.contains("NO_SCROLLABLE_TARGET"))
+    }
+
+    @Test
+    fun test10_GlobalActionsWhenServiceDisconnectedReturnsAccessibilityUnavailable() {
+        val details = goalDispatcher.dispatchAndProcessWithLock("action back", source = "OVERLAY")
+        assertEquals(SkillStatus.UNAVAILABLE, details.result.status)
+        assertEquals("ACCESSIBILITY_UNAVAILABLE", details.result.errorCode)
+    }
+
+    @Test
+    fun test11_ObserveAndStatusOverlayCommandsParity() {
+        val obsDetails = goalDispatcher.dispatchAndProcessWithLock("observe current", source = "OVERLAY")
+        assertNotNull(obsDetails)
+
+        val statusDetails = goalDispatcher.dispatchAndProcessWithLock("action status", source = "OVERLAY")
+        assertNotNull(statusDetails)
     }
 }

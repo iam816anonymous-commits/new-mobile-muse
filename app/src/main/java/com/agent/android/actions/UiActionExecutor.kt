@@ -34,6 +34,27 @@ class UiActionExecutor(
         Log.d(TAG, "ACTION_REQUEST: type=${request.actionType}, reqId=${request.requestId}, query=${request.targetQueryText}")
         Log.d(TAG, "ACCESSIBILITY_SERVICE_STATE: isConnected=$isServiceConnected, serviceInstance=${liveService != null}")
 
+        val isClickOrLongClick = request.actionType == UiActionType.CLICK || request.actionType == UiActionType.LONG_CLICK
+        val hasNoTarget = request.targetQueryText.isNullOrBlank() && request.targetNodeId.isNullOrBlank() && request.resolvedTarget == null
+
+        if (isClickOrLongClick && hasNoTarget) {
+            currentState = ActionExecutionStatus.TARGET_REQUIRED
+            return UiActionResult(
+                requestId = request.requestId,
+                status = ActionExecutionStatus.TARGET_REQUIRED,
+                actionType = request.actionType,
+                expectedPackage = request.expectedPackage,
+                actualPackage = beforeSnap?.packageName,
+                actualActivity = beforeSnap?.activityName,
+                targetNodeId = null,
+                beforeSnapshot = beforeSnap,
+                afterSnapshot = null,
+                explanation = "TARGET_REQUIRED: Target selection required for ${request.actionType.name} action.",
+                durationMs = System.currentTimeMillis() - start,
+                stateChanged = false
+            )
+        }
+
         val validation = validator.validateActionPreconditions(
             request = request,
             currentSnapshot = beforeSnap,
@@ -160,9 +181,9 @@ class UiActionExecutor(
 
         if (nodeInfo == null && !isUnitTestOverride) {
             val isScrollAction = request.actionType == UiActionType.SCROLL_FORWARD || request.actionType == UiActionType.SCROLL_BACKWARD
-            val failureStatus = if (isScrollAction) ActionExecutionStatus.TARGET_NOT_ACTIONABLE else ActionExecutionStatus.TARGET_NOT_FOUND
+            val failureStatus = if (isScrollAction) ActionExecutionStatus.NO_SCROLLABLE_TARGET else ActionExecutionStatus.TARGET_NOT_FOUND
             val failureMsg = if (isScrollAction) {
-                "TARGET_NOT_ACTIONABLE: No scrollable target available in active window for '${request.actionType.name}'."
+                "NO_SCROLLABLE_TARGET: No scrollable container found in active foreground application."
             } else {
                 "TARGET_NOT_FOUND: Could not resolve active AccessibilityNodeInfo for target '$resolvedNodeId'."
             }

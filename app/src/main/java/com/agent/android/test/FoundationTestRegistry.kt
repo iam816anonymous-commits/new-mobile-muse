@@ -293,6 +293,12 @@ class FoundationTestRegistry {
         add(TestCase("P3.2-OVERLAY-002", "overlay.hide", "PHASE_3.2", "DIAGNOSTICS", "Hide Action Overlay", "Hides movable action overlay panel.", "overlay hide", "Overlay hidden", TestType.AUTOMATED))
         add(TestCase("P3.2-OVERLAY-003", "overlay.status", "PHASE_3.2", "DIAGNOSTICS", "Overlay Status Query", "Queries movable action overlay status.", "overlay status", "Overlay status reported", TestType.AUTOMATED))
 
+        // PERSISTENT LOGGING TEST CASES (4)
+        add(TestCase("P3.2-LOGS-001", "logs.recent", "PHASE_3.2", "DIAGNOSTICS", "Recent Logs Query", "Queries recent persistent structured SQLite log records.", "logs recent", "Recent log records returned", TestType.AUTOMATED))
+        add(TestCase("P3.2-LOGS-002", "logs.errors", "PHASE_3.2", "DIAGNOSTICS", "Error Logs Query", "Queries persistent error log records.", "logs errors", "Error log records returned", TestType.AUTOMATED))
+        add(TestCase("P3.2-LOGS-003", "logs.command", "PHASE_3.2", "DIAGNOSTICS", "Command Trace Query", "Queries log trace for a correlation ID.", "logs command 7F2A90C1", "Command trace log records returned", TestType.AUTOMATED))
+        add(TestCase("P3.2-LOGS-004", "logs.clear", "PHASE_3.2", "DIAGNOSTICS", "Clear Logs Database", "Clears persistent SQLite log database.", "logs clear", "Logs database cleared", TestType.AUTOMATED))
+
         // DISCOVERY, NAMESPACED OBSERVATION & SYSTEM UI TEST CASES
         add(TestCase("P3.2-DISC-001", "help", "PHASE_3.2", "DISCOVERY", "Command Help Discovery", "Queries help and usage information for command categories.", "help", "Category help returned", TestType.AUTOMATED))
         add(TestCase("P3.2-DISC-002", "commands", "PHASE_3.2", "DISCOVERY", "List Registered Commands", "Lists registered production commands.", "commands", "Registered commands listed", TestType.AUTOMATED))

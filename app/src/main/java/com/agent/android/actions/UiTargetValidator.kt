@@ -77,12 +77,25 @@ class UiTargetValidator {
         }
 
         val resolved = request.resolvedTarget
+        val isScrollAction = request.actionType == UiActionType.SCROLL_FORWARD || request.actionType == UiActionType.SCROLL_BACKWARD
+
         if (resolved == null) {
-            return ValidationResult(
-                isValid = false,
-                status = ActionExecutionStatus.TARGET_NOT_FOUND,
-                explanation = "TARGET_NOT_FOUND: Action request has no resolved target node."
-            )
+            if (!isScrollAction) {
+                return ValidationResult(
+                    isValid = false,
+                    status = ActionExecutionStatus.TARGET_NOT_FOUND,
+                    explanation = "TARGET_NOT_FOUND: Action request has no resolved target node."
+                )
+            }
+            val hasScrollableNodeInWindow = currentSnapshot.allNodesList.any { it.isScrollable }
+            if (!hasScrollableNodeInWindow) {
+                return ValidationResult(
+                    isValid = false,
+                    status = ActionExecutionStatus.NO_SCROLLABLE_TARGET,
+                    explanation = "NO_SCROLLABLE_TARGET: No scrollable container found in active foreground application."
+                )
+            }
+            return ValidationResult(isValid = true, status = ActionExecutionStatus.SUCCESS, explanation = "SCROLL action validated for active window.")
         }
 
         val node = resolved.node

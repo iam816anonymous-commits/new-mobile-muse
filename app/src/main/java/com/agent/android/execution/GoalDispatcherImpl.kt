@@ -39,6 +39,8 @@ import com.agent.android.permissions.PermissionStatus
 import com.agent.android.safety.CancellationReason
 import com.agent.android.speech.SpeechToTextEngine
 import com.agent.android.speech.TextToSpeechEngine
+import com.agent.android.storage.LogLevel
+import com.agent.android.storage.LocalAgentLogger
 import com.agent.android.target.TargetQuery
 import com.agent.android.target.TargetResolver
 import com.agent.android.target.TargetResolutionStatus
@@ -89,8 +91,11 @@ class GoalDispatcherImpl(
     val permissionManager: PermissionManager? = null,
     val observationEngine: com.agent.android.observation.AccessibilityObservationEngine? = null,
     val targetResolver: TargetResolver = TargetResolver(),
-    val context: android.content.Context? = null
+    val context: android.content.Context? = null,
+    val persistentLogger: LocalAgentLogger? = null
 ) : GoalDispatcher {
+
+    val logger: LocalAgentLogger = persistentLogger ?: LocalAgentLogger.getOrCreate(context ?: permissionManager?.context)
 
     init {
         instance = this
@@ -106,6 +111,13 @@ class GoalDispatcherImpl(
     }
 
     fun dispatchAndProcessWithLock(goal: String): DispatchDetails {
+        return dispatchAndProcessWithLock(goal, source = "CONSOLE")
+    }
+
+    fun dispatchAndProcessWithLock(goal: String, source: String = "CONSOLE", correlationIdOverride: String? = null): DispatchDetails {
+        val cid = correlationIdOverride ?: logger.generateCorrelationId()
+        logger.log(source, LogLevel.INFO, "GoalDispatcher", "COMMAND_RECEIVED: '$goal'", null, cid)
+
         if (!executionController.acquireExecution()) {
             val rejectedRes = SkillResult(
                 operation = "LOCK_REJECTED",
@@ -114,17 +126,20 @@ class GoalDispatcherImpl(
                 durationMs = 0L,
                 errorCode = "LOCK_REJECTED"
             )
+            logger.log(source, LogLevel.WARN, "GoalDispatcher", "LOCK_REJECTED for goal '$goal'", null, cid)
             return DispatchDetails(goal, "LOCK_REJECTED", "ExecutionController", rejectedRes, "Execution Lock Rejected")
         }
         return try {
-            val details = dispatchAndProcess(goal)
+            val details = dispatchAndProcess(goal, source = source, correlationId = cid)
             executionController.releaseExecution(
                 if (details.result.status == SkillStatus.SUCCESS) CancellationReason.NONE else CancellationReason.INTERNAL_FAILURE
             )
+            logger.log(source, if (details.result.status == SkillStatus.SUCCESS) LogLevel.INFO else LogLevel.ERROR, "GoalDispatcher", "FINAL_RESULT: [${details.result.status}] ${details.result.message}", null, cid)
             details
         } catch (e: Exception) {
             executionController.releaseExecution(CancellationReason.INTERNAL_FAILURE)
             val errRes = SkillResult("ERROR", SkillStatus.FAILED, "Internal execution error: ${e.message}", 0L, "INTERNAL_ERROR")
+            logger.log(source, LogLevel.ERROR, "GoalDispatcher", "EXECUTION_EXCEPTION: ${e.message}", null, cid)
             DispatchDetails(goal, "ERROR", "GoalDispatcherImpl", errRes, "Exception Thrown")
         }
     }
@@ -133,14 +148,17 @@ class GoalDispatcherImpl(
         executionController.resetToSafeState(CancellationReason.USER_STOP)
     }
 
-    fun dispatchAndProcess(goal: String): DispatchDetails {
+    fun dispatchAndProcess(goal: String, source: String = "CONSOLE", correlationId: String = "SYSTEM"): DispatchDetails {
         val trimmed = goal.trim()
 
         val cmdDef = commandRegistry.findCommandForInput(trimmed)
         if (cmdDef == null) {
             val res = SkillResult("UNKNOWN", SkillStatus.INVALID_GOAL, "Unrecognized command: '$trimmed'", 0L, "UNKNOWN_COMMAND")
+            logger.log(source, LogLevel.WARN, "GoalDispatcher", "COMMAND_NOT_FOUND for input '$trimmed'", null, correlationId)
             return DispatchDetails(trimmed, "UNKNOWN", "GoalDispatcherImpl", res, "Unrecognized Command")
         }
+
+        logger.log(source, LogLevel.INFO, "GoalDispatcher", "COMMAND_PARSED: id='${cmdDef.commandId}' handler='${cmdDef.handlerIdentifier}'", null, correlationId)
 
         if (cmdDef.status != CommandStatus.IMPLEMENTED) {
             val res = SkillResult(cmdDef.commandId, SkillStatus.UNAVAILABLE, "Command '${cmdDef.commandId}' is not implemented (${cmdDef.status})", 0L, "UNIMPLEMENTED_COMMAND")
@@ -609,6 +627,7 @@ class GoalDispatcherImpl(
                     else -> SkillStatus.UNAVAILABLE
                 }
                 val skillRes = SkillResult("TARGET_RESOLUTION", skillStatus, res.explanation, 0L, res.status.name)
+                logger.log(source, LogLevel.INFO, "TargetResolver", "TARGET_RESOLVED: query='$qStr' status=${res.status.name}", null, correlationId)
                 DispatchDetails(trimmed, "TARGET_RESOLVE", cmdDef.handlerIdentifier, skillRes, res.explanation)
             }
             "target.inspect" -> {
@@ -654,6 +673,7 @@ class GoalDispatcherImpl(
                     sourceSnapshotId = snapshot?.snapshotId
                 )
 
+                logger.log(source, LogLevel.INFO, "UiActionExecutor", "ACTION_REQUEST: type=${actionType.name} target='$qStr'", null, correlationId)
                 val executor = com.agent.android.actions.UiActionExecutor(observationEngine = observationEngine)
                 val liveService = com.agent.android.service.LocalAgentAccessibilityService.instance
                 val actionRes = executor.executeAction(req, service = liveService)
@@ -661,10 +681,13 @@ class GoalDispatcherImpl(
                 val skillStatus = when (actionRes.status) {
                     com.agent.android.actions.ActionExecutionStatus.SUCCESS -> SkillStatus.SUCCESS
                     com.agent.android.actions.ActionExecutionStatus.TARGET_NOT_FOUND -> SkillStatus.FAILED
+                    com.agent.android.actions.ActionExecutionStatus.TARGET_REQUIRED -> SkillStatus.FAILED
+                    com.agent.android.actions.ActionExecutionStatus.NO_SCROLLABLE_TARGET -> SkillStatus.FAILED
                     com.agent.android.actions.ActionExecutionStatus.WRONG_FOREGROUND_APP, com.agent.android.actions.ActionExecutionStatus.WRONG_PACKAGE -> SkillStatus.FAILED
                     else -> SkillStatus.UNAVAILABLE
                 }
                 val skillRes = SkillResult("ACTION_EXECUTION", skillStatus, actionRes.explanation, actionRes.durationMs, actionRes.status.name)
+                logger.log(source, if (skillStatus == SkillStatus.SUCCESS) LogLevel.INFO else LogLevel.WARN, "UiActionExecutor", "ACTION_RESULT: status=${actionRes.status.name} explanation='${actionRes.explanation}'", null, correlationId)
                 DispatchDetails(trimmed, "ACTION_EXECUTION", cmdDef.handlerIdentifier, skillRes, actionRes.explanation)
             }
             "overlay.show" -> {
@@ -717,6 +740,39 @@ class GoalDispatcherImpl(
                 val diag = com.agent.android.overlay.LocalAgentOverlayService.getDiagnosticStatus(ctx)
                 val res = SkillResult("OVERLAY_STATUS", SkillStatus.SUCCESS, diag, 0L)
                 DispatchDetails(trimmed, "OVERLAY_STATUS", cmdDef.handlerIdentifier, res, diag)
+            }
+            "logs.recent" -> {
+                val recs = logger.getRecentLogs(30)
+                val sb = StringBuilder("Recent Logs (${recs.size} entries):\n")
+                for (r in recs) {
+                    sb.append("[${r.correlationId}][${r.source}][${r.level}] ${r.category}: ${r.message}\n")
+                }
+                val res = SkillResult("LOGS_RECENT", SkillStatus.SUCCESS, sb.toString().trim(), 0L)
+                DispatchDetails(trimmed, "LOGS_RECENT", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "logs.errors" -> {
+                val errs = logger.getErrorLogs(30)
+                val sb = StringBuilder("Error Logs (${errs.size} entries):\n")
+                for (r in errs) {
+                    sb.append("[${r.correlationId}][${r.source}] ${r.category}: ${r.message}\n")
+                }
+                val res = SkillResult("LOGS_ERRORS", SkillStatus.SUCCESS, sb.toString().trim(), 0L)
+                DispatchDetails(trimmed, "LOGS_ERRORS", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "logs.command" -> {
+                val reqCid = parsedArgs.getString("correlationId") ?: correlationId
+                val trace = logger.getLogsForCorrelationId(reqCid)
+                val sb = StringBuilder("Command Trace [$reqCid] (${trace.size} entries):\n")
+                for (r in trace) {
+                    sb.append("  ${r.level.name} | ${r.category}: ${r.message}\n")
+                }
+                val res = SkillResult("LOGS_COMMAND", SkillStatus.SUCCESS, sb.toString().trim(), 0L)
+                DispatchDetails(trimmed, "LOGS_COMMAND", cmdDef.handlerIdentifier, res, res.message)
+            }
+            "logs.clear" -> {
+                logger.clearLogs()
+                val res = SkillResult("LOGS_CLEAR", SkillStatus.SUCCESS, "Persistent SQLite log database cleared.", 0L)
+                DispatchDetails(trimmed, "LOGS_CLEAR", cmdDef.handlerIdentifier, res, res.message)
             }
             "action.status" -> {
                 val liveService = com.agent.android.service.LocalAgentAccessibilityService.instance

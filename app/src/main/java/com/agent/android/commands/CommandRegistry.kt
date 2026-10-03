@@ -153,6 +153,12 @@ class CommandRegistry {
         register(CommandDefinition("overlay.hide", "Hide Overlay", CommandCategory.DIAGNOSTICS, "Hides movable action overlay panel", CommandStatus.IMPLEMENTED, "overlay hide", listOf("overlay hide"), emptyList(), handlerIdentifier = "LocalAgentOverlayService"))
         register(CommandDefinition("overlay.status", "Overlay Status", CommandCategory.DIAGNOSTICS, "Queries movable action overlay status", CommandStatus.IMPLEMENTED, "overlay status", listOf("overlay status"), emptyList(), handlerIdentifier = "LocalAgentOverlayService"))
 
+        // 20.2 PERSISTENT LOGGING COMMANDS
+        register(CommandDefinition("logs.recent", "Recent Logs", CommandCategory.DIAGNOSTICS, "Queries recent persistent structured SQLite log records", CommandStatus.IMPLEMENTED, "logs recent", listOf("logs recent", "logs.recent"), emptyList(), handlerIdentifier = "LocalAgentLogger"))
+        register(CommandDefinition("logs.errors", "Error Logs", CommandCategory.DIAGNOSTICS, "Queries persistent error log records", CommandStatus.IMPLEMENTED, "logs errors", listOf("logs errors", "logs.errors"), emptyList(), handlerIdentifier = "LocalAgentLogger"))
+        register(CommandDefinition("logs.command", "Command Trace Logs", CommandCategory.DIAGNOSTICS, "Queries log trace for a specific correlation ID", CommandStatus.IMPLEMENTED, "logs command <correlationId>", listOf("logs command 7F2A90C1"), listOf("correlationId"), handlerIdentifier = "LocalAgentLogger"))
+        register(CommandDefinition("logs.clear", "Clear Logs", CommandCategory.DIAGNOSTICS, "Clears persistent SQLite log database", CommandStatus.IMPLEMENTED, "logs clear", listOf("logs clear", "logs.clear"), emptyList(), handlerIdentifier = "LocalAgentLogger"))
+
         // 21. PHASE 3.2 TEST HARNESS COMMANDS
         register(CommandDefinition("test.launch", "Test App Launch", CommandCategory.OBSERVATION, "Launches test target app and waits for actual foreground package", CommandStatus.IMPLEMENTED, "test launch <target>", listOf("test launch calculator", "test launch chrome"), listOf("target"), requirement = CommandRequirement(accessibilityRequired = true), handlerIdentifier = "ControlledTestAppLauncher"))
         register(CommandDefinition("test.observe", "Test Observe", CommandCategory.OBSERVATION, "Captures current active UI observation snapshot", CommandStatus.IMPLEMENTED, "test observe", listOf("test observe"), handlerIdentifier = "AccessibilityObservationEngine"))
@@ -295,15 +301,24 @@ class CommandRegistry {
                 if (parts.size >= 2) params["sensorType"] = parts[1]
             }
             "target.resolve", "target.find", "target.candidates", "action.click", "click", "action.long_click", "long click", "test.launch", "test.click", "test.long_click", "test.run" -> {
-                if (trimmed.length > parts[0].length) {
-                    val textArg = when {
-                        trimmed.startsWith("long click ") -> trimmed.removePrefix("long click ").trim()
-                        trimmed.startsWith("click ") -> trimmed.removePrefix("click ").trim()
-                        else -> trimmed.substring(parts[0].length).trim()
+                val prefix = when {
+                    trimmed.startsWith("action long_click") -> "action long_click"
+                    trimmed.startsWith("action.long_click") -> "action.long_click"
+                    trimmed.startsWith("long click") -> "long click"
+                    trimmed.startsWith("action click") -> "action click"
+                    trimmed.startsWith("action.click") -> "action.click"
+                    trimmed.startsWith("click") -> "click"
+                    trimmed.startsWith("test long_click") -> "test long_click"
+                    trimmed.startsWith("test click") -> "test click"
+                    else -> parts[0]
+                }
+                if (trimmed.length > prefix.length) {
+                    val textArg = trimmed.substring(prefix.length).trim()
+                    if (textArg.isNotEmpty()) {
+                        params["target"] = textArg
+                        params["testId"] = textArg
+                        params["query"] = textArg
                     }
-                    params["target"] = textArg
-                    params["testId"] = textArg
-                    params["query"] = textArg
                 }
             }
             "action.input", "text input", "test.text_input" -> {

@@ -314,6 +314,23 @@ During real-device testing on Android Calculator:
 
 ---
 
+## 16.1 Persistent Structured SQLite Logging Architecture (`LocalAgentLogger`)
+
+LocalAgent provides a core platform-wide persistent structured logging subsystem (`LocalAgentLogger`) backed by a lightweight SQLite database (`localagent_logs.db`, table `agent_logs`).
+
+### Key Design Principles:
+1. **Single Production Core:** All components (`MainActivity`, `GoalDispatcherImpl`, `CommandRegistry`, `UiActionExecutor`, `LocalAgentOverlayService`, `SpeechToTextEngine`) log to `LocalAgentLogger.getOrCreate(context)`.
+2. **Correlation ID Tracing:** Every command execution generates an 8-character correlation ID (e.g. `7F2A90C1-001`) that propagates through all pipeline events (`COMMAND_RECEIVED` -> `COMMAND_PARSED` -> `TARGET_RESOLVED` -> `ACTION_REQUEST` -> `VERIFICATION` -> `FINAL_RESULT`).
+3. **Bounded Retention:** Auto-trims oldest `DEBUG`/`INFO` log records when database row count exceeds 1,000 entries, respecting target Low-RAM constraints.
+4. **Sensitive Data Sanitization:** Automatic regex redaction masks passwords, secret tokens, authentication keys, and sensitive inputs before storage.
+5. **Log Commands:**
+   - `logs.recent`: Queries recent structured log entries.
+   - `logs.errors`: Queries error log records.
+   - `logs.command <correlationId>`: Traces complete execution history for a given correlation ID.
+   - `logs.clear`: Clears persistent log database.
+
+---
+
 ## 17. Movable Action Overlay Subsystem Architecture
 
 ### Architecture Overview
