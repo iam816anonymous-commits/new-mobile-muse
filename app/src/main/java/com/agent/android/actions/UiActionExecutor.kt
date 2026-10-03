@@ -275,7 +275,8 @@ class UiActionExecutor(
             val pkgDiff = beforeSnap.packageName != afterSnap.packageName
             val activityDiff = beforeSnap.activityName != afterSnap.activityName
             val textDiff = beforeSnap.allNodesList.map { it.text } != afterSnap.allNodesList.map { it.text }
-            nodeCountDiff || pkgDiff || activityDiff || textDiff
+            val boundsDiff = beforeSnap.allNodesList.map { it.bounds } != afterSnap.allNodesList.map { it.bounds }
+            nodeCountDiff || pkgDiff || activityDiff || textDiff || boundsDiff
         } else false
 
         currentState = ActionExecutionStatus.SUCCESS

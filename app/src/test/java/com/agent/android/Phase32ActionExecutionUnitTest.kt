@@ -550,6 +550,52 @@ class Phase32ActionExecutionUnitTest {
     }
 
     @Test
+    fun testScrollActionValidationCases() {
+        // Case A: Directly scrollable target
+        val snapScroll = createSampleSnapshot("com.android.settings", "snap-scroll-1")
+        store.setExplicitDisplayedSnapshot(snapScroll)
+        val targetScrollable = createResolvedTarget(nodeId = "list-1", packageName = "com.android.settings", isScrollable = true)
+        val forwardReq = UiActionRequest(actionType = UiActionType.SCROLL_FORWARD, resolvedTarget = targetScrollable, expectedPackage = "com.android.settings")
+        val forwardRes = executor.executeAction(forwardReq, isServiceConnectedOverride = true)
+        assertEquals(ActionExecutionStatus.SUCCESS, forwardRes.status)
+
+        // Case B: Non-scrollable child text node with scrollable container in window
+        val scrollContainerNode = ObservationNode(
+            id = "scroll-parent", parentId = "root", className = "android.widget.ScrollView",
+            packageName = "com.android.settings", text = null, contentDescription = null, resourceId = "scroll_id",
+            bounds = ObservationBounds(0, 0, 1080, 1920), isClickable = false, isLongClickable = false,
+            isFocusable = true, isFocused = false, isEnabled = true, isEditable = false,
+            isScrollable = true, isCheckable = false, isChecked = false, isSelected = false,
+            isVisibleToUser = true, isPassword = false, childCount = 1
+        )
+        val snapWithScrollContainer = createSampleSnapshot("com.android.settings", "snap-scroll-2", listOf(scrollContainerNode))
+        store.setExplicitDisplayedSnapshot(snapWithScrollContainer)
+        val childTarget = createResolvedTarget(nodeId = "child-text", packageName = "com.android.settings", isScrollable = false)
+        val childScrollReq = UiActionRequest(actionType = UiActionType.SCROLL_FORWARD, resolvedTarget = childTarget, expectedPackage = "com.android.settings")
+        val childValRes = validator.validateActionPreconditions(childScrollReq, snapWithScrollContainer, isServiceConnected = true)
+        assertEquals(true, childValRes.isValid)
+
+        // Case C: No scrollable container in window
+        val snapNoScroll = createSampleSnapshot("com.android.settings", "snap-no-scroll")
+        store.setExplicitDisplayedSnapshot(snapNoScroll)
+        val nonScrollTarget = createResolvedTarget(nodeId = "static-text", packageName = "com.android.settings", isScrollable = false)
+        val noScrollReq = UiActionRequest(actionType = UiActionType.SCROLL_FORWARD, resolvedTarget = nonScrollTarget, expectedPackage = "com.android.settings")
+        val noScrollValRes = validator.validateActionPreconditions(noScrollReq, snapNoScroll, isServiceConnected = true)
+        assertEquals(false, noScrollValRes.isValid)
+        assertEquals(ActionExecutionStatus.ACTION_UNSUPPORTED, noScrollValRes.status)
+
+        // Case E: Stale scroll target
+        val staleScrollReq = UiActionRequest(actionType = UiActionType.SCROLL_FORWARD, resolvedTarget = targetScrollable, expectedPackage = "com.android.settings", sourceSnapshotId = "snap-old")
+        val staleRes = executor.executeAction(staleScrollReq, isServiceConnectedOverride = true)
+        assertEquals(ActionExecutionStatus.TARGET_STALE, staleRes.status)
+
+        // Case F: Wrong-package scroll target
+        val wrongPkgScrollReq = UiActionRequest(actionType = UiActionType.SCROLL_FORWARD, resolvedTarget = targetScrollable, expectedPackage = "com.other.app")
+        val wrongPkgRes = executor.executeAction(wrongPkgScrollReq, isServiceConnectedOverride = true)
+        assertEquals(ActionExecutionStatus.WRONG_PACKAGE, wrongPkgRes.status)
+    }
+
+    @Test
     fun testPostActionUnchangedStateExplanationTag() {
         val calcSnap = createSampleSnapshot("com.google.android.calculator", "snap-calc-same")
         store.setExplicitDisplayedSnapshot(calcSnap)

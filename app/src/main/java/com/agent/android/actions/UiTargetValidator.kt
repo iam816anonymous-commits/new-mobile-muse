@@ -143,11 +143,12 @@ class UiTargetValidator {
                 }
             }
             UiActionType.SCROLL_FORWARD, UiActionType.SCROLL_BACKWARD -> {
-                if (!node.isScrollable && !resolved.isScrollable) {
+                val hasScrollableNodeInWindow = currentSnapshot.allNodesList.any { it.isScrollable }
+                if (!node.isScrollable && !resolved.isScrollable && !hasScrollableNodeInWindow) {
                     ValidationResult(
                         isValid = false,
                         status = ActionExecutionStatus.ACTION_UNSUPPORTED,
-                        explanation = "ACTION_UNSUPPORTED: Target node '${node.id}' is not scrollable."
+                        explanation = "ACTION_UNSUPPORTED: Target node '${node.id}' and window container are not scrollable."
                     )
                 } else {
                     ValidationResult(isValid = true, status = ActionExecutionStatus.SUCCESS, explanation = "SCROLL action validated for target '${node.id}'.")

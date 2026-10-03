@@ -233,3 +233,32 @@ During end-to-end device testing on Google Calculator:
 ### Fix Applied
 1. **Clickable Ancestor Traversal:** Implemented `findClickableAncestor()`, `findLongClickableAncestor()`, and `findScrollableAncestor()` in `UiActionExecutor.kt`. When `performAction` is invoked on a node that is not directly clickable/scrollable, `UiActionExecutor` automatically traverses parent node references (`curr.parent`) to locate the nearest clickable ancestor container before dispatching `ACTION_CLICK`.
 2. **Post-Action State Verification Hardening:** Removed `timestampMs` diffs from `stateChanged` evaluation. If post-action `ObservationSnapshot` reveals zero node count, package, activity, or node text changes, `UiActionExecutor` tags the result explanation with `[DISPATCHED_BUT_NOT_VERIFIED: No UI state change observed post-action]` rather than claiming verified success.
+
+---
+
+## 14. General Actionable Ancestor Traversal Architecture & Scroll Validation
+
+### Architectural Principle
+For all node-based UI interactions, LocalAgent follows a **General Actionable Ancestor Rule**:
+- `CLICK` -> `findClickableAncestor()`
+- `LONG_CLICK` -> `findLongClickableAncestor()`
+- `SCROLL_FORWARD` / `SCROLL_BACKWARD` -> `findScrollableAncestor()`
+
+When a target node or content child (e.g. TextView inside a ScrollView or RecyclerView) is resolved, `UiActionExecutor` automatically ascends the parent hierarchy (`curr.parent`) to find the nearest actionable container before dispatching the Accessibility action.
+
+### Scroll Target Validation Criteria
+Before executing `SCROLL_FORWARD` or `SCROLL_BACKWARD`, `UiTargetValidator` enforces:
+1. Target belongs to the current foreground package (`expectedPackage == actualPackage`).
+2. Target snapshot is fresh (`sourceSnapshotId == activeSnapshotId`).
+3. Target bounds are valid (> 0 width/height).
+4. Target or an ancestor container in the active window supports scroll actions (`isScrollable == true`).
+5. Disconnected service requests return `ACCESSIBILITY_UNAVAILABLE`.
+
+### Post-Action Scroll Verification
+Post-action verification captures a new `ObservationSnapshot` and compares:
+- Node count differences
+- Package / activity identity changes
+- Visible node text list differences
+- Visible node position / bounds differences
+
+If `performAction(ACTION_SCROLL_FORWARD/BACKWARD)` returns `true` but zero node, text, or bounds differences occur, the execution result is explicitly tagged as `[DISPATCHED_BUT_NOT_VERIFIED: No UI state change observed post-action]`.
