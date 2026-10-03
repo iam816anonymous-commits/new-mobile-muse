@@ -478,7 +478,7 @@ class Phase32ActionExecutionUnitTest {
         assertEquals(UiActionType.CLICK, res.actionType)
 
         val testRegistry = FoundationTestRegistry()
-        val testCases = testRegistry.getTestCasesByPhase("PHASE_3.2").filter { it.id.startsWith("P3.2-ACT-") }
+        val testCases = testRegistry.getTestCasesByPhase("PHASE_3.2").filter { it.id.matches(Regex("P3\\.2-ACT-\\d{3}")) }
         assertEquals(25, testCases.size)
     }
 
@@ -526,5 +526,39 @@ class Phase32ActionExecutionUnitTest {
         val runRes = dispatcher.dispatchAndProcess("test run P3.2-ACT-001")
         assertEquals(SkillStatus.SUCCESS, runRes.result.status)
         assertEquals("TEST_RUN", runRes.operation)
+    }
+
+    @Test
+    fun testDisconnectedAccessibilityServiceReturnsUnavailable() {
+        val req = UiActionRequest(actionType = UiActionType.GLOBAL_BACK)
+        val res = executor.executeAction(req, service = null, isServiceConnectedOverride = false)
+        assertEquals(ActionExecutionStatus.ACCESSIBILITY_UNAVAILABLE, res.status)
+        assertTrue(res.explanation.contains("ACCESSIBILITY_UNAVAILABLE"))
+    }
+
+    @Test
+    fun testGlobalRecentsAndHomeActions() {
+        setupActiveChromeSnapshot()
+
+        val recentsReq = UiActionRequest(actionType = UiActionType.GLOBAL_RECENTS, expectedPackage = "com.android.chrome")
+        val recentsRes = executor.executeAction(recentsReq, isServiceConnectedOverride = true)
+        assertEquals(ActionExecutionStatus.SUCCESS, recentsRes.status)
+
+        val homeReq = UiActionRequest(actionType = UiActionType.GLOBAL_HOME, expectedPackage = "com.android.chrome")
+        val homeRes = executor.executeAction(homeReq, isServiceConnectedOverride = true)
+        assertEquals(ActionExecutionStatus.SUCCESS, homeRes.status)
+    }
+
+    @Test
+    fun testActionStatusDiagnosticCommand() {
+        val execCtrl = com.agent.android.execution.ExecutionController()
+        val dispatcher = com.agent.android.execution.GoalDispatcherImpl(
+            executionController = execCtrl,
+            observationEngine = observationEngine
+        )
+
+        val statusRes = dispatcher.dispatchAndProcess("action status")
+        assertEquals("ACTION_STATUS", statusRes.operation)
+        assertTrue(statusRes.result.message.contains("Action Subsystem Status"))
     }
 }

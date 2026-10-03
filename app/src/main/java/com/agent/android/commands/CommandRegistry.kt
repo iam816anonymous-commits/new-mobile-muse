@@ -139,11 +139,14 @@ class CommandRegistry {
         register(CommandDefinition("target.find", "Target Find", CommandCategory.OBSERVATION, "Finds target candidate nodes matching query", CommandStatus.IMPLEMENTED, "target find <query>", listOf("target find Search"), listOf("query"), handlerIdentifier = "TargetResolver"))
         register(CommandDefinition("target.inspect", "Target Inspect Node", CommandCategory.OBSERVATION, "Inspects node metadata and actionability properties", CommandStatus.IMPLEMENTED, "target inspect <node_id>", listOf("target inspect node-1"), listOf("nodeId"), handlerIdentifier = "TargetResolver"))
         register(CommandDefinition("target.candidates", "Target Candidate List", CommandCategory.OBSERVATION, "Lists all ranked candidate nodes for query", CommandStatus.IMPLEMENTED, "target candidates <query>", listOf("target candidates Search"), listOf("query"), handlerIdentifier = "TargetResolver"))
-        register(CommandDefinition("action.click", "Action Click", CommandCategory.OBSERVATION, "Executes CLICK action on resolved UI target node", CommandStatus.IMPLEMENTED, "action click <query>", listOf("action click Search", "action click Submit"), listOf("query"), CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
-        register(CommandDefinition("action.long_click", "Action Long Click", CommandCategory.OBSERVATION, "Executes LONG_CLICK action on resolved UI target node", CommandStatus.IMPLEMENTED, "action long_click <query>", listOf("action long_click Item"), listOf("query"), CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
-        register(CommandDefinition("action.input", "Action Text Input", CommandCategory.OBSERVATION, "Executes TEXT_INPUT action on resolved editable target node", CommandStatus.IMPLEMENTED, "action input <text>", listOf("action input Hello"), listOf("text"), CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
-        register(CommandDefinition("action.scroll", "Action Scroll", CommandCategory.OBSERVATION, "Executes SCROLL action on resolved scrollable target node", CommandStatus.IMPLEMENTED, "action scroll <direction>", listOf("action scroll forward", "action scroll backward"), listOf("direction"), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("action.click", "Action Click", CommandCategory.OBSERVATION, "Executes CLICK action on resolved UI target node", CommandStatus.IMPLEMENTED, "action click <query>", listOf("action click Search", "click Search"), listOf("query"), CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("action.long_click", "Action Long Click", CommandCategory.OBSERVATION, "Executes LONG_CLICK action on resolved UI target node", CommandStatus.IMPLEMENTED, "action long_click <query>", listOf("action long_click Item", "long click Item"), listOf("query"), CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("action.input", "Action Text Input", CommandCategory.OBSERVATION, "Executes TEXT_INPUT action on resolved editable target node", CommandStatus.IMPLEMENTED, "action input <text>", listOf("action input Hello", "text input Hello"), listOf("text"), CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("action.scroll", "Action Scroll", CommandCategory.OBSERVATION, "Executes SCROLL action on resolved scrollable target node", CommandStatus.IMPLEMENTED, "action scroll <direction>", listOf("action scroll forward", "scroll forward", "scroll backward"), listOf("direction"), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
         register(CommandDefinition("action.back", "Action Global Back", CommandCategory.OBSERVATION, "Executes GLOBAL_BACK navigation action", CommandStatus.IMPLEMENTED, "action back", listOf("action back"), emptyList(), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("action.recents", "Action Global Recents", CommandCategory.OBSERVATION, "Executes GLOBAL_RECENTS navigation action", CommandStatus.IMPLEMENTED, "action recents", listOf("action recents", "recents"), emptyList(), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("action.home", "Action Global Home", CommandCategory.OBSERVATION, "Executes GLOBAL_HOME navigation action", CommandStatus.IMPLEMENTED, "action home", listOf("action home", "home"), emptyList(), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("action.status", "Action Subsystem Status", CommandCategory.DIAGNOSTICS, "Queries action subsystem readiness, accessibility service status, and capabilities", CommandStatus.IMPLEMENTED, "action status", listOf("action status"), emptyList(), handlerIdentifier = "UiActionExecutor"))
 
         // 21. PHASE 3.2 TEST HARNESS COMMANDS
         register(CommandDefinition("test.launch", "Test App Launch", CommandCategory.OBSERVATION, "Launches test target app and waits for actual foreground package", CommandStatus.IMPLEMENTED, "test launch <target>", listOf("test launch calculator", "test launch chrome"), listOf("target"), requirement = CommandRequirement(accessibilityRequired = true), handlerIdentifier = "ControlledTestAppLauncher"))
@@ -277,21 +280,32 @@ class CommandRegistry {
             "sensor.test", "sensor.sample", "sensor.info" -> {
                 if (parts.size >= 2) params["sensorType"] = parts[1]
             }
-            "target.resolve", "target.find", "target.candidates", "action.click", "action.long_click", "test.launch", "test.click", "test.long_click", "test.run" -> {
+            "target.resolve", "target.find", "target.candidates", "action.click", "click", "action.long_click", "long click", "test.launch", "test.click", "test.long_click", "test.run" -> {
                 if (trimmed.length > parts[0].length) {
-                    params["target"] = trimmed.substring(parts[0].length).trim()
-                    params["testId"] = trimmed.substring(parts[0].length).trim()
-                    params["query"] = trimmed.substring(parts[0].length).trim()
+                    val textArg = when {
+                        trimmed.startsWith("long click ") -> trimmed.removePrefix("long click ").trim()
+                        trimmed.startsWith("click ") -> trimmed.removePrefix("click ").trim()
+                        else -> trimmed.substring(parts[0].length).trim()
+                    }
+                    params["target"] = textArg
+                    params["testId"] = textArg
+                    params["query"] = textArg
                 }
             }
-            "action.input", "test.text_input" -> {
-                val prefix = if (trimmed.startsWith("test text_input")) "test text_input" else "action input"
+            "action.input", "text input", "test.text_input" -> {
+                val prefix = when {
+                    trimmed.startsWith("test text_input") -> "test text_input"
+                    trimmed.startsWith("text input") -> "text input"
+                    trimmed.startsWith("action input") -> "action input"
+                    else -> parts[0]
+                }
                 if (trimmed.length > prefix.length) {
                     params["text"] = trimmed.substring(prefix.length).trim()
                 }
             }
-            "action.scroll", "test.scroll" -> {
-                if (parts.size >= 3) params["direction"] = parts[2]
+            "action.scroll", "scroll", "test.scroll" -> {
+                val dir = if (trimmed.contains("backward", true)) "backward" else "forward"
+                params["direction"] = dir
             }
             "target.inspect" -> {
                 if (parts.size >= 3) params["nodeId"] = parts[2]

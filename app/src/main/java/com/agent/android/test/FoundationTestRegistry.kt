@@ -283,6 +283,11 @@ class FoundationTestRegistry {
         add(TestCase("P3.2-HARN-007", "test.back", "PHASE_3.2", "TEST_HARNESS", "Test Back Harness Command", "Executes test back action.", "test back", "Action executed", TestType.AUTOMATED))
         add(TestCase("P3.2-HARN-008", "test.run", "PHASE_3.2", "TEST_HARNESS", "Test Run Scenario Harness Command", "Executes automated test scenario.", "test run P3.2-ACT-001", "Scenario executed", TestType.AUTOMATED))
 
+        // ACTION SUBSYSTEM EXTENSION TEST CASES
+        add(TestCase("P3.2-ACT-EXT-001", "action.recents", "PHASE_3.2", "ACTION_EXECUTION", "Action Global Recents", "Executes GLOBAL_RECENTS navigation action.", "action recents", "GLOBAL_RECENTS executed", TestType.AUTOMATED))
+        add(TestCase("P3.2-ACT-EXT-002", "action.home", "PHASE_3.2", "ACTION_EXECUTION", "Action Global Home", "Executes GLOBAL_HOME navigation action.", "action home", "GLOBAL_HOME executed", TestType.AUTOMATED))
+        add(TestCase("P3.2-ACT-EXT-003", "action.status", "PHASE_3.2", "DIAGNOSTICS", "Action Subsystem Status Query", "Queries action subsystem readiness and capabilities.", "action status", "Action status reported", TestType.AUTOMATED))
+
         // DISCOVERY, NAMESPACED OBSERVATION & SYSTEM UI TEST CASES
         add(TestCase("P3.2-DISC-001", "help", "PHASE_3.2", "DISCOVERY", "Command Help Discovery", "Queries help and usage information for command categories.", "help", "Category help returned", TestType.AUTOMATED))
         add(TestCase("P3.2-DISC-002", "commands", "PHASE_3.2", "DISCOVERY", "List Registered Commands", "Lists registered production commands.", "commands", "Registered commands listed", TestType.AUTOMATED))

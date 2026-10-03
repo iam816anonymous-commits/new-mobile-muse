@@ -613,7 +613,7 @@ class GoalDispatcherImpl(
                 val skillRes = SkillResult("TARGET_INSPECT", if (matchedNode != null) SkillStatus.SUCCESS else SkillStatus.FAILED, msg, 0L)
                 DispatchDetails(trimmed, "TARGET_INSPECT", cmdDef.handlerIdentifier, skillRes, msg)
             }
-            "action.click", "action.long_click", "action.input", "action.scroll", "action.back", "test.click", "test.long_click", "test.text_input", "test.scroll", "test.back" -> {
+            "action.click", "action.long_click", "action.input", "action.scroll", "action.back", "action.recents", "action.home", "test.click", "test.long_click", "test.text_input", "test.scroll", "test.back" -> {
                 val qStr = parsedArgs.getString("query") ?: parsedArgs.getString("text") ?: parsedArgs.getString("direction") ?: ""
                 val snapshot = observationEngine?.getDisplayedSnapshot() ?: observationEngine?.getLastSnapshot()
                 val actionType = when (cmdDef.commandId) {
@@ -622,10 +622,16 @@ class GoalDispatcherImpl(
                     "action.input", "test.text_input" -> com.agent.android.actions.UiActionType.TEXT_INPUT
                     "action.scroll", "test.scroll" -> if (qStr.equals("backward", true)) com.agent.android.actions.UiActionType.SCROLL_BACKWARD else com.agent.android.actions.UiActionType.SCROLL_FORWARD
                     "action.back", "test.back" -> com.agent.android.actions.UiActionType.GLOBAL_BACK
+                    "action.recents" -> com.agent.android.actions.UiActionType.GLOBAL_RECENTS
+                    "action.home" -> com.agent.android.actions.UiActionType.GLOBAL_HOME
                     else -> com.agent.android.actions.UiActionType.CLICK
                 }
 
-                val resolvedTarget = if (qStr.isNotEmpty() && actionType != com.agent.android.actions.UiActionType.GLOBAL_BACK) {
+                val isGlobal = actionType == com.agent.android.actions.UiActionType.GLOBAL_BACK ||
+                        actionType == com.agent.android.actions.UiActionType.GLOBAL_RECENTS ||
+                        actionType == com.agent.android.actions.UiActionType.GLOBAL_HOME
+
+                val resolvedTarget = if (qStr.isNotEmpty() && !isGlobal) {
                     targetResolver.resolve(snapshot, TargetQuery(text = qStr)).resolvedTarget
                 } else null
 
@@ -639,7 +645,8 @@ class GoalDispatcherImpl(
                 )
 
                 val executor = com.agent.android.actions.UiActionExecutor(observationEngine = observationEngine)
-                val actionRes = executor.executeAction(req)
+                val liveService = com.agent.android.service.LocalAgentAccessibilityService.instance
+                val actionRes = executor.executeAction(req, service = liveService)
 
                 val skillStatus = when (actionRes.status) {
                     com.agent.android.actions.ActionExecutionStatus.SUCCESS -> SkillStatus.SUCCESS
@@ -649,6 +656,21 @@ class GoalDispatcherImpl(
                 }
                 val skillRes = SkillResult("ACTION_EXECUTION", skillStatus, actionRes.explanation, actionRes.durationMs, actionRes.status.name)
                 DispatchDetails(trimmed, "ACTION_EXECUTION", cmdDef.handlerIdentifier, skillRes, actionRes.explanation)
+            }
+            "action.status" -> {
+                val liveService = com.agent.android.service.LocalAgentAccessibilityService.instance
+                val isConnected = liveService != null
+                val snapshot = observationEngine?.getDisplayedSnapshot() ?: observationEngine?.getLastSnapshot()
+                val msg = """
+                    Action Subsystem Status:
+                    AccessibilityService: ${if (isConnected) "CONNECTED" else "DISCONNECTED"}
+                    Current Foreground Package: ${snapshot?.packageName ?: "UNKNOWN"}
+                    Current Activity: ${snapshot?.activityName ?: "UNKNOWN"}
+                    Global Actions: ${if (isConnected) "AVAILABLE" else "UNAVAILABLE"}
+                    Node Actions: ${if (isConnected) "AVAILABLE" else "UNAVAILABLE"}
+                """.trimIndent()
+                val res = SkillResult("ACTION_STATUS", if (isConnected) SkillStatus.SUCCESS else SkillStatus.UNAVAILABLE, msg, 0L)
+                DispatchDetails(trimmed, "ACTION_STATUS", cmdDef.handlerIdentifier, res, msg)
             }
             "test.launch" -> {
                 val targetName = parsedArgs.getString("target") ?: "calculator"
