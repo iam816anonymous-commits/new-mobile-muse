@@ -180,3 +180,40 @@ This diagnostic command exposes whether the accessibility service is connected, 
 ### Conclusion
 - **Can Phase 3.3 safely begin?** **YES.**
 - The integration layer between Phase 3.1 Observation and Phase 3.2 Action Execution is mathematically and architecturally proven, fully tested with 218 passing unit and integration tests, 0 lint errors, and clean debug APK compilation.
+
+---
+
+## 12. Command Parity Matrix & Architectural Principle
+
+### Single Production Core Principle
+LocalAgent strictly adheres to the **One Production Core Architecture**:
+
+```
+TEST / CONSOLE COMMAND / SPEECH INPUT
+                   ↓
+            CommandRegistry
+                   ↓
+            GoalDispatcherImpl
+                   ↓
+    AccessibilityObservationEngine & UiActionExecutor
+                   ↓
+    LocalAgentAccessibilityService / Android API
+```
+
+Test entry points and user console commands invoke the exact same underlying production classes (`AccessibilityObservationEngine`, `TargetResolver`, `UiActionExecutor`, `LocalAgentAccessibilityService`). There are zero synthetic or parallel test-only action executors.
+
+### Command Parity Matrix
+
+| Capability | Automated Test | Production Implementation | Console Command | Same Code Path | Device Verified | Status |
+| :--- | :--- | :--- | :--- | :---: | :---: | :---: |
+| **Observation** | `Phase31ObservationUnitTest` | `AccessibilityObservationEngine` | `observe start`, `test observe` | YES | YES | PASS |
+| **Root capture** | `Phase31ObservationUnitTest` | `AccessibilityObservationEngine` | `observe nodes`, `test observe` | YES | YES | PASS |
+| **Current window** | `Phase31ObservationUnitTest` | `AccessibilityObservationEngine` | `observe current` | YES | YES | PASS |
+| **CLICK** | `Phase3IntegrationUnitTest` | `UiActionExecutor` | `click <target>`, `action click <target>` | YES | YES | PASS |
+| **LONG_CLICK** | `Phase3IntegrationUnitTest` | `UiActionExecutor` | `long click <target>`, `action long_click <target>` | YES | YES | PASS |
+| **TEXT_INPUT** | `Phase3IntegrationUnitTest` | `UiActionExecutor` | `text input <text>`, `action input <text>` | YES | YES | PASS |
+| **SCROLL_FORWARD** | `Phase3IntegrationUnitTest` | `UiActionExecutor` | `scroll forward`, `action scroll forward` | YES | YES | PASS |
+| **SCROLL_BACKWARD** | `Phase3IntegrationUnitTest` | `UiActionExecutor` | `scroll backward`, `action scroll backward` | YES | YES | PASS |
+| **BACK** | `Phase3IntegrationUnitTest` | `UiActionExecutor` | `back`, `action back` | YES | YES | PASS |
+| **HOME** | `Phase3IntegrationUnitTest` | `UiActionExecutor` | `home`, `action home` | YES | YES | PASS |
+| **RECENTS** | `Phase3IntegrationUnitTest` | `UiActionExecutor` | `recents`, `action recents` | YES | YES | PASS |
