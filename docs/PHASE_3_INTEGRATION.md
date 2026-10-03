@@ -338,10 +338,26 @@ Fresh Post-Action Observation & Verification
 ```
 
 ### Key Technical Specs
-- **WindowManager Integration:** Renders via `WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY` (API 26+) / `TYPE_PHONE` (API < 26).
+- **WindowManager Integration:** Renders via `WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY` (Android 8.0/8.1+ / API 26+) / `TYPE_PHONE` (API < 26).
+- **Runtime Overlay Permission:** Checked dynamically via `Settings.canDrawOverlays(context)`. Returns `OVERLAY_PERMISSION_REQUIRED` if ungranted and provides intent for `Settings.ACTION_MANAGE_OVERLAY_PERMISSION`.
 - **Zero Duplicate Logic:** Overlay buttons dispatch commands directly through `GoalDispatcherImpl.dispatchAndProcessWithLock()`. No duplicate or parallel action execution code exists.
-- **Drag & Clamp Bounds:** Touch drag on `[LA]` collapsed header updates `params.x` and `params.y` with immediate `windowManager.updateViewLayout()` calls, using a 10px motion threshold to prevent drag/tap ambiguity.
+- **Duplicate Attachment Protection:** Checks `isViewAttached` before calling `windowManager.addView()` to eliminate `WindowManager.BadTokenException`.
+- **Drag & Clamp Bounds:** Touch drag on `[LA]` collapsed header updates `params.x` and `params.y` with immediate `windowManager.updateViewLayout()` calls, using a 10px motion threshold to prevent drag/tap ambiguity and clamping coordinates within display bounds.
+- **Post-addView Verification:** Confirms `View.isAttachedToWindow == true` and `visibility == View.VISIBLE`, logging `[Overlay] OVERLAY_NOT_ATTACHED` if unattached.
 - **Registered Commands:**
-  - `overlay.show` -> Shows/launches overlay panel
-  - `overlay.hide` -> Hides/collapses overlay panel
-  - `overlay.status` -> Queries overlay subsystem status (`VISIBLE` / `HIDDEN`)
+  - `overlay.show` -> Launches/displays movable floating overlay
+  - `overlay.hide` -> Hides/collapses overlay view
+  - `overlay.status` -> Returns detailed diagnostic status (`Service`, `Permission`, `View Attachment`, `Visibility`, `WindowManager`, `Position`, `Size`, `Last Error`)
+
+### Physical Device Manual Verification Procedure
+To verify overlay rendering on a physical Android device:
+1. Enable Display Over Other Apps permission:
+   `adb shell appops set com.agent.android SYSTEM_ALERT_WINDOW allow`
+2. Open LocalAgent app or launch via ADB:
+   `adb shell am start -n com.agent.android/.MainActivity`
+3. Dispatch `overlay show` in console or via ADB:
+   `adb shell am start-service -a com.agent.android.overlay.SHOW com.agent.android/.overlay.LocalAgentOverlayService`
+4. Confirm cyan `[LA]` floating button appears at safe right edge of screen.
+5. Tap `[LA]` to expand panel containing 10 action buttons (`BACK`, `HOME`, `RECENTS`, `SCROLL UP`, `SCROLL DOWN`, `CLICK`, `LONG CLICK`, `OBSERVE`, `STATUS`, `HIDE`).
+6. Drag `[LA]` across screen to confirm smooth movement and bounds clamping.
+7. Tap `HIDE` or execute `overlay hide` to confirm view removal.

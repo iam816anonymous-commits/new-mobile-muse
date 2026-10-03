@@ -218,6 +218,21 @@ class PermissionRegistry {
             explanation = "Requires user enablement in Settings -> Device Administrators"
         ))
 
+        register(PermissionDefinition(
+            id = "system_alert_window_access",
+            androidIdentifier = Manifest.permission.SYSTEM_ALERT_WINDOW,
+            displayName = "Display Over Other Apps (Overlay)",
+            category = PermissionCategory.SPECIAL_ACCESS,
+            description = "Allows displaying floating action overlay window over other applications",
+            protectionType = "SPECIAL_ACCESS",
+            requiresSettingsScreen = true,
+            requiresSpecialAccess = true,
+            relatedCapabilityIds = listOf("OVERLAY"),
+            relatedCommandIds = listOf("overlay.show", "overlay.hide", "overlay.status"),
+            settingsAction = Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            explanation = "Requires user enablement in Settings -> Display over other apps"
+        ))
+
         // 3. PRIVILEGED / SYSTEM-ONLY
         register(PermissionDefinition(
             id = "device_owner_access",

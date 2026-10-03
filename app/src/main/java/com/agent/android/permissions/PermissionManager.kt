@@ -16,7 +16,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class PermissionManager(
-    private val context: Context,
+    val context: Context,
     val registry: PermissionRegistry = PermissionRegistry()
 ) {
 
@@ -60,6 +60,9 @@ class PermissionManager(
                     val adminComponent = ComponentName(context, LocalAgentAdminReceiver::class.java)
                     val active = dpm?.isAdminActive(adminComponent) == true
                     if (active) PermissionStatus.OBTAINED else PermissionStatus.SETTINGS_REQUIRED
+                } else if (perm.id == "system_alert_window_access") {
+                    val canDraw = Settings.canDrawOverlays(context)
+                    if (canDraw) PermissionStatus.OBTAINED else PermissionStatus.SETTINGS_REQUIRED
                 } else {
                     PermissionStatus.NOT_GRANTED
                 }

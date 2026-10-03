@@ -88,7 +88,8 @@ class GoalDispatcherImpl(
     private val ttsEngine: TextToSpeechEngine? = null,
     val permissionManager: PermissionManager? = null,
     val observationEngine: com.agent.android.observation.AccessibilityObservationEngine? = null,
-    val targetResolver: TargetResolver = TargetResolver()
+    val targetResolver: TargetResolver = TargetResolver(),
+    val context: android.content.Context? = null
 ) : GoalDispatcher {
 
     init {
@@ -667,21 +668,55 @@ class GoalDispatcherImpl(
                 DispatchDetails(trimmed, "ACTION_EXECUTION", cmdDef.handlerIdentifier, skillRes, actionRes.explanation)
             }
             "overlay.show" -> {
-                val isVis = com.agent.android.overlay.LocalAgentOverlayService.isOverlayVisible
-                val msg = if (isVis) "Movable action overlay is ACTIVE" else "Movable action overlay SHOW requested"
-                val res = SkillResult("OVERLAY_SHOW", SkillStatus.SUCCESS, msg, 0L)
-                DispatchDetails(trimmed, "OVERLAY_SHOW", cmdDef.handlerIdentifier, res, msg)
+                val ctx = context ?: permissionManager?.context
+                if (ctx != null && !com.agent.android.overlay.LocalAgentOverlayService.checkOverlayPermission(ctx)) {
+                    val res = SkillResult(
+                        "OVERLAY_SHOW",
+                        SkillStatus.PERMISSION_REQUIRED,
+                        "Display over other apps permission required. Grant via Settings -> Display over other apps.",
+                        0L,
+                        "OVERLAY_PERMISSION_REQUIRED"
+                    )
+                    return DispatchDetails(trimmed, "OVERLAY_SHOW", cmdDef.handlerIdentifier, res, res.message)
+                }
+
+                if (ctx != null) {
+                    try {
+                        val showIntent = android.content.Intent(ctx, com.agent.android.overlay.LocalAgentOverlayService::class.java).apply {
+                            action = com.agent.android.overlay.LocalAgentOverlayService.ACTION_SHOW
+                        }
+                        ctx.startService(showIntent)
+                    } catch (e: Exception) {
+                        // Background service start fallback
+                    }
+                }
+                com.agent.android.overlay.LocalAgentOverlayService.instance?.showOverlay()
+
+                val diag = com.agent.android.overlay.LocalAgentOverlayService.getDiagnosticStatus(ctx)
+                val res = SkillResult("OVERLAY_SHOW", SkillStatus.SUCCESS, "Movable action overlay SHOW requested.\n$diag", 0L)
+                DispatchDetails(trimmed, "OVERLAY_SHOW", cmdDef.handlerIdentifier, res, res.message)
             }
             "overlay.hide" -> {
+                val ctx = context ?: permissionManager?.context
+                if (ctx != null) {
+                    try {
+                        val hideIntent = android.content.Intent(ctx, com.agent.android.overlay.LocalAgentOverlayService::class.java).apply {
+                            action = com.agent.android.overlay.LocalAgentOverlayService.ACTION_HIDE
+                        }
+                        ctx.startService(hideIntent)
+                    } catch (e: Exception) {
+                        // Background service start fallback
+                    }
+                }
                 com.agent.android.overlay.LocalAgentOverlayService.instance?.hideOverlay()
                 val res = SkillResult("OVERLAY_HIDE", SkillStatus.SUCCESS, "Movable action overlay HIDDEN", 0L)
                 DispatchDetails(trimmed, "OVERLAY_HIDE", cmdDef.handlerIdentifier, res, res.message)
             }
             "overlay.status" -> {
-                val isVis = com.agent.android.overlay.LocalAgentOverlayService.isOverlayVisible
-                val msg = "Movable Overlay Subsystem Status: ${if (isVis) "VISIBLE" else "HIDDEN/COLLAPSED"}"
-                val res = SkillResult("OVERLAY_STATUS", SkillStatus.SUCCESS, msg, 0L)
-                DispatchDetails(trimmed, "OVERLAY_STATUS", cmdDef.handlerIdentifier, res, msg)
+                val ctx = context ?: permissionManager?.context
+                val diag = com.agent.android.overlay.LocalAgentOverlayService.getDiagnosticStatus(ctx)
+                val res = SkillResult("OVERLAY_STATUS", SkillStatus.SUCCESS, diag, 0L)
+                DispatchDetails(trimmed, "OVERLAY_STATUS", cmdDef.handlerIdentifier, res, diag)
             }
             "action.status" -> {
                 val liveService = com.agent.android.service.LocalAgentAccessibilityService.instance
