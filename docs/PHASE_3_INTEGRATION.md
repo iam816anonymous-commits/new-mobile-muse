@@ -217,3 +217,19 @@ Test entry points and user console commands invoke the exact same underlying pro
 | **BACK** | `Phase3IntegrationUnitTest` | `UiActionExecutor` | `back`, `action back` | YES | YES | PASS |
 | **HOME** | `Phase3IntegrationUnitTest` | `UiActionExecutor` | `home`, `action home` | YES | YES | PASS |
 | **RECENTS** | `Phase3IntegrationUnitTest` | `UiActionExecutor` | `recents`, `action recents` | YES | YES | PASS |
+
+---
+
+## 13. Real Calculator Click Investigation & Clickable Ancestor Traversal Fix
+
+### Investigation Summary
+During end-to-end device testing on Google Calculator:
+1. Target resolution correctly located the Calculator button text node (e.g. TextView containing `"7"`).
+2. `performAction(ACTION_CLICK)` was invoked directly on the child `TextView`.
+3. The child `TextView` had `isClickable = false` (the parent `MaterialButton`/`FrameLayout` was the actual clickable container with `isClickable = true`).
+4. `performAction` on the non-clickable child returned `true` or was consumed without triggering the parent's click listener, leaving the Calculator display unchanged (`""`).
+5. `UiActionExecutor` previously evaluated `timestampMs` diffs as a false-positive state change.
+
+### Fix Applied
+1. **Clickable Ancestor Traversal:** Implemented `findClickableAncestor()`, `findLongClickableAncestor()`, and `findScrollableAncestor()` in `UiActionExecutor.kt`. When `performAction` is invoked on a node that is not directly clickable/scrollable, `UiActionExecutor` automatically traverses parent node references (`curr.parent`) to locate the nearest clickable ancestor container before dispatching `ACTION_CLICK`.
+2. **Post-Action State Verification Hardening:** Removed `timestampMs` diffs from `stateChanged` evaluation. If post-action `ObservationSnapshot` reveals zero node count, package, activity, or node text changes, `UiActionExecutor` tags the result explanation with `[DISPATCHED_BUT_NOT_VERIFIED: No UI state change observed post-action]` rather than claiming verified success.

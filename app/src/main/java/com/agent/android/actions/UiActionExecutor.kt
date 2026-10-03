@@ -208,14 +208,16 @@ class UiActionExecutor(
         if (nodeInfo != null) {
             when (request.actionType) {
                 UiActionType.CLICK -> {
-                    val performed = nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    val targetNode = findClickableAncestor(nodeInfo)
+                    val performed = targetNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     execSuccess = performed
-                    execExplanation = if (performed) "ACTION_CLICK executed on node '$resolvedNodeId'." else "ACTION_CLICK returned false on node '$resolvedNodeId'."
+                    execExplanation = if (performed) "ACTION_CLICK executed on node '${targetNode.viewIdResourceName ?: resolvedNodeId}'." else "ACTION_CLICK returned false on node '$resolvedNodeId'."
                 }
                 UiActionType.LONG_CLICK -> {
-                    val performed = nodeInfo.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
+                    val targetNode = findLongClickableAncestor(nodeInfo)
+                    val performed = targetNode.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
                     execSuccess = performed
-                    execExplanation = if (performed) "ACTION_LONG_CLICK executed on node '$resolvedNodeId'." else "ACTION_LONG_CLICK returned false on node '$resolvedNodeId'."
+                    execExplanation = if (performed) "ACTION_LONG_CLICK executed on node '${targetNode.viewIdResourceName ?: resolvedNodeId}'." else "ACTION_LONG_CLICK returned false on node '$resolvedNodeId'."
                 }
                 UiActionType.TEXT_INPUT -> {
                     val textToSet = request.textInput ?: request.targetQueryText ?: ""
@@ -227,14 +229,16 @@ class UiActionExecutor(
                     execExplanation = if (performed) "ACTION_SET_TEXT executed ('$textToSet') on node '$resolvedNodeId'." else "ACTION_SET_TEXT returned false on node '$resolvedNodeId'."
                 }
                 UiActionType.SCROLL_FORWARD -> {
-                    val performed = nodeInfo.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+                    val targetNode = findScrollableAncestor(nodeInfo)
+                    val performed = targetNode.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
                     execSuccess = performed
-                    execExplanation = if (performed) "ACTION_SCROLL_FORWARD executed on node '$resolvedNodeId'." else "ACTION_SCROLL_FORWARD returned false on node '$resolvedNodeId'."
+                    execExplanation = if (performed) "ACTION_SCROLL_FORWARD executed on node '${targetNode.viewIdResourceName ?: resolvedNodeId}'." else "ACTION_SCROLL_FORWARD returned false on node '$resolvedNodeId'."
                 }
                 UiActionType.SCROLL_BACKWARD -> {
-                    val performed = nodeInfo.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
+                    val targetNode = findScrollableAncestor(nodeInfo)
+                    val performed = targetNode.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
                     execSuccess = performed
-                    execExplanation = if (performed) "ACTION_SCROLL_BACKWARD executed on node '$resolvedNodeId'." else "ACTION_SCROLL_BACKWARD returned false on node '$resolvedNodeId'."
+                    execExplanation = if (performed) "ACTION_SCROLL_BACKWARD executed on node '${targetNode.viewIdResourceName ?: resolvedNodeId}'." else "ACTION_SCROLL_BACKWARD returned false on node '$resolvedNodeId'."
                 }
                 else -> {
                     execSuccess = false
@@ -267,10 +271,20 @@ class UiActionExecutor(
 
         val afterSnap = observationEngine?.captureCurrentScreen()
         val stateChanged = if (beforeSnap != null && afterSnap != null) {
-            beforeSnap.nodeCount != afterSnap.nodeCount || beforeSnap.packageName != afterSnap.packageName || beforeSnap.activityName != afterSnap.activityName || beforeSnap.timestampMs != afterSnap.timestampMs
+            val nodeCountDiff = beforeSnap.nodeCount != afterSnap.nodeCount
+            val pkgDiff = beforeSnap.packageName != afterSnap.packageName
+            val activityDiff = beforeSnap.activityName != afterSnap.activityName
+            val textDiff = beforeSnap.allNodesList.map { it.text } != afterSnap.allNodesList.map { it.text }
+            nodeCountDiff || pkgDiff || activityDiff || textDiff
         } else false
 
         currentState = ActionExecutionStatus.SUCCESS
+
+        val verificationNote = if (stateChanged) {
+            " [State Change Verified]"
+        } else if (beforeSnap != null && afterSnap != null) {
+            " [DISPATCHED_BUT_NOT_VERIFIED: No UI state change observed post-action]"
+        } else ""
 
         return UiActionResult(
             requestId = request.requestId,
@@ -282,7 +296,7 @@ class UiActionExecutor(
             targetNodeId = resolvedNodeId,
             beforeSnapshot = beforeSnap,
             afterSnapshot = afterSnap,
-            explanation = execExplanation + if (stateChanged) " [State Change Observed]" else "",
+            explanation = execExplanation + verificationNote,
             durationMs = System.currentTimeMillis() - start,
             stateChanged = stateChanged
         )
@@ -319,6 +333,39 @@ class UiActionExecutor(
         }
 
         return if (isScrollAction) findScrollableNode(root) else root
+    }
+
+    private fun findClickableAncestor(node: AccessibilityNodeInfo): AccessibilityNodeInfo {
+        var curr: AccessibilityNodeInfo? = node
+        while (curr != null) {
+            if (curr.isClickable) return curr
+            val parent = try { curr.parent } catch (e: Exception) { null }
+            if (parent == null || parent == curr) break
+            curr = parent
+        }
+        return node
+    }
+
+    private fun findLongClickableAncestor(node: AccessibilityNodeInfo): AccessibilityNodeInfo {
+        var curr: AccessibilityNodeInfo? = node
+        while (curr != null) {
+            if (curr.isLongClickable) return curr
+            val parent = try { curr.parent } catch (e: Exception) { null }
+            if (parent == null || parent == curr) break
+            curr = parent
+        }
+        return node
+    }
+
+    private fun findScrollableAncestor(node: AccessibilityNodeInfo): AccessibilityNodeInfo {
+        var curr: AccessibilityNodeInfo? = node
+        while (curr != null) {
+            if (curr.isScrollable) return curr
+            val parent = try { curr.parent } catch (e: Exception) { null }
+            if (parent == null || parent == curr) break
+            curr = parent
+        }
+        return node
     }
 
     companion object {

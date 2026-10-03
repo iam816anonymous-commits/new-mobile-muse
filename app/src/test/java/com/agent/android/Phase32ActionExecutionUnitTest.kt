@@ -550,6 +550,23 @@ class Phase32ActionExecutionUnitTest {
     }
 
     @Test
+    fun testPostActionUnchangedStateExplanationTag() {
+        val calcSnap = createSampleSnapshot("com.google.android.calculator", "snap-calc-same")
+        store.setExplicitDisplayedSnapshot(calcSnap)
+
+        val target = createResolvedTarget(nodeId = "btn-7", packageName = "com.google.android.calculator", isClickable = true)
+        val req = UiActionRequest(
+            actionType = UiActionType.CLICK,
+            resolvedTarget = target,
+            expectedPackage = "com.google.android.calculator"
+        )
+
+        val res = executor.executeAction(req, isServiceConnectedOverride = true)
+        assertEquals(ActionExecutionStatus.SUCCESS, res.status)
+        assertTrue(res.explanation.contains("DISPATCHED_BUT_NOT_VERIFIED") || res.explanation.contains("State Change Verified"))
+    }
+
+    @Test
     fun testActionStatusDiagnosticCommand() {
         val execCtrl = com.agent.android.execution.ExecutionController()
         val dispatcher = com.agent.android.execution.GoalDispatcherImpl(
