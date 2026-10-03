@@ -5,11 +5,11 @@ An on-device, safety-first Android agent foundation targeting Android 8.1+ (API 
 ---
 
 ## 1. Project Overview
-`LocalAgent` is currently in **Phase 2.5 (Foundation Completion)**. It provides a deterministic, local-execution runtime on Android that handles goal dispatching, device state observation, system control skills, platform STT/TTS speech abstractions, structured permissions management, and interactive sequential test runner verification.
+`LocalAgent` is currently in **Phase 3.2 (Action Execution Foundation & Jarvis Main UI)**. It provides a deterministic, local-execution runtime on Android that handles goal dispatching, UI target resolution, real accessibility action execution (`CLICK`, `LONG_CLICK`, `TEXT_INPUT`, `SCROLL`, `GLOBAL_BACK`, `GLOBAL_RECENTS`, `GLOBAL_HOME`), device state observation, system control skills, multi-language speech abstractions (EN, TE, HI, KN), structured permissions management, and interactive sequential test runner verification.
 
 **CRITICAL DISTINCTION:**
-- **CURRENT IMPLEMENTATION (Phases 0 - 2.5):** On-device deterministic skill execution, centralized command registry, safety boundary execution locking, MasterWatchdog timeout enforcement, double Volume-Up hardware panic button, STT/TTS platform wrappers, structured capability/permission detectors, and sequential interactive test runner harness.
-- **FUTURE AUTONOMOUS AGENT (Phase 3+):** On-device LLM integration, autonomous planning, UI screen parsing/traversal, DOM crawling, and multi-step autonomous loops. *Zero autonomous AI behavior or cloud APIs exist in the current codebase.*
+- **CURRENT IMPLEMENTATION (Phases 0 - 3.2):** On-device deterministic skill execution, generic UI target resolution and real Accessibility action execution, low-power JARVIS-inspired voice/text UI, central command registry (122 production commands), safety boundary execution locking, MasterWatchdog timeout enforcement, double Volume-Up hardware panic button, STT/TTS platform wrappers, structured capability/permission detectors, and sequential interactive test runner harness.
+- **FUTURE AUTONOMOUS AGENT (Phase 3.3+):** On-device LLM integration, autonomous planning, multi-step autonomous loops, expense tracking, and web browsing. *Zero autonomous AI planning or cloud APIs exist in the current codebase.*
 
 ---
 
@@ -24,10 +24,10 @@ An on-device, safety-first Android agent foundation targeting Android 8.1+ (API 
 ## 3. Current Architecture
 
 ```text
-User Input / Interactive Test Runner / Live Command Console
+User Input / Voice / Jarvis UI / Live Command Console
                          │
                          ▼
-                CommandRegistry (53 Commands)
+                CommandRegistry (122 Commands)
                          │
                          ▼
               GoalDispatcherImpl & CommandArguments
@@ -41,7 +41,9 @@ MasterWatchdog (6000ms)    LocalAgentAccessibilityService
                                  (Double Vol-Up Panic -> USER_PANIC)
                          │
                          ▼
- Skills / Hardware Controllers / System Control Subsystems
+ Skills / Target Resolver / Action Executor / Subsystems
+  - TargetResolver                 - UiActionExecutor
+  - AccessibilityObservationEngine - ControlledTestAppLauncher
   - CalculatorSkill                - FlashlightController
   - NotesSkill                     - HapticController
   - IntentSkills                   - VolumeController
@@ -56,7 +58,7 @@ MasterWatchdog (6000ms)    LocalAgentAccessibilityService
                Android Framework APIs
                          │
                          ▼
-   SkillResult / TestResultStore / EvidenceManager / UI Log
+   SkillResult / UiActionResult / TestResultStore / EvidenceManager / UI
 ```
 
 ---
@@ -69,7 +71,7 @@ LocalAgent/
 │   ├── src/
 │   │   ├── main/
 │   │   │   ├── java/com/agent/android/
-│   │   │   │   ├── actions/          # Action contract abstractions
+│   │   │   │   ├── actions/          # UiActionExecutor, UiTargetValidator, ControlledTestAppLauncher
 │   │   │   │   ├── agent/
 │   │   │   │   │   ├── device/       # Hardware & system controllers
 │   │   │   │   │   └── skills/       # Deterministic skills (Math, Notes, Intents, AppLaunch)
@@ -77,23 +79,24 @@ LocalAgent/
 │   │   │   │   ├── diagnostics/      # FoundationReadinessEvaluator & status reports
 │   │   │   │   ├── execution/        # ExecutionController, GoalDispatcherImpl, State Machine
 │   │   │   │   ├── learning/         # Bounded learning schemas & storage
-│   │   │   │   ├── observation/     # Observation contract models
+│   │   │   │   ├── observation/     # AccessibilityObservationEngine, ObservationTargetResolver
 │   │   │   │   ├── permissions/      # PermissionRegistry & PermissionManager
 │   │   │   │   ├── safety/           # Safety state machine, MasterWatchdog, Test Harness
-│   │   │   │   ├── service/          # Accessibility & Notification Listener Services
-│   │   │   │   ├── speech/           # Native STT & TTS platform wrappers
-│   │   │   │   ├── storage/          # Logger & persistent storage
-│   │   │   │   ├── test/             # FoundationTestRegistry, EvidenceManager, TestResultStore
-│   │   │   │   └── MainActivity.kt   # 4-Tab Console UI (Test Runner, Permissions, Diagnostics, Console)
+│   │   │   │   ├── service/          # LocalAgentAccessibilityService & Notification Listener
+│   │   │   │   ├── speech/           # AgentLanguage, SpeechToTextEngine, TextToSpeechEngine
+│   │   │   │   ├── target/           # TargetResolver, TargetQuery, ResolvedTarget
+│   │   │   │   ├── ui/               # AgentUiState & UiModel
+│   │   │   │   └── MainActivity.kt   # Low-Power JARVIS Main UI & 4-Tab Engineering Console
 │   │   │   ├── res/                  # UI layouts & resource definitions
 │   │   │   └── AndroidManifest.xml   # Manifest permissions, services, and activity declarations
-│   │   └── test/java/com/agent/android/ # 98 JUnit unit tests
+│   │   └── test/java/com/agent/android/ # 208 JUnit unit tests
 │   └── build.gradle                  # App build configuration (AGP 8.5.2, minSdk 27, targetSdk 34)
-├── docs/                             # Comprehensive architecture & module documentation
+├── docs/                             # Comprehensive architecture, module & command documentation
+│   └── COMMAND_REFERENCE.md          # Canonical Command & Capability Reference
 ├── .github/workflows/ci.yml          # GitHub Actions CI pipeline
 ├── build.gradle                      # Root Gradle build script
 ├── settings.gradle                   # Gradle settings
-├── COMMANDS.md                       # Comprehensive 53-command manual
+├── COMMANDS.md                       # Root 122-command manual
 └── README.md                         # Project overview and reference guide
 ```
 
@@ -118,7 +121,7 @@ LocalAgent/
 - **SoC:** MediaTek Helio P23 (Octa-core 2.0 GHz)
 - **RAM:** 4 GB
 - **Resource Constraints:**
-  - Zero continuous polling or infinite loops.
+  - Zero continuous polling, infinite loops, or constant visual animations when IDLE.
   - On-demand HandlerThread sensor sampling with automatic unregistration.
   - Bounded storage for logs (max 100 entries) and test evidence screenshots (max 20 directories).
   - Explicit job cancellation and 6000ms watchdog execution budgets.
@@ -129,53 +132,55 @@ LocalAgent/
 
 | Category | Capability | Status | Permission Required | Special Access | Hardware Required | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| Headless Core | Calculator | IMPLEMENTED_AND_USABLE | None | None | No | Evaluates expressions with precedence, decimal, power, modulo |
-| Headless Core | Notes Storage | IMPLEMENTED_PERMISSION_REQUIRED | `WRITE_EXTERNAL_STORAGE` | None | No | Appends entries to persistent local notes file |
-| Headless Core | Timer Intent | IMPLEMENTED_AND_USABLE | None | None | No | Launches system Clock timer intent |
-| Headless Core | Alarm Intent | IMPLEMENTED_AND_USABLE | None | None | No | Launches system Clock alarm intent |
-| Headless Core | Web Search | IMPLEMENTED_AND_USABLE | None | None | No | Launches system web search intent |
-| Application | App Launching | IMPLEMENTED_AND_USABLE | None | None | No | Launches apps via exact package -> label -> substring resolution |
-| Application | App Discovery | IMPLEMENTED_AND_USABLE | None | None | No | Enumerates installed launchable apps and package info |
-| Application | Foreground App | IMPLEMENTED_SPECIAL_ACCESS_REQUIRED | None | `PACKAGE_USAGE_STATS` | No | Queries active foreground app package via UsageStatsManager |
-| Device Control | Flashlight | IMPLEMENTED_PERMISSION_REQUIRED | `CAMERA` | None | Torch Flash | Toggles camera flash torch ON/OFF |
-| Device Control | Haptics | IMPLEMENTED_AND_USABLE | `VIBRATE` | None | Vibrator | Triggers timed vibration (1-2000ms bounds) |
-| Device Control | Volume Streams | IMPLEMENTED_AND_USABLE | None | None | Audio | Gets/sets volume % for MUSIC, RING, ALARM, NOTIFICATION |
-| Connectivity | Wi-Fi Status | IMPLEMENTED_AND_USABLE | `ACCESS_WIFI_STATE` | None | Wi-Fi | Queries Wi-Fi adapter state |
-| Connectivity | Bluetooth Status | IMPLEMENTED_BUT_OS_RESTRICTED | `BLUETOOTH` | None | Bluetooth | Direct toggle restricted by Android 8.1 OS; opens Settings |
-| Observation | Battery Status | IMPLEMENTED_AND_USABLE | None | None | Battery | Reads battery level % and charging status via IntentFilter |
-| Observation | Sensor Sampling | IMPLEMENTED_HARDWARE_DEPENDENT | None | None | Sensors | On-demand sampling for Accelerometer, Gyro, Proximity, Light |
-| System Control | Screen Brightness | IMPLEMENTED_SPECIAL_ACCESS_REQUIRED | None | `WRITE_SETTINGS` | Display | Queries read-only level; sets brightness with WRITE_SETTINGS |
-| System Control | Ringer Mode | IMPLEMENTED_SPECIAL_ACCESS_REQUIRED | None | Notification Policy | Audio | Gets ringer mode; sets Normal/Vibrate/Silent with DND access |
-| System Control | Location Status | IMPLEMENTED_PERMISSION_REQUIRED | `ACCESS_FINE_LOCATION` | None | GPS/Network | Queries GPS_PROVIDER and NETWORK_PROVIDER state |
-| Device Control | Clipboard | IMPLEMENTED_AND_USABLE | None | None | No | Status, Read, Write, Clear text on system clipboard |
-| Observation | Notifications | IMPLEMENTED_SPECIAL_ACCESS_REQUIRED | None | Notification Listener | No | Reads latest notification snapshot via NotificationListenerService |
-| Speech | STT (Speech) | IMPLEMENTED_PERMISSION_REQUIRED | `RECORD_AUDIO` | None | Microphone | Built-in SpeechRecognizer wrapper with timeouts |
-| Speech | TTS (Speech) | IMPLEMENTED_AND_USABLE | None | None | Speaker | Native TextToSpeech engine initialization and speech output |
-| Diagnostics | Accessibility | IMPLEMENTED_SPECIAL_ACCESS_REQUIRED | None | Accessibility Service | No | Native volume key pass-through; double Vol-Up panic stop |
+| Headless Core | Calculator | `IMPLEMENTED` | None | None | No | Evaluates expressions with precedence, decimal, power, modulo |
+| Headless Core | Notes Storage | `IMPLEMENTED` | `WRITE_EXTERNAL_STORAGE` | None | No | Appends entries to persistent local notes file |
+| Headless Core | Timer Intent | `IMPLEMENTED_DEVICE_DEPENDENT` | None | None | No | Launches system Clock timer intent |
+| Headless Core | Alarm Intent | `IMPLEMENTED_DEVICE_DEPENDENT` | None | None | No | Launches system Clock alarm intent |
+| Headless Core | Web Search | `IMPLEMENTED_DEVICE_DEPENDENT` | None | None | No | Launches system web search intent |
+| Application | App Launching | `IMPLEMENTED_DEVICE_DEPENDENT` | None | None | No | Launches apps via exact package -> label -> substring resolution |
+| Application | App Discovery | `IMPLEMENTED_DEVICE_DEPENDENT` | None | None | No | Enumerates installed launchable apps and package info |
+| Application | Foreground App | `IMPLEMENTED_DEVICE_DEPENDENT` | None | `PACKAGE_USAGE_STATS` | No | Queries active foreground app package via UsageStatsManager |
+| Device Control | Flashlight | `IMPLEMENTED_DEVICE_DEPENDENT` | `CAMERA` | None | Torch Flash | Toggles camera flash torch ON/OFF (front/back/both) |
+| Device Control | Haptics | `IMPLEMENTED_DEVICE_DEPENDENT` | `VIBRATE` | None | Vibrator | Triggers timed vibration (1-2000ms bounds) |
+| Device Control | Volume Streams | `IMPLEMENTED_DEVICE_DEPENDENT` | None | None | Audio | Gets/sets volume % for MUSIC, RING, ALARM, NOTIFICATION |
+| Connectivity | Wi-Fi Status | `IMPLEMENTED_DEVICE_DEPENDENT` | `ACCESS_WIFI_STATE` | None | Wi-Fi | Queries Wi-Fi adapter state |
+| Connectivity | Bluetooth Status | `IMPLEMENTED_DEVICE_DEPENDENT` | `BLUETOOTH` | None | Bluetooth | Direct toggle restricted by Android 8.1 OS; opens Settings |
+| Observation | Battery Status | `IMPLEMENTED_DEVICE_DEPENDENT` | None | None | Battery | Reads battery level % and charging status via IntentFilter |
+| Observation | Sensor Sampling | `IMPLEMENTED_DEVICE_DEPENDENT` | None | None | Sensors | On-demand sampling for Accelerometer, Gyro, Proximity, Light |
+| System Control | Screen Brightness | `IMPLEMENTED_DEVICE_DEPENDENT` | None | `WRITE_SETTINGS` | Display | Queries read-only level; sets brightness with WRITE_SETTINGS |
+| System Control | Ringer Mode | `IMPLEMENTED_DEVICE_DEPENDENT` | None | Notification Policy | Audio | Gets ringer mode; sets Normal/Vibrate/Silent with DND access |
+| System Control | Location Status | `IMPLEMENTED_DEVICE_DEPENDENT` | `ACCESS_FINE_LOCATION` | None | GPS/Network | Queries GPS_PROVIDER and NETWORK_PROVIDER state |
+| Device Control | Clipboard | `IMPLEMENTED` | None | None | No | Status, Read, Write, Clear text on system clipboard |
+| Observation | Notifications | `IMPLEMENTED_DEVICE_DEPENDENT` | None | Notification Listener | No | Reads latest notification snapshot via NotificationListenerService |
+| Speech | STT (Speech) | `IMPLEMENTED_DEVICE_DEPENDENT` | `RECORD_AUDIO` | None | Microphone | SpeechRecognizer wrapper with timeouts and 4-lang abstraction |
+| Speech | TTS (Speech) | `IMPLEMENTED_DEVICE_DEPENDENT` | None | None | Speaker | Native TextToSpeech engine with multi-language support |
+| Target Resolution | Target Resolver | `IMPLEMENTED` | None | None | No | Strict read-only UI target resolution from snapshot |
+| Real Action Execution | UI Action Executor | `IMPLEMENTED_DEVICE_DEPENDENT` | None | Accessibility Service | No | Native Accessibility execution for CLICK, SCROLL, BACK, etc. |
+| Discovery & Help | Help & Commands | `IMPLEMENTED_DIAGNOSTIC` | None | None | No | Interactive command discovery and category help |
 
 ---
 
 ## 8. What LocalAgent Can Do NOW
 
+- **Voice & Text Low-Power JARVIS UI:** Push-to-talk speech listening, text fallback input, central agent state ring (`AgentUiState`), and multi-language support (English, Telugu, Hindi, Kannada).
+- **Target Resolution & UI Actions:** Resolve target UI nodes from active snapshot and execute native Accessibility actions (`click Search`, `long click Item`, `text input Hello`, `scroll forward`, `scroll backward`, `back`, `recents`, `home`).
 - **Mathematical Calculation:** Evaluate arithmetic expressions (`calculate 12 + 34 * 2`, `calculate (2 + 3) ^ 3`).
 - **Local Note Appending:** Persist notes to disk (`note down buy milk`).
 - **System Intents:** Trigger timers (`timer 60`), alarms (`alarm 07:30`), and web search (`web search localagent`).
 - **App Management:** Launch apps by name/query (`open settings`), list installed apps (`app list`), and inspect package details (`app info com.android.settings`).
-- **Hardware Control:** Control flashlight torch (`flashlight on`/`off`), vibrate motor (`vibrate 200`), and adjust volume streams (`volume music 50`).
+- **Hardware Control:** Control multi-torch flashlight (`flashlight on`/`front`/`both`/`off`), vibrate motor (`vibrate 200`), and adjust volume streams (`volume music 50`).
 - **Connectivity Inspection:** Check Wi-Fi state (`wifi status`) and Bluetooth state (`bluetooth status`).
 - **Sensor Sampling:** Sample real-time Accelerometer, Gyroscope, Proximity (cm with range metadata), and Ambient Light (lux) readings.
 - **System Settings:** Query/set brightness (`brightness 50`), set ringer mode (`ringer vibrate`), and inspect GPS/Network location provider states (`location providers`).
 - **Clipboard Control:** Read, write, and clear system clipboard contents (`clipboard write hello`, `clipboard read`).
-- **Speech Services:** Perform native text-to-speech (`speak Foundation test successful`) and speech-to-text input listening (`stt listen`).
 - **Foundation Diagnostics & Test Runner:** Execute sequential data-driven test cases, capture evidence, persist results, and evaluate 9 readiness gates.
 
 ---
 
-## 9. What LocalAgent CANNOT Do Yet (Phase 3+ Exclusions)
+## 9. What LocalAgent CANNOT Do Yet (Phase 3.3+ Exclusions)
 
 - **NO Autonomous AI / LLMs:** Zero Gemini, OpenAI, or external LLM API integrations exist in the repository.
 - **NO Autonomous Planning:** No goal decomposition or multi-step autonomous planning loops.
-- **NO Screen Crawling / DOM Understanding:** No UI hierarchy tree parsing or recursive accessibility traversal.
 - **NO Chrome / Web Automation:** No browser DOM interaction or web crawling.
 - **NO Camera Automation / OCR:** No optical character recognition or image processing pipelines.
 
@@ -217,8 +222,8 @@ Managed centrally via `PermissionRegistry` and `PermissionManager`:
 
 ## 13. Testing & Evidence System
 
-- **Sequential Test Runner UI:** Interactive 4-tab UI in `MainActivity` executing tests one at a time.
-- **Data-Driven Test Registry (`FoundationTestRegistry`):** Contains 82 test cases covering all 53 registered production commands with positive, negative, permission-blocked, hardware-dependent, and physical observation test types.
+- **Sequential Test Runner UI:** Interactive UI in `MainActivity` executing tests one at a time.
+- **Data-Driven Test Registry (`FoundationTestRegistry`):** Contains 229 test cases covering all 122 registered production commands with positive, negative, permission-blocked, hardware-dependent, and physical observation test types.
 - **Result Persistence (`TestResultStore`):** Saves test run states in `SharedPreferences` as JSON across activity recreations.
 - **Evidence Capture (`EvidenceManager`):** Writes screenshot PNGs and result JSON files to `filesDir/evidence/` with bounded directory rotation (max 20 directories).
 
@@ -228,7 +233,7 @@ Managed centrally via `PermissionRegistry` and `PermissionManager`:
 
 ### Gradle Build Commands
 ```bash
-# 1. Run unit test suite (164 unit tests)
+# 1. Run unit test suite (208 unit tests)
 ./gradlew testDebugUnitTest
 
 # 2. Run Android Lint checks
@@ -240,61 +245,10 @@ Managed centrally via `PermissionRegistry` and `PermissionManager`:
 
 ### Output APK
 - **Location:** `app/build/outputs/apk/debug/app-debug.apk`
-- **File Size:** `~3,499,352 bytes`
 
 ---
 
-## 15. GitHub Release & In-Place APK Update Workflow
+## 15. Command References
 
-To support rapid testing directly on physical hardware without USB debugging or ADB, new builds are published to GitHub and installed directly on the device as in-place updates over the existing `LocalAgent` installation.
-
-### Iterative Testing Loop
-
-```text
-CODE CHANGE ──► GITHUB REPO ──► GITHUB RELEASE/CI ──► DOWNLOAD APK ON PHONE ──► INSTALL OVER EXISTING ──► TEST
-```
-
-### Versioning Strategy
-
-`LocalAgent` uses monotonically increasing `versionCode` values and phase-aligned `versionName` tags in `app/build.gradle.kts`:
-- **`0.1` (versionCode 1):** Phase 2 Headless Core & Device Control Complete.
-- **`0.2` (versionCode 2):** Phase 3.1 Observation Foundation & Phase 3.2 Target Resolution.
-- **`0.3` (versionCode 3):** Phase 3.2 Action Execution Foundation.
-
-### In-Place Application Update Principles
-
-When updating `LocalAgent` by opening the downloaded APK directly on the phone:
-1. **Package Identity:** The `applicationId` remains strictly `com.agent.android`.
-2. **Signing Identity:** Builds retain matching keystore signatures.
-3. **In-Place Preservation:** Android Package Installer updates the app in-place without uninstalling:
-   - **Preserved Data:** SQLite databases, `SharedPreferences`, test history, observation settings, evidence files (`filesDir/evidence/`).
-   - **Preserved Accesses (Android 8.1+):** Runtime permissions (`CAMERA`, `RECORD_AUDIO`, `STORAGE`, `LOCATION`) and special access grants (`Accessibility Service`, `Notification Listener`, `Usage Access`, `Notification Policy`, `Write System Settings`) remain active across updates.
-4. **No Uninstall Required:** Do **NOT** uninstall `LocalAgent` before installing a new GitHub APK update. Uninstalling wipes all app data and revokes granted special access.
-
----
-
-## 16. CI/CD Pipeline
-
-The project uses GitHub Actions (`.github/workflows/ci.yml`):
-1. **Triggers:** Push / PR to main/master branches.
-2. **Environment:** Ubuntu-latest with JDK 17 setup.
-3. **Pipeline Steps:**
-   - Gradle wrapper validation.
-   - Run unit tests (`./gradlew testDebugUnitTest`).
-   - Run Android Lint (`./gradlew lintDebug`).
-   - Assemble debug APK (`./gradlew assembleDebug`).
-   - Upload APK artifact.
-
----
-
-## 16. Development Rules & Phase Roadmap
-
-### Rules
-1. Every new command added to `CommandRegistry` **must** have corresponding test coverage added to `FoundationTestRegistry`.
-2. All goal executions must route strictly through `GoalDispatcherImpl` and `ExecutionController`.
-3. Single volume key events must never be consumed by `LocalAgentAccessibilityService`.
-
-### Roadmap
-- **Phases 0 - 2.5 (COMPLETED):** Foundation core, safety boundary, headless skills, hardware controllers, command registry, speech abstractions, permission subsystem, test runner, 100% command test coverage contract.
-- **Phase 3 (NEXT):** Local LLM integration, prompt engineering, structured JSON tool calling, context window management.
-- **Phase 4 (FUTURE):** Autonomous web/UI interaction, DOM understanding, multi-step goal planning loops.
+- **[COMMANDS.md](COMMANDS.md):** Complete root 122-command manual.
+- **[docs/COMMAND_REFERENCE.md](docs/COMMAND_REFERENCE.md):** Canonical command and capability reference with pipeline traces, developer code mappings, and test coverage matrix.
