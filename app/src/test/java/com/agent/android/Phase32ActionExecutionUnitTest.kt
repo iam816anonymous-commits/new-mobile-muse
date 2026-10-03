@@ -596,9 +596,18 @@ class Phase32ActionExecutionUnitTest {
     }
 
     @Test
-    fun testPostActionUnchangedStateExplanationTag() {
-        val calcSnap = createSampleSnapshot("com.google.android.calculator", "snap-calc-same")
-        store.setExplicitDisplayedSnapshot(calcSnap)
+    fun testCalculatorClickDispatchedButNotVerifiedFailsSuccessStatus() {
+        val beforeNode = ObservationNode(
+            id = "formula", parentId = "root", className = "android.widget.TextView",
+            packageName = "com.google.android.calculator", text = "", contentDescription = null, resourceId = "formula_id",
+            bounds = ObservationBounds(0, 0, 1080, 200), isClickable = false, isLongClickable = false,
+            isFocusable = false, isFocused = false, isEnabled = true, isEditable = false,
+            isScrollable = false, isCheckable = false, isChecked = false, isSelected = false,
+            isVisibleToUser = true, isPassword = false, childCount = 0
+        )
+        val beforeSnap = createSampleSnapshot("com.google.android.calculator", "snap-calc-before", listOf(beforeNode))
+        val afterSnap = createSampleSnapshot("com.google.android.calculator", "snap-calc-after", listOf(beforeNode))
+        store.setExplicitDisplayedSnapshot(beforeSnap)
 
         val target = createResolvedTarget(nodeId = "btn-7", packageName = "com.google.android.calculator", isClickable = true)
         val req = UiActionRequest(
@@ -607,9 +616,59 @@ class Phase32ActionExecutionUnitTest {
             expectedPackage = "com.google.android.calculator"
         )
 
-        val res = executor.executeAction(req, isServiceConnectedOverride = true)
+        val res = executor.executeAction(
+            request = req,
+            isServiceConnectedOverride = true,
+            findNodeBlock = {
+                store.updateFromCapture(afterSnap)
+                null
+            }
+        )
+        println("DEBUG EXPLANATION: '${res.explanation}'")
+        assertEquals(ActionExecutionStatus.ACTION_FAILED, res.status)
+        assertTrue("Explanation was '${res.explanation}'", res.explanation.contains("DISPATCHED_BUT_NOT_VERIFIED"))
+    }
+
+    @Test
+    fun testCalculatorClickVerifiedSuccessWhenDisplayChanges() {
+        val beforeNode = ObservationNode(
+            id = "formula", parentId = "root", className = "android.widget.TextView",
+            packageName = "com.google.android.calculator", text = "", contentDescription = null, resourceId = "formula_id",
+            bounds = ObservationBounds(0, 0, 1080, 200), isClickable = false, isLongClickable = false,
+            isFocusable = false, isFocused = false, isEnabled = true, isEditable = false,
+            isScrollable = false, isCheckable = false, isChecked = false, isSelected = false,
+            isVisibleToUser = true, isPassword = false, childCount = 0
+        )
+        val beforeSnap = createSampleSnapshot("com.google.android.calculator", "snap-calc-before", listOf(beforeNode))
+        store.setExplicitDisplayedSnapshot(beforeSnap)
+
+        val afterNode = ObservationNode(
+            id = "formula", parentId = "root", className = "android.widget.TextView",
+            packageName = "com.google.android.calculator", text = "7", contentDescription = null, resourceId = "formula_id",
+            bounds = ObservationBounds(0, 0, 1080, 200), isClickable = false, isLongClickable = false,
+            isFocusable = false, isFocused = false, isEnabled = true, isEditable = false,
+            isScrollable = false, isCheckable = false, isChecked = false, isSelected = false,
+            isVisibleToUser = true, isPassword = false, childCount = 0
+        )
+        val afterSnap = createSampleSnapshot("com.google.android.calculator", "snap-calc-after", listOf(afterNode))
+
+        val target = createResolvedTarget(nodeId = "btn-7", packageName = "com.google.android.calculator", isClickable = true)
+        val req = UiActionRequest(
+            actionType = UiActionType.CLICK,
+            resolvedTarget = target,
+            expectedPackage = "com.google.android.calculator"
+        )
+
+        val res = executor.executeAction(
+            request = req,
+            isServiceConnectedOverride = true,
+            findNodeBlock = {
+                store.updateFromCapture(afterSnap)
+                null
+            }
+        )
         assertEquals(ActionExecutionStatus.SUCCESS, res.status)
-        assertTrue(res.explanation.contains("DISPATCHED_BUT_NOT_VERIFIED") || res.explanation.contains("State Change Verified"))
+        assertTrue(res.explanation.contains("State Change Verified"))
     }
 
     @Test

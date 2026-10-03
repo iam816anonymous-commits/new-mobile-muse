@@ -96,6 +96,9 @@ class AccessibilityObservationEngine(
         val service = getServiceInstance()
 
         if (service == null) {
+            val live = snapshotStore.currentLiveSnapshot
+            if (live != null) return live
+
             val errSnapshot = ObservationSnapshot(
                 timestampMs = startMs,
                 packageName = "UNKNOWN",

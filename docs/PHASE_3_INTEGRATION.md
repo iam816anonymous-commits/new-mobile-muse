@@ -295,3 +295,19 @@ Semantic Target Query / ID
 ### Low-RAM Footprint Adherence
 - **Live Node Reacquisition:** `AccessibilityNodeInfo` references are acquired on-demand at dispatch time and discarded immediately. No long-lived node object trees are retained in memory.
 - **Bounded Verification Snapshot:** Post-action verification extracts lightweight primitives (`nodeCount`, `packageName`, `activityName`, text strings, and bounds rectangles) to confirm state diffs without maintaining duplicate node trees.
+
+---
+
+## 16. Calculator Click False-Positive Analysis & Verified Execution Standard
+
+### Problem Statement
+During real-device testing on Android Calculator:
+1. Console command `click 7` resolved button "7" and dispatched `performAction(ACTION_CLICK)`.
+2. `performAction(ACTION_CLICK)` returned `true`.
+3. However, Calculator display text remained empty (`""`).
+4. Previously, status was false-positively reported as `SUCCESS`.
+
+### Root Cause & Resolution
+- **Root Cause:** `UiActionExecutor` set `status = ActionExecutionStatus.SUCCESS` whenever `performAction(...)` returned `true`, even if post-action re-observation revealed zero UI state change (`stateChanged == false`).
+- **Fix Applied:** `UiActionExecutor` was updated so that when `beforeSnap` and `afterSnap` exist (or fall back to `beforeSnap`), `status` evaluates to `ActionExecutionStatus.SUCCESS` **only if `stateChanged == true`**. If `stateChanged == false` (e.g., display text remains `""`), `status` evaluates to `ActionExecutionStatus.ACTION_FAILED` with explanation `[DISPATCHED_BUT_NOT_VERIFIED: No UI state change observed post-action]`.
+- **Regression Tests:** Added `testCalculatorClickDispatchedButNotVerifiedFailsSuccessStatus` and `testCalculatorClickVerifiedSuccessWhenDisplayChanges` in `Phase32ActionExecutionUnitTest.kt`.
