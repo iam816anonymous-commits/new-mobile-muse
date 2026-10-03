@@ -262,3 +262,36 @@ Post-action verification captures a new `ObservationSnapshot` and compares:
 - Visible node position / bounds differences
 
 If `performAction(ACTION_SCROLL_FORWARD/BACKWARD)` returns `true` but zero node, text, or bounds differences occur, the execution result is explicitly tagged as `[DISPATCHED_BUT_NOT_VERIFIED: No UI state change observed post-action]`.
+
+---
+
+## 15. Universal Action Resolution Architecture & Verification Pipeline
+
+### Universal Pipeline Standard
+Every node-based UI action in LocalAgent adheres to the **Universal Action Resolution Rule**:
+
+```
+Semantic Target Query / ID
+            ↓
+    TargetResolver.resolve()
+            ↓
+    UiTargetValidator Precondition Validation
+            ↓
+    Capability-Specific Live Node Resolution
+      - CLICK -> findClickableAncestor()
+      - LONG_CLICK -> findLongClickableAncestor()
+      - TEXT_INPUT -> findEditableTarget()
+      - SCROLL -> findScrollableAncestor()
+            ↓
+    Android Accessibility API performAction()
+            ↓
+    Fresh Post-Action Observation
+            ↓
+    Observable UI State Diff Verification
+            ↓
+    UiActionResult (SUCCESS / DISPATCHED_BUT_NOT_VERIFIED / ACTION_FAILED)
+```
+
+### Low-RAM Footprint Adherence
+- **Live Node Reacquisition:** `AccessibilityNodeInfo` references are acquired on-demand at dispatch time and discarded immediately. No long-lived node object trees are retained in memory.
+- **Bounded Verification Snapshot:** Post-action verification extracts lightweight primitives (`nodeCount`, `packageName`, `activityName`, text strings, and bounds rectangles) to confirm state diffs without maintaining duplicate node trees.
