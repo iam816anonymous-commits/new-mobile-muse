@@ -143,7 +143,7 @@ class CommandRegistry {
         register(CommandDefinition("action.long_click", "Action Long Click", CommandCategory.OBSERVATION, "Executes LONG_CLICK action on resolved UI target node", CommandStatus.IMPLEMENTED, "action long_click <query>", listOf("action long_click Item", "long click Item"), listOf("query"), CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
         register(CommandDefinition("action.input", "Action Text Input", CommandCategory.OBSERVATION, "Executes TEXT_INPUT action on resolved editable target node", CommandStatus.IMPLEMENTED, "action input <text>", listOf("action input Hello", "text input Hello"), listOf("text"), CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
         register(CommandDefinition("action.scroll", "Action Scroll", CommandCategory.OBSERVATION, "Executes SCROLL action on resolved scrollable target node", CommandStatus.IMPLEMENTED, "action scroll <direction>", listOf("action scroll forward", "scroll forward", "scroll backward"), listOf("direction"), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
-        register(CommandDefinition("action.back", "Action Global Back", CommandCategory.OBSERVATION, "Executes GLOBAL_BACK navigation action", CommandStatus.IMPLEMENTED, "action back", listOf("action back"), emptyList(), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
+        register(CommandDefinition("action.back", "Action Global Back", CommandCategory.OBSERVATION, "Executes GLOBAL_BACK navigation action", CommandStatus.IMPLEMENTED, "action back", listOf("action back", "back"), emptyList(), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
         register(CommandDefinition("action.recents", "Action Global Recents", CommandCategory.OBSERVATION, "Executes GLOBAL_RECENTS navigation action", CommandStatus.IMPLEMENTED, "action recents", listOf("action recents", "recents"), emptyList(), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
         register(CommandDefinition("action.home", "Action Global Home", CommandCategory.OBSERVATION, "Executes GLOBAL_HOME navigation action", CommandStatus.IMPLEMENTED, "action home", listOf("action home", "home"), emptyList(), requirement = CommandRequirement(accessibilityRequired = true, changesDeviceState = true), handlerIdentifier = "UiActionExecutor"))
         register(CommandDefinition("action.status", "Action Subsystem Status", CommandCategory.DIAGNOSTICS, "Queries action subsystem readiness, accessibility service status, and capabilities", CommandStatus.IMPLEMENTED, "action status", listOf("action status"), emptyList(), handlerIdentifier = "UiActionExecutor"))
@@ -213,7 +213,16 @@ class CommandRegistry {
         }
 
         return registry.values.find { cmd ->
-            cmd.examples.any { ex -> trimmed.startsWith(ex.lowercase()) || trimmed == ex.lowercase() }
+            cmd.examples.any { ex ->
+                val exTokens = ex.lowercase().split("\\s+".toRegex())
+                val exFixed = exTokens.takeWhile { !it.startsWith("<") && it != "search" && it != "item" && it != "hello" && it != "12" && it != "buy" && it != "60" && it != "07:30" && it != "localagent" && it != "settings" && it != "200" && it != "50" && it != "node-1" && it != "p3.2-act-001" }
+                if (exFixed.isEmpty()) {
+                    trimmed == ex.lowercase()
+                } else {
+                    val exPrefix = exFixed.joinToString(" ")
+                    trimmed == ex.lowercase() || trimmed.startsWith("$exPrefix ") || trimmed == exPrefix
+                }
+            }
         }
     }
 
