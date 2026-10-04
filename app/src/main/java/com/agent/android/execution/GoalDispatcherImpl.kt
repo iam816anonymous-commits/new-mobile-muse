@@ -644,7 +644,8 @@ class GoalDispatcherImpl(
             }
             "action.click", "action.long_click", "action.input", "action.scroll", "action.back", "action.recents", "action.home", "test.click", "test.long_click", "test.text_input", "test.scroll", "test.back" -> {
                 val qStr = parsedArgs.getString("query") ?: parsedArgs.getString("text") ?: parsedArgs.getString("direction") ?: ""
-                val snapshot = observationEngine?.getDisplayedSnapshot() ?: observationEngine?.getLastSnapshot()
+                val snapshot = observationEngine?.captureCurrentScreen() ?: observationEngine?.getDisplayedSnapshot() ?: observationEngine?.getLastSnapshot()
+                logger.log(source, LogLevel.INFO, "GoalDispatcher", "CURRENT_FOREGROUND: package='${snapshot?.packageName ?: "UNKNOWN"}' activity='${snapshot?.activityName ?: "UNKNOWN"}'", null, correlationId)
                 val actionType = when (cmdDef.commandId) {
                     "action.click", "test.click" -> com.agent.android.actions.UiActionType.CLICK
                     "action.long_click", "test.long_click" -> com.agent.android.actions.UiActionType.LONG_CLICK
